@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAuthorized(patientId) {
+      return request.auth.uid == patientId;
+    }
+
+    // General match for documents
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Specific match for patientProfiles collection
+    match /patientProfiles/{patientId} {
+      allow read, write: if isAuthenticated() && isAuthorized(patientId);
+    }
+
+    // Specific match for prescriptions collection
+    match /prescriptions/{docId} {
+      allow read, write: if isAuthenticated() && isAuthorized(resource.data.patientId);
+    }
+
+    // Specific match for appointments collection
+    match /appointments/{appointmentId} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+
+      // Allow create if no other appointment exists for the same patient on the same date
+      allow create: if isAuthenticated() &&
+        request.resource.data.date != null &&
+        request.resource.data.time != null &&
+        // Check if no other appointment exists for the same patient on the same date
+        !exists(
+          /databases/$(database)/documents/appointments
+            .where('patientId', '==', request.auth.uid)
+            .where('date', '==', request.resource.data.date)
+            .where('status', 'in', ['pending', 'Accepted'])
+        );
+
+      // Allow the user to update their own appointment
+      allow update: if isAuthenticated() && resource.data.patientId == request.auth.uid;
+
+      // Allow deletion if the appointment is by the user and status is empty or pending
+      allow delete: if isAuthenticated() && resource.data.patientId == request.auth.uid && resource.data.status == 'pending';
+    }
+
+    // Specific match for medicines collection
+    match /medicines/{docId} {
+      // Allow read and update if authenticated
+      allow read, update: if isAuthenticated();
+
+      // Prevent write (create or delete) actions unless specifically needed
+      allow create, delete: if false; // Adjust this based on your needs
+    }
+
+    // Allow authenticated users to read schedule information
+    match /dailySchedules/{date} {
+      allow read: if isAuthenticated();
+    }
+
+    // Allow authenticated users to read settings
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+    }
+
+    // Allow payment status updates for appointments
+    match /appointments/{appointmentId} {
+      allow update: if isAuthenticated() && 
+        (
+          // Allow user to update their own appointment's payment status
+          (resource.data.patientId == request.auth.uid) ||
+          // Allow system to update payment status after successful payment
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentDate']))
+        );
+    }
+  }
+} 
