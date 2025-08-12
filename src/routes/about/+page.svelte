@@ -135,7 +135,9 @@
 
 <header>
     <div class="nav-container">
+        <a href="/">
         <img src="/images/digital member portal.png" alt="PHP DGMP" class="navbar-logo" />
+        </a>
         <nav>
             <a href="/loginPatient">Login</a>
             <a href="/about">About</a>

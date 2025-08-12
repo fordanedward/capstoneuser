@@ -203,7 +203,7 @@
 			<div class="circle-background">
 				<!-- Conditional image based on collapsed state (desktop) or always logo (mobile?) -->
                  <img
-                    src={(isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "/images/logo(landing) copy.png" : "/images/icon-person.png"}
+                    src={(isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "/images/digital member portal.png" : "/images/icon-person.png"}
                     alt={ (isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "App Logo" : "User Icon"}
                  />
 			</div>
@@ -284,9 +284,7 @@
 		--sidebar-width-collapsed: 4.22rem;
 		--sidebar-width-mobile: 200px; /* Or adjust as needed */
 
-		/* --- Using OriginalComponent's blue color --- */
-        --sidebar-bg-color: #334eac;
-		/* --- Hover/Active colors inspired by OriginalComponent --- */
+        --sidebar-bg-color: #1e3a66;
 	
 	
 		/* --- Text color --- */
