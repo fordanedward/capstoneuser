@@ -172,14 +172,14 @@
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.setTextColor(67, 56, 202); // Blue color
-            doc.text("AFDomingo", 55, 15);
+            doc.text("The Permanente Health Plan Corp.", 55, 15);
             doc.setTextColor(0, 0, 0); // Reset to black
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text("DENTAL CLINIC", 55, 20);
-            doc.text("#46 12th Street, Corner Gordon Ave, New Kalalake", 55, 25);
-            doc.text("afdomingodentalclinic@gmail.com", 55, 30);
-            doc.text("0932 984 9554", 55, 35);
+            doc.text("Multi-Specialty Health Plan", 55, 20);
+            doc.text("Lot 19, Blk. 7, Mayumi St. Sta. Rita, Olongapo City", 55, 25);
+            doc.text("customerservice@permanentehealthplan.org", 55, 30);
+            doc.text("0968 856 1807", 55, 35);
             doc.line(20, 40, 277, 40); // Horizontal line below header (adjust x2 for landscape)
         };
 
@@ -338,13 +338,13 @@
 
 	<!-- Clinic Header Card -->
 	<div class="clinic-header-card">
-		<img src="/images/logo(landing) copy.png" alt="Clinic Logo" class="logo"/>
+		<img src="/images/digital member portal.png" alt="Clinic Logo" class="logo"/>
 		<div class="header-info">
-			<h1 class="clinic-name">AFDomingo</h1>
-			<p class="clinic-details">DENTAL CLINIC</p>
-			<p class="clinic-details">#46 12th Street, Corner Gordon Ave New Kalalake</p>
-			<p class="clinic-details">afdomingodentalclinic@gmail.com</p>
-			<p class="clinic-details">0932 984 9554</p>
+			<h1 class="clinic-name">The Permanente Health Plan Corp.</h1>
+			<p class="clinic-details">Multi-Specialty Health Plan</p>
+			<p class="clinic-details">Lot 19, Blk. 7, Mayumi St. Sta. Rita, Olongapo City</p>
+			<p class="clinic-details">customerservice@permanentehealthplan.org</p>
+			<p class="clinic-details">0968 856 1807</p>
 		</div>
 	</div>
 
@@ -427,23 +427,22 @@
 
 	/* Clinic Header Styling */
 	.clinic-header-card {
-		background: linear-gradient(90deg, #eef2ff, #a2b6ff); 
+		background: linear-gradient(90deg, #dfdfdf, #f4c542); 
 		border-radius: 10px;
 		padding: 15px 20px;
 		display: flex;
 		align-items: center;
 		box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
         margin-bottom: 25px; /* Space below header */
-		gap: 20px; /* Space between logo and text */
+		gap: 25px; /* Space between logo and text */
 	}
 
 	.clinic-header-card .logo {
-		width: 70px; /* Adjusted size */
-		height: 70px;
+		width: 120px; /* Adjusted size */
+		height: 120px;
 		border-radius: 50%;
 		object-fit: cover;
 		flex-shrink: 0; /* Prevent logo from shrinking */
-        border: 2px solid white;
 	}
 
 	.clinic-header-card .header-info {

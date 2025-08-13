@@ -219,6 +219,12 @@
 		<!-- Sidebar Menu (using OriginalComponent's items) -->
 		<ul class="sidebar-menu">
 			<li>
+				<a href="./dashboard">
+					<img class="icon" src="/images/dashboard.png" alt="Dashboard Icon" />
+					<span class="text">Dashboard</span>
+				</a>
+			</li>
+			<li>
 				<a href="./profile">
 					<img class="icon" src="/images/profile1.png" alt="Profile Icon" />
 					<span class="text">Profile</span>
@@ -734,4 +740,55 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
+
+    /* Add this to your CSS section */
+
+.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-radius: 8px;
+    color: var(--sidebar-text-color);
+    text-decoration: none;
+    transition: background 0.25s, transform 0.2s;
+}
+
+.sidebar-menu li a:hover {
+    background: linear-gradient(90deg, #1e3a66 60%, #f4c542 100%);
+    color: #fff;
+    transform: scale(1.04);
+}
+
+.sidebar-menu li a .icon {
+    transition: transform 0.2s;
+}
+
+.sidebar-menu li a:hover .icon {
+    transform: scale(1.15) rotate(-8deg);
+}
+
+.sidebar-menu li a .text {
+    transition: color 0.2s, font-weight 0.2s;
+}
+
+.sidebar-menu li a:hover .text {
+    color: #f4c542;
+    font-weight: 600;
+}
+
+/* Add or update inside your desktop media query */
+
+@media (min-width: 768px) {
+    .sidebar.collapsed .sidebar-menu li a {
+        justify-content: center;
+        padding: 12px 0; /* Remove horizontal padding */
+    }
+    .sidebar.collapsed .sidebar-menu li a .icon {
+        margin-right: 0; /* Remove space beside icon */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+}
 </style>
