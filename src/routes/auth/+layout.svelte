@@ -260,8 +260,12 @@
 		
         {#if !isMobile}
 			<button class="toggle-btn" on:click={toggleSidebarDesktop} aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}>
-				{isCollapsed ? '➡️' : '⬅️'}
-			</button>
+                {#if isCollapsed}
+                    <i class="fas fa-arrow-right"></i>
+                {:else}
+                    <i class="fas fa-arrow-left"></i>
+                {/if}
+            </button>
 		{/if}
 	</div>
 

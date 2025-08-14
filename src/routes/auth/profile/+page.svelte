@@ -572,7 +572,7 @@ function toggleEditProfile() {
 
 <style>
     :root {
-        --primary-color: #6681e2;
+        --primary-color: #1e3a66;
         --secondary-color: #172f85;
         --accent-color: #eaee00;
         --light-gray: #f8f9fa;
