@@ -267,7 +267,7 @@
             <img src="/images/digital member portal.png" alt="PHP DGMP" class="navbar-logo" />
         </a>
         <nav>
-            <a href="/loginPatient">Login</a>
+            <a href="/loginPatient">Member Login</a>
         </nav>
     </div>
 </header>
