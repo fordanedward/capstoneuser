@@ -6,7 +6,7 @@ import { browser } from '$app/environment';
 
 export const firebaseConfig = {
   apiKey: "AIzaSyDNGNakXXmB89nR5-JOYcMOMAEDCTS9WjE",
-  authDomain: "phpuser.vercel.app", // <-- update this to match your deployed domain
+  authDomain: "integratedsystem-4040b.firebaseapp.com", // <-- update this to match your deployed domain
   projectId: "integratedsystem-4040b",
   storageBucket: "integratedsystem-4040b.firebasestorage.app",
   messagingSenderId: "529987505201",
