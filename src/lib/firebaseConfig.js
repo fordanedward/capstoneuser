@@ -4,9 +4,9 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth"; 
 import { browser } from '$app/environment';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDNGNakXXmB89nR5-JOYcMOMAEDCTS9WjE",
-  authDomain: "integratedsystem-4040b.firebaseapp.com",
+  authDomain: "phpuser.vercel.app", // <-- update this to match your deployed domain
   projectId: "integratedsystem-4040b",
   storageBucket: "integratedsystem-4040b.firebasestorage.app",
   messagingSenderId: "529987505201",
@@ -33,4 +33,4 @@ if (browser) {
 }
 
 // Export the Firestore database, Auth, and Firebase config
-export { db, auth, firebaseConfig };
+export { db, auth };
