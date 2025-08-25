@@ -240,6 +240,74 @@
             max-width: 95vw;
         }
     }
+
+    /* Mobile landing adjustments */
+    @media (max-width: 900px) {
+        header {
+            padding: 14px;
+        }
+        .nav-container {
+            padding: 0 6px;
+        }
+        nav {
+            gap: 12px;
+        }
+        nav a {
+            font-size: 0.95rem;
+            padding: 6px 10px;
+        }
+
+        main {
+            flex-direction: column;
+            align-items: center;
+            height: auto;
+            overflow: visible;
+            padding-top: 5.5rem; /* account for fixed header */
+        }
+        .left-section {
+            max-width: 100%;
+            text-align: left;
+            padding: 0 1rem;
+        }
+        .left-section h1 {
+            margin-top: 1rem;
+            margin-left: 0;
+            font-size: 2.4rem;
+            line-height: 1.15;
+        }
+        .left-section h2 {
+            margin-left: 0;
+            margin-top: 1rem;
+            font-size: 1rem;
+            max-width: 100%;
+        }
+        .right-section {
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        .right-section img {
+            max-width: 85%;
+            max-height: none;
+            height: auto;
+            margin-left: 0;
+            margin-top: 0.5rem;
+        }
+    }
+
+    /* Extra-small phones */
+    @media (max-width: 480px) {
+        .left-section h1 {
+            font-size: 2rem;
+        }
+        .left-section h2 {
+            font-size: 0.95rem;
+        }
+        .right-section img {
+            max-width: 90%;
+        }
+    }
 </style>
 
 <script>
