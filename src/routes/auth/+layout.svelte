@@ -12,30 +12,31 @@
 	import Swal from 'sweetalert2';
 	import '../../app.css'; 
 
+ 
 	let isMobile = false;
 	let isCollapsed = false; // Desktop collapsed state
 	let isSidebarOpen = false; // Mobile sidebar open state
-
+ 
 	const MOBILE_BREAKPOINT = 768; // Same breakpoint
-
+ 
 	// --- Firebase Setup (from OriginalComponent) ---
 	const app = browser && !getApps().length ? initializeApp(firebaseConfig) : (browser ? getApp() : null); // Initialize only in browser
 	const auth = app ? getAuth(app) : null; // Get auth only if app is initialized
-
+ 
 	// --- Stores (from OriginalComponent) ---
 	export const username = writable<string>('');
 	let loading = writable(false);
-
+ 
 	// --- Layout Logic (from TemplateComponent, adapted) ---
 	function checkLayoutMode() {
 		if (!browser) return;
-
+ 
 		const screenWidth = window.innerWidth;
 		const currentlyMobile = screenWidth < MOBILE_BREAKPOINT;
-
+ 
 		if (currentlyMobile !== isMobile) {
 			isMobile = currentlyMobile;
-
+ 
 			if (isMobile) {
 				isCollapsed = true; // Mobile always starts 'collapsed' conceptually
 				isSidebarOpen = false; // Mobile sidebar starts closed
@@ -46,34 +47,34 @@
 				isCollapsed = savedState === 'true'; // Restore from session storage
 			}
 		} else {
-             // Ensure default state is set if not mobile and no session storage exists
-             if (!isMobile && sessionStorage.getItem('isCollapsed') === null) {
-                sessionStorage.setItem('isCollapsed', 'false');
-                isCollapsed = false;
-            }
-        }
+            // Ensure default state is set if not mobile and no session storage exists
+            if (!isMobile && sessionStorage.getItem('isCollapsed') === null) {
+               sessionStorage.setItem('isCollapsed', 'false');
+               isCollapsed = false;
+           }
+       }
 	}
-
+ 
 	// Toggle desktop sidebar collapse state
 	function toggleSidebarDesktop() {
 		if (!browser || isMobile || !auth) return; // Guard against non-browser, mobile, or uninitialized auth
 		isCollapsed = !isCollapsed;
 		sessionStorage.setItem('isCollapsed', String(isCollapsed)); // Save state
 	}
-
+ 
 	// Toggle mobile sidebar open/closed state
 	function toggleSidebarMobile() {
 		if (!browser || !isMobile || !auth) return; // Guard against non-browser, non-mobile, or uninitialized auth
 		isSidebarOpen = !isSidebarOpen;
 	}
-
+ 
 	// Close mobile sidebar explicitly
 	function closeSidebarMobile() {
 		if (isSidebarOpen) {
 			isSidebarOpen = false;
 		}
 	}
-
+ 
 	// --- Logout Function (Merged Logic) ---
 	export function logout() {
 		if (!auth) {
@@ -82,7 +83,7 @@
 			goto('/loginPatient');
 			return;
 		}
-
+ 
 		Swal.fire({
 			title: 'Are you sure?',
 			text: "You are about to log out.",
@@ -95,14 +96,14 @@
 		}).then((result) => {
 			if (result.isConfirmed) {
 				loading.set(true); // Show loading state
-
+ 
 				// Clean up session storage (from TemplateComponent)
 				if (browser) {
 					sessionStorage.removeItem('isCollapsed');
 				}
                 // Close mobile sidebar if open (from TemplateComponent)
                 closeSidebarMobile();
-
+ 
 				signOut(auth)
 					.then(() => {
 						console.log('User signed out');
@@ -119,14 +120,14 @@
 			}
 		});
 	}
-
+ 
 	// --- Lifecycle Hooks (Merged Logic) ---
 	onMount(() => {
 		if (!browser) return; // Don't run listeners/Firebase on server
-
+ 
         checkLayoutMode(); // Initial layout check
         window.addEventListener('resize', checkLayoutMode); // Add resize listener
-
+ 
         // Firebase Auth Listener (from OriginalComponent)
         let unsubscribeAuthState: (() => void) | null = null;
         if (auth) {
@@ -153,10 +154,10 @@
                  goto('/loginPatient');
              }
         }
-
+ 
 		// Page change listener (from TemplateComponent)
 		const pageUnsubscribe = page.subscribe((currentPage) => {
-             // Close mobile sidebar on navigation
+            // Close mobile sidebar on navigation
 			if (isMobile && isSidebarOpen) {
 				closeSidebarMobile();
 			}
@@ -166,7 +167,7 @@
                  // goto('/loginPatient');
             }
 		});
-
+ 
 		// Cleanup function
 		return () => {
 			window.removeEventListener('resize', checkLayoutMode);
@@ -174,9 +175,9 @@
 			pageUnsubscribe();
 		};
 	});
-
+ 
 </script>
-
+ 
 <!-- HTML Structure (from TemplateComponent, using OriginalComponent's content/icons) -->
 <div class="app-layout">
 	<!-- Mobile Header -->
@@ -192,7 +193,7 @@
 			<!-- <span class="header-title">App Name</span> -->
 		</header>
 	{/if}
-
+ 
 	<!-- Sidebar -->
 	<div class="sidebar {isMobile ? (isSidebarOpen ? 'open' : 'closed-mobile') : (isCollapsed ? 'collapsed' : 'open-desktop')}">
 		<!-- Sidebar Header (using OriginalComponent's logic/images) -->
@@ -202,20 +203,20 @@
 			{/if}
 			<div class="circle-background">
 				<!-- Conditional image based on collapsed state (desktop) or always logo (mobile?) -->
-                 <img
-                    src={(isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "/images/digital member portal.png" : "/images/icon-person.png"}
-                    alt={ (isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "App Logo" : "User Icon"}
-                 />
+				 <img
+					src={(isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "/images/digital member portal.png" : "/images/icon-person.png"}
+					alt={ (isMobile && isSidebarOpen) || (!isMobile && !isCollapsed) ? "App Logo" : "User Icon"}
+				 />
 			</div>
 			<!-- Display username when expanded (desktop) or sidebar is open (mobile) -->
 			{#if (!isMobile && !isCollapsed) || (isMobile && isSidebarOpen)}
 				<div class="name-container"> <!-- Use name-container div -->
 					<span>{$username || '...'}</span> <!-- Display username from store -->
-                     <!-- Remove second name span unless needed -->
+					 <!-- Remove second name span unless needed -->
 				</div>
 			{/if}
 		</div>
-
+ 
 		<!-- Sidebar Menu (using OriginalComponent's items) -->
 		<ul class="sidebar-menu">
 			<li>
@@ -243,7 +244,7 @@
 				</a>
 			</li>
 		</ul>
-
+ 
 		<!-- Logout Button (using combined logic) -->
 		<button class="logout-btn" on:click={logout} title="Logout">
 			{#if isMobile || (!isMobile && !isCollapsed)}
@@ -255,7 +256,7 @@
 				<img src="/images/logout-icon.png" alt="Logout" class="logout-icon" />
 			{/if}
 		</button>
-
+ 
 		<!-- Desktop Toggle Button (using OriginalComponent's arrows) -->
 		
         {#if !isMobile}
@@ -268,17 +269,17 @@
             </button>
 		{/if}
 	</div>
-
+ 
 	<!-- Mobile Backdrop -->
 	{#if isMobile && isSidebarOpen}
 		<div class="backdrop" on:click={closeSidebarMobile} aria-hidden="true"></div>
 	{/if}
-
+ 
 	<!-- Main Content Area -->
 	<main class="content {isMobile ? 'mobile' : (isCollapsed ? 'collapsed' : 'desktop')}">
 		<slot /> <!-- Page content goes here -->
 	</main>
-
+ 
 	<!-- Loading Spinner Overlay (from OriginalComponent) -->
 	{#if $loading}
 		<div class="loading-overlay" aria-busy="true" aria-label="Loading">
@@ -286,14 +287,14 @@
 		</div>
 	{/if}
 </div>
-
+ 
 <!-- CSS (from TemplateComponent, with color override and Loading styles added) -->
 <style>
 	:root {
 		--sidebar-width-desktop: 11.6rem;
 		--sidebar-width-collapsed: 4.22rem;
 		--sidebar-width-mobile: 200px; /* Or adjust as needed */
-
+ 
         --sidebar-bg-color: #1e3a66;
 	
 	
@@ -306,14 +307,14 @@
         /* --- Mobile Header Height (adjust if needed) --- */
         --header-height-mobile: 56px; /* Example height */
 	}
-
+ 
 	.app-layout {
 		min-height: 100vh;
 		background-color: var(--content-bg-color);
         position: relative; /* Needed for absolute positioning of sidebar/backdrop */
         overflow-x: hidden; /* Prevent horizontal scroll */
 	}
-
+ 
     /* --- Mobile Header --- */
 	.app-header {
 		display: none; /* Hidden by default */
@@ -328,7 +329,7 @@
 		z-index: 900; /* Below mobile sidebar */
 		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 	}
-
+ 
 	.hamburger-btn {
 		background: none;
 		border: none;
@@ -337,18 +338,18 @@
 		padding: 0.5rem;
 		margin-right: 1rem; /* Space between button and potential title */
 	}
-
+ 
 	.hamburger-btn svg {
 		display: block;
 		width: 24px;
 		height: 24px;
 	}
-
+ 
 	.header-title { /* Optional title styling */
 		font-size: 1.1rem;
 		font-weight: 500;
 	}
-
+ 
     /* --- Sidebar --- */
 	.sidebar {
 		position: fixed;
@@ -364,7 +365,7 @@
 		box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
 		/* Transitions applied in media queries */
 	}
-
+ 
     /* --- Sidebar Header --- */
 	.sidebar-header {
 		display: flex;
@@ -375,7 +376,7 @@
 		position: relative; /* For close button positioning */
         border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Optional separator */
 	}
-
+ 
 	.sidebar-header .circle-background {
 		display: flex;
 		justify-content: center;
@@ -387,14 +388,14 @@
 		transition: width 0.3s ease, height 0.3s ease;
 		margin-bottom: 10px;
 	}
-
+ 
 	.sidebar-header .circle-background img {
 		display: block;
         max-width: 70%; /* Adjust image size inside circle */
         max-height: 70%;
         object-fit: contain;
 	}
-
+ 
     .name-container {
 		margin-top: 5px; /* Reduced margin */
 		display: flex;
@@ -403,7 +404,7 @@
 		flex-shrink: 0;
         width: 100%; /* Allow text centering */
 	}
-
+ 
 	.name-container span {
         margin-top: 2px;
         font-size: 0.9rem; /* Match template */
@@ -413,7 +414,7 @@
         max-width: calc(var(--sidebar-width-desktop) - 40px); /* Limit width */
         line-height: 1.3;
 	}
-
+ 
 	/* --- Sidebar Menu --- */
     .sidebar-menu {
 		list-style: none;
@@ -421,13 +422,13 @@
 		margin: 0;
 		flex-grow: 1; /* Take remaining space */
 	}
-
+ 
 	.sidebar-menu li {
 		padding: 0; /* Remove padding from li */
 		cursor: pointer;
 		/* transition: background-color 0.2s ease; Removed, apply to <a> */
 	}
-
+ 
 	.sidebar-menu a {
 		display: flex;
 		align-items: center;
@@ -439,19 +440,19 @@
 		overflow: hidden;
         transition: background-color 0.2s ease, color 0.2s ease;
 	}
-
+ 
 	.sidebar-menu a:hover,
     .sidebar-menu a:focus {
 		background-color: var(--sidebar-hover-bg); /* Use hover color */
         outline: none;
 	}
-
+ 
 	/* Active link styling - requires router integration or manual class */
 	.sidebar-menu a.active {
 		background-color: var(--sidebar-active-bg);
 		font-weight: bold;
 	}
-
+ 
 	.sidebar-menu a .icon {
 		width: 20px; /* Match OriginalComponent style */
 		height: 20px;
@@ -459,7 +460,7 @@
 		margin-right: 15px; /* Space between icon and text */
 		transition: margin-right var(--sidebar-transition);
 	}
-
+ 
 	.sidebar-menu a .text {
 		font-size: 0.95rem; /* Match template */
 		overflow: hidden;
@@ -467,7 +468,7 @@
 		opacity: 1;
 		transition: opacity 0.1s ease 0.1s, width var(--sidebar-transition); /* Delay opacity transition */
 	}
-
+ 
 	/* --- Logout Button --- */
     .logout-btn {
 		background-color: transparent;
@@ -487,21 +488,22 @@
 		flex-shrink: 0;
 		gap: 8px;
 	}
+ 
 	.logout-btn:hover {
 		background-color: #007bb5;
 		border-color: #007bb5;
 	}
-
+ 
 	.logout-btn img.logout-icon {
 		width: 18px;
 		height: 18px;
 	}
-
+ 
 	@media (max-width: 767px) {
 		.app-header {
 			display: flex; 
 		}
-
+ 
 		.sidebar {
 			width: var(--sidebar-width-mobile);
 			transform: translateX(-100%); /* Hidden off-screen */
@@ -509,50 +511,50 @@
 			transition: transform var(--sidebar-transition);
             box-shadow: 4px 0 6px rgba(0,0,0,0.2); /* Stronger shadow for mobile */
 		}
-
+ 
 		.sidebar.open {
 			transform: translateX(0); /* Slide in */
 		}
-
+ 
 		.sidebar-header .circle-background {
 			width: 70px; /* Adjust size for mobile */
 			height: 70px;
 		}
-
+ 
          .name-container span {
              max-width: calc(var(--sidebar-width-mobile) - 40px);
          }
-
+ 
 		.sidebar-menu a .icon {
             margin-right: 15px; /* Ensure margin exists */
 		}
-
+ 
 		.sidebar-menu a .text {
 			opacity: 1;
 			width: auto; /* Text always visible */
             margin-left: 15px;
 		}
-
+ 
 		.logout-btn {
 			padding: 10px 15px; /* Ensure padding */
             margin: 20px; /* Consistent margin */
 		}
-
+ 
 		.logout-btn span {
 			display: inline; /* Text always visible */
 		}
-
+ 
 		.content.mobile {
 			margin-left: 0; /* No margin when sidebar is hidden/overlay */
 		
 			transition: filter var(--sidebar-transition); /* Optional: Dim content when sidebar open */
 			width: 100%;
 		}
-
+ 
 		.sidebar.open ~ .content.mobile { /* Apply dimming when sidebar is open */
 			/* filter: brightness(0.7); */
 		}
-
+ 
 		.close-sidebar-btn {
 			position: absolute;
 			top: 10px;
@@ -567,15 +569,15 @@
 			display: block; /* Show on mobile */
             z-index: 10; /* Above other header content */
 		}
-
+ 
 		.close-sidebar-btn:hover {
 			color: white;
 		}
-
+ 
 		.toggle-btn { /* Desktop toggle button */
 			display: none;
 		}
-
+ 
 		.backdrop {
 			position: fixed;
 			top: 0;
@@ -588,7 +590,7 @@
 			visibility: hidden;
 			transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
 		}
-
+ 
 		/* Use .sidebar.open + .backdrop selector */
         .sidebar.open + .backdrop {
 			opacity: 1;
@@ -596,7 +598,7 @@
 			transition: opacity 0.3s ease-in-out, visibility 0s linear 0s;
 		}
 	}
-
+ 
     /* --- Desktop Specific Styles --- */
 	@media (min-width: 768px) {
 		.sidebar {
@@ -605,56 +607,56 @@
 			z-index: 50; /* Standard z-index */
 			transition: width var(--sidebar-transition);
 		}
-
+ 
 		.sidebar.collapsed {
 			width: var(--sidebar-width-collapsed);
 			/* overflow: hidden; /* Hide overflow when collapsed */
 		}
-
+ 
 		.sidebar-header .circle-background {
 			width: 80px; /* Desktop expanded size */
 			height: 80px;
 		}
-
+ 
 		.sidebar.collapsed .sidebar-header .circle-background {
 			width: 45px; /* Desktop collapsed size */
 			height: 45px;
             margin-bottom: 0; /* No space needed when name is hidden */
 		}
-
+ 
         .sidebar.collapsed .name-container {
             display: none; /* Hide name container when collapsed */
         }
-
+ 
 		.sidebar-menu a .icon {
             margin-right: 15px; /* Default margin */
 		}
-
+ 
 		.sidebar.collapsed .sidebar-menu a {
 			justify-content: center; /* Center icon */
 			padding: 12px 10px; /* Adjust padding for centered icon */
 		}
-
+ 
 		.sidebar.collapsed .sidebar-menu a .icon {
 			margin-right: 0; /* No margin when text hidden */
 		}
-
+ 
 		.sidebar.collapsed .sidebar-menu a .text {
 			opacity: 0;
 			width: 0; /* Collapse text width */
 			margin-left: 0; /* No margin for text */
             transition: opacity 0.1s ease, width var(--sidebar-transition), margin-left var(--sidebar-transition); /* Adjust transition timing */
 		}
-
+ 
 		.logout-btn {
 			padding: 10px 15px; /* Expanded state padding */
              margin: 20px;
 		}
-
+ 
 		.logout-btn span {
 			display: inline; /* Show text */
 		}
-
+ 
 		.sidebar.collapsed .logout-btn {
 			width: auto; /* Fit icon */
 			padding: 10px; /* Padding for icon-only */
@@ -662,41 +664,41 @@
             border-radius: 50%; /* Make it circular */
              aspect-ratio: 1 / 1; /* Maintain square/circle shape */
 		}
-
+ 
 		.sidebar.collapsed .logout-btn span {
 			display: none; /* Hide text */
 		}
          .sidebar.collapsed .logout-btn img.logout-icon {
              margin: 0; /* Remove potential gap */
          }
-
+ 
 		.content { /* Base content class for desktop */
              padding: 20px; /* Add padding */
              height: 100vh; /* Ensure content takes height */
              box-sizing: border-box;
              overflow-y: auto; /* Allow content scroll */
          }
-
+ 
 		.content.desktop { /* When sidebar is expanded */
 			margin-left: var(--sidebar-width-desktop);
 			padding-top: 0; /* No mobile header */
 			transition: margin-left var(--sidebar-transition);
 			width: calc(100% - var(--sidebar-width-desktop)); /* Calculate width */
 		}
-
+ 
 		.content.collapsed { /* When sidebar is collapsed */
 			margin-left: var(--sidebar-width-collapsed);
 			width: calc(100% - var(--sidebar-width-collapsed)); /* Calculate width */
 		}
-
+ 
 		.close-sidebar-btn { /* Mobile close button */
 			display: none;
 		}
-
+ 
 		.backdrop { /* Mobile backdrop */
 			display: none;
 		}
-
+ 
 			.toggle-btn {
 			display: block;
 			cursor: pointer;
@@ -710,12 +712,12 @@
 			width: 100%;
 			margin-top: 10px;
 		}
-
+ 
 		.toggle-btn:hover {
 			background-color: var(--sidebar-hover-bg); /* Use hover blue */
 		}
 	}
-
+ 
     /* --- Loading Overlay Styles (from OriginalComponent) --- */
     .loading-overlay {
         position: fixed;
@@ -730,7 +732,7 @@
         z-index: 9999; /* Highest */
         backdrop-filter: blur(2px); /* Optional blur */
     }
-
+ 
     .loading-spinner {
         border: 6px solid #f3f3f3; /* Adjusted border */
         border-top: 6px solid var(--sidebar-bg-color); /* Use theme color */
@@ -739,14 +741,14 @@
         height: 45px;
         animation: spin 1.5s linear infinite; /* Adjusted speed */
     }
-
+ 
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-
+ 
     /* Add this to your CSS section */
-
+ 
 .sidebar-menu li a {
     display: flex;
     align-items: center;
@@ -757,32 +759,32 @@
     text-decoration: none;
     transition: background 0.25s, transform 0.2s;
 }
-
+ 
 .sidebar-menu li a:hover {
     background: linear-gradient(90deg, #1e3a66 60%, #f4c542 100%);
     color: #fff;
     transform: scale(1.04);
 }
-
+ 
 .sidebar-menu li a .icon {
     transition: transform 0.2s;
 }
-
+ 
 .sidebar-menu li a:hover .icon {
     transform: scale(1.15) rotate(-8deg);
 }
-
+ 
 .sidebar-menu li a .text {
     transition: color 0.2s, font-weight 0.2s;
 }
-
+ 
 .sidebar-menu li a:hover .text {
     color: #f4c542;
     font-weight: 600;
 }
-
+ 
 /* Add or update inside your desktop media query */
-
+ 
 @media (min-width: 768px) {
     .sidebar.collapsed .sidebar-menu li a {
         justify-content: center;

@@ -12,12 +12,12 @@
         // ...add more as needed...
     ];
     let availableServices = [
-        { name: "Complete Blood Count (CBC)", info: " " },
-        { name: "Urinalysis", info: " " },
-        { name: "Chest X-Ray", info: " ." },
-        { name: "Physical Examination", info: " " },
-        { name: "Drug Screening", info: " " },
-        { name: "Fecalysis", info: " " }
+        { name: "Complete Blood Count (CBC)" },
+        { name: "Urinalysis" },
+        { name: "Chest X-Ray" },
+        { name: "Physical Examination" },
+        { name: "Drug Screening" },
+        { name: "Fecalysis" }
         // ...add more as needed...
     ];
 
@@ -36,7 +36,7 @@
     const filteredServices = derived(
         [serviceSearch],
         ([$serviceSearch]) =>
-            availableServices.filter((s: { name: string; info: string }) =>
+            availableServices.filter((s: { name: string }) =>
                 s.name.toLowerCase().includes($serviceSearch.toLowerCase())
             )
     );
@@ -47,16 +47,67 @@
 </script>
 
 <style>
+    .prescription-page-container {
+        padding: 15px;
+        max-width: 1200px;
+        margin: 0 auto;
+        height: 100%;
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+    .prescription-page-container::-webkit-scrollbar { display: none; }
+    .prescription-page-container { -ms-overflow-style: none; scrollbar-width: none; }
+    .clinic-header-card {
+        background: linear-gradient(90deg, #dfdfdf, #f4c542);
+        border-radius: 10px;
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+        gap: 25px;
+    }
+    .clinic-header-card .logo {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .clinic-header-card .header-info { color: #005b80; flex-grow: 1; }
+    .clinic-header-card .clinic-name {
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin: 0 0 2px 0;
+        color: #003d50;
+    }
+    .clinic-header-card .clinic-details {
+        margin: 1px 0;
+        font-size: 0.9rem;
+        color: #005b80;
+        line-height: 1.3;
+    }
     .lists-container {
         display: flex;
         gap: 2rem;
         flex-wrap: wrap;
         align-items: stretch;
     }
+    .scroll-list {
+        max-height: 20rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 0.25rem;
+    }
     h2 {
         font-weight: 800;
     }
     @media (max-width: 700px) {
+        .prescription-page-container { padding: 10px; }
+        .clinic-header-card { flex-direction: column; text-align: center; padding: 15px; gap: 10px; }
+        .clinic-header-card .logo { width: 60px; height: 60px; margin-right: 0; margin-bottom: 5px; }
+        .clinic-name { font-size: 1.2rem; }
+        .clinic-details { font-size: 0.85rem; }
         .lists-container {
             flex-direction: column;
             gap: 1rem;
@@ -75,6 +126,9 @@
         .list-item {
             font-size: 1rem !important;
             padding: 0.75rem !important;
+        }
+        .scroll-list {
+            max-height: 14rem;
         }
     }
     .container {
@@ -158,8 +212,19 @@
     }
 </style>
 
+<div class="prescription-page-container">
+    <div class="clinic-header-card">
+        <img src="/images/digital member portal.png" alt="Clinic Logo" class="logo"/>
+        <div class="header-info">
+            <h1 class="clinic-name">The Permanente Health Plan Corp.</h1>
+            <p class="clinic-details">Multi-Specialty Health Plan</p>
+            <p class="clinic-details">Lot 19, Blk. 7, Mayumi St. Sta. Rita, Olongapo City</p>
+            <p class="clinic-details">customerservice@permanentehealthplan.org</p>
+            <p class="clinic-details">0968 856 1807</p>
+        </div>
+    </div>
 <div class="lists-container">
-    <div class="container medicines-list" style="background: #f5f8fa; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
+    <div class="container medicines-list" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
         <h2 style="color: #0a3761; font-size: 2rem;">Covered Medicines</h2>
         <div class="search-wrap">
             <input
@@ -175,7 +240,7 @@
                 </svg>
             </span>
         </div>
-        <div style="overflow-x: auto;">
+        <div class="scroll-list">
             {#each $filteredMedicines as med}
                 <div
                     class="list-item"
@@ -187,7 +252,7 @@
             {/each}
         </div>
     </div>
-    <div class="container services-list" style="background: #f5f8fa; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
+    <div class="container services-list" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
         <h2 style="color: #0a3761; font-size: 2rem;">Available Services</h2>
         <div class="search-wrap">
             <input
@@ -203,7 +268,7 @@
                 </svg>
             </span>
         </div>
-        <div style="overflow-x: auto;">
+        <div class="scroll-list">
             {#each $filteredServices as svc}
                 <div
                     class="list-item static"
@@ -213,4 +278,5 @@
             {/each}
         </div>
     </div>
+</div>
 </div>
