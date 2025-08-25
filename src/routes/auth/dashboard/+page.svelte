@@ -12,12 +12,12 @@
         // ...add more as needed...
     ];
     let availableServices = [
-        { name: "Complete Blood Count (CBC)", info: "Blood test for overall health." },
-        { name: "Urinalysis", info: "Urine test for various conditions." },
-        { name: "Chest X-Ray", info: "Imaging for chest area." },
-        { name: "Physical Examination", info: "General health check." },
-        { name: "Drug Screening", info: "Test for drugs in system." },
-        { name: "Fecalysis", info: "Stool test for digestive health." }
+        { name: "Complete Blood Count (CBC)", info: " " },
+        { name: "Urinalysis", info: " " },
+        { name: "Chest X-Ray", info: " ." },
+        { name: "Physical Examination", info: " " },
+        { name: "Drug Screening", info: " " },
+        { name: "Fecalysis", info: " " }
         // ...add more as needed...
     ];
 
@@ -44,9 +44,6 @@
     function showMedicineInfo(med: { name: string; info: string }) {
         alert(`${med.name}\n\n${med.info}`);
     }
-    function showServiceInfo(svc: { name: string; info: string }) {
-        alert(`${svc.name}\n\n${svc.info}`);
-    }
 </script>
 
 <style>
@@ -54,6 +51,10 @@
         display: flex;
         gap: 2rem;
         flex-wrap: wrap;
+        align-items: stretch;
+    }
+    h2 {
+        font-weight: 800;
     }
     @media (max-width: 700px) {
         .lists-container {
@@ -78,23 +79,39 @@
     }
     .container {
         min-width: 0;
-        width: 100%;
+        flex: 1 1 0;
         box-sizing: border-box;
     }
-    input {
+    .search-wrap {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    .search-field {
         width: 100%;
-        padding-left: 2.5rem;
-        height: 2.5rem;
+        padding-left: 2.75rem;
+        height: 2.75rem;
+        line-height: 2.75rem;
         font-size: 1rem;
         border: 1px solid #cfd8dc;
         border-radius: 0.75rem;
         outline: none;
         box-sizing: border-box;
-        margin-bottom: 1rem;
         transition: border 0.2s;
     }
-    input:focus {
+    .search-field:focus {
         border: 1.5px solid #0a3761;
+    }
+    .search-icon {
+        position: absolute;
+        left: 0.9rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 1.125rem;
+        width: 1.125rem;
     }
     .list-item {
         background: #0a3761;
@@ -113,19 +130,46 @@
     .list-item:active {
         background: #08406e;
     }
+    .list-item-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 700;
+    }
+    .list-item.static {
+        cursor: default;
+    }
+    .list-item.static:active {
+        background: #0a3761;
+    }
+    .info-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 9999px;
+        background: #0b457e;
+        border: 2px solid #073055;
+        font-size: 0.95rem;
+        flex: 0 0 auto;
+    }
 </style>
 
 <div class="lists-container">
     <div class="container medicines-list" style="background: #f5f8fa; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
         <h2 style="color: #0a3761; font-size: 2rem;">Covered Medicines</h2>
-        <div style="position: relative; margin-bottom: 1rem;">
+        <div class="search-wrap">
             <input
                 type="text"
                 placeholder="Search medicines"
+                class="search-field"
                 bind:value={$medicineSearch}
             />
-            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none;">
-                <svg width="20" height="20" fill="none" stroke="#0a3761" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <span class="search-icon">
+                <svg width="18" height="18" fill="none" stroke="#0a3761" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
@@ -137,22 +181,23 @@
                     class="list-item"
                     on:click={() => showMedicineInfo(med)}
                 >
-                    <span>{med.name}</span>
-                    <span style="font-size: 1.2em;">ℹ️</span>
+                    <span class="list-item-name">{med.name}</span>
+                    <span class="info-icon">i</span>
                 </div>
             {/each}
         </div>
     </div>
     <div class="container services-list" style="background: #f5f8fa; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
         <h2 style="color: #0a3761; font-size: 2rem;">Available Services</h2>
-        <div style="position: relative; margin-bottom: 1rem;">
+        <div class="search-wrap">
             <input
                 type="text"
                 placeholder="Search services"
+                class="search-field"
                 bind:value={$serviceSearch}
             />
-            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none;">
-                <svg width="20" height="20" fill="none" stroke="#0a3761" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <span class="search-icon">
+                <svg width="18" height="18" fill="none" stroke="#0a3761" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
@@ -161,11 +206,9 @@
         <div style="overflow-x: auto;">
             {#each $filteredServices as svc}
                 <div
-                    class="list-item"
-                    on:click={() => showServiceInfo(svc)}
+                    class="list-item static"
                 >
-                    <span>{svc.name}</span>
-                    <span style="font-size: 1.2em;">ℹ️</span>
+                    <span class="list-item-name">{svc.name}</span>
                 </div>
             {/each}
         </div>
