@@ -193,6 +193,128 @@
         animation: iconPop 1.2s 1.2s both;
     }
 
+    .info-panels-container {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+        align-items: flex-start;
+        margin: 2rem 0;
+        flex-wrap: wrap;
+    }
+    .info-panel {
+        background: #fff;
+        border: 3px solid #0b2d56;
+        border-radius: 1.2rem;
+        padding: 1.5rem;
+        width: 350px;
+        min-width: 280px;
+        max-height: 400px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .info-panel h2 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #0b2d56;
+        text-align: left;
+    }
+    .info-search {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        font-size: 1rem;
+        outline: none;
+    }
+    .info-list {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 260px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        scrollbar-width: thin;
+        scrollbar-color: #0b2d56 #f4c542;
+    }
+    .info-list::-webkit-scrollbar {
+        width: 8px;
+    }
+    .info-list::-webkit-scrollbar-thumb {
+        background: #0b2d56;
+        border-radius: 8px;
+    }
+    .info-list::-webkit-scrollbar-track {
+        background: #f4c542;
+        border-radius: 8px;
+    }
+    .info-item {
+        background: #0b2d56;
+        color: #fff;
+        padding: 0.7rem 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s, transform 0.2s;
+    }
+    .info-item:hover {
+        background: #f4c542;
+        color: #0b2d56;
+        transform: scale(1.03);
+    }
+    .info-btn {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-left: 1rem;
+    }
+    .info-modal {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    .info-modal-content {
+        background: #fff;
+        padding: 2rem;
+        border-radius: 1rem;
+        min-width: 300px;
+        max-width: 90vw;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+        text-align: center;
+    }
+    .info-modal-content h3 {
+        font-size: 1.3rem;
+        color: #0b2d56;
+        margin-bottom: 1rem;
+    }
+    .close-modal-btn {
+        margin-top: 1.5rem;
+        padding: 0.5rem 1.2rem;
+        background: #0b2d56;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .close-modal-btn:hover {
+        background: #f4c542;
+        color: #0b2d56;
+    }
+
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -239,12 +361,51 @@
         .about-content {
             max-width: 95vw;
         }
+        .info-panels-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .info-panel {
+            width: 100%;
+            margin-bottom: 1.5rem;
+        }
     }
 </style>
 
 <script>
     import { onMount } from 'svelte';
     let aboutVisible = false;
+
+    // Medicines and services data
+    const medicines = [
+        { name: "Acetaminophen (Paracetamol)", info: "Used to treat pain and fever." },
+        { name: "Acetylcysteine (Fluimucil)", info: "Mucolytic agent for respiratory conditions." },
+        { name: "Acyclovir", info: "Antiviral for herpes infections." },
+        { name: "Allopurinol", info: "Used to treat gout." },
+        { name: "Budesonide", info: "Steroid for asthma and allergies." },
+        { name: "Carbamazepine", info: "Anticonvulsant for epilepsy." },
+        // ...add more medicines as needed
+    ];
+    const services = [
+        { name: "Complete Blood Count (CBC)", info: "Blood test to evaluate overall health." },
+        { name: "Urinalysis", info: "Test for urine composition." },
+        { name: "Chest X-Ray", info: "Imaging for lungs and chest." },
+        { name: "Physical Examination", info: "General health check." },
+        { name: "Drug Screening", info: "Test for drugs in the system." },
+        { name: "Fecalysis", info: "Stool test for digestive health." },
+        // ...add more services as needed
+    ];
+
+    let medicineSearch = '';
+    let serviceSearch = '';
+    let selectedItem = null;
+
+    function showInfo(item) {
+        selectedItem = item;
+    }
+    function closeInfo() {
+        selectedItem = null;
+    }
 
     onMount(() => {
         const aboutSection = document.querySelector('.about-container');
@@ -281,6 +442,53 @@
         <img src="/images/digital member portal.png" alt="Landing Logo" height="400" />
     </div>
 </main>
+
+<div class="info-panels-container">
+    <div class="info-panel">
+        <h2>Covered Medicines</h2>
+        <input
+            type="text"
+            placeholder="Search medicines"
+            bind:value={medicineSearch}
+            class="info-search"
+        />
+        <div class="info-list">
+            {#each medicines.filter(m => m.name.toLowerCase().includes(medicineSearch.toLowerCase())) as med}
+                <div class="info-item" on:click={() => showInfo(med)}>
+                    <span>{med.name}</span>
+                    <button class="info-btn" title="More info">i</button>
+                </div>
+            {/each}
+        </div>
+    </div>
+    <div class="info-panel">
+        <h2>Available Services</h2>
+        <input
+            type="text"
+            placeholder="Search services"
+            bind:value={serviceSearch}
+            class="info-search"
+        />
+        <div class="info-list">
+            {#each services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase())) as svc}
+                <div class="info-item" on:click={() => showInfo(svc)}>
+                    <span>{svc.name}</span>
+                    <button class="info-btn" title="More info">i</button>
+                </div>
+            {/each}
+        </div>
+    </div>
+</div>
+
+{#if selectedItem}
+    <div class="info-modal">
+        <div class="info-modal-content">
+            <h3>{selectedItem.name}</h3>
+            <p>{selectedItem.info}</p>
+            <button class="close-modal-btn" on:click={closeInfo}>Close</button>
+        </div>
+    </div>
+{/if}
 
 <div class="about-container">
     <img src="/images/php building.jpg" alt="PHP Building" class="about-image" />

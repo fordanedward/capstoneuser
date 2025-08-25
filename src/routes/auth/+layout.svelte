@@ -107,7 +107,7 @@
 					.then(() => {
 						console.log('User signed out');
 						username.set(''); // Clear username store
-						goto('/loginPatient'); // Navigate to login
+						goto('/'); // <-- changed from '/loginPatient' to '/welcome'
 					})
 					.catch((error) => {
 						console.error('Error signing out: ', error);

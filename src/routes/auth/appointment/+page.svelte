@@ -29,10 +29,10 @@
   const stripePromise = loadStripe(env.stripe.publicKey);
 
   const ALL_POSSIBLE_MORNING_SLOTS = [
-      "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+      "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:30 AM", "12:00 PM", "12:30 PM",
   ];
   const ALL_POSSIBLE_AFTERNOON_SLOTS = [
-      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
+      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", 
   ];
   const ALL_POSSIBLE_SLOTS = [...ALL_POSSIBLE_MORNING_SLOTS, ...ALL_POSSIBLE_AFTERNOON_SLOTS];
 
@@ -129,57 +129,14 @@
 
   // --- Static Data ---
   const services = [
-    "Consultation", "Oral Prophylaxis / Linis", "Filling / Pasta", "COSMETIC", "ORAL SURGERY",
-    "ENDODONTIC", "PROSTHODONTICS", "CROWNS", "ORTHODONTICS", "TMJ", "IMPLANTS"
+    "Imaging", "Laboratory", "Doctor's Consultation",
   ] as const;
 
-  // Add service prices
-  const servicePrices: Record<ServiceType, number> = {
-    "Consultation": 300,
-    "Oral Prophylaxis / Linis": 1000,
-    "Filling / Pasta": 1500,
-    "COSMETIC": 5000,
-    "ORAL SURGERY": 3000,
-    "ENDODONTIC": 4000,
-    "PROSTHODONTICS": 8000,
-    "CROWNS": 12000,
-    "ORTHODONTICS": 50000,
-    "TMJ": 2000,
-    "IMPLANTS": 30000
-  };
-
   const subServices = {
-    "Oral Prophylaxis / Linis": ["Simple & Deep Scaling", "Fluoride"],
-    "Filling / Pasta": ["Composite", "Temporary", "Pit & Fissure Sealants"],
-    "COSMETIC": ["Whitening", "Laminate / Veneer"],
-    "ORAL SURGERY": ["Simple", "Complicated", "Odontectomy"],
-    "ENDODONTIC": ["Pulpotomy"],
-    "PROSTHODONTICS": ["Complete Denture", "Removable Denture"],
-    "CROWNS": ["Plastic", "Porcelain, Zirconia, Emax", "Fixed Bridge"],
-    "ORTHODONTICS": ["Braces", "Retainers"]
+    "Imaging": ["X-ray", "ECG", "Ultrasound"],
+    "Laboratory": ["FBS", "CBC", "SGPT", "SGOT", "HBSAG", "Cholesterol", "Lipid Profile"],
+    "Doctor's Consultation": ["Simple & Deep Scaling", "Fluoride"]
   } as const;
-
-  // Add sub-service prices
-  const subServicePrices: Record<SubServiceType, number> = {
-    "Simple & Deep Scaling": 500,
-    "Fluoride": 300,
-    "Composite": 800,
-    "Temporary": 500,
-    "Pit & Fissure Sealants": 400,
-    "Whitening": 3000,
-    "Laminate / Veneer": 8000,
-    "Simple": 1500,
-    "Complicated": 2500,
-    "Odontectomy": 3000,
-    "Pulpotomy": 2000,
-    "Complete Denture": 5000,
-    "Removable Denture": 4000,
-    "Plastic": 3000,
-    "Porcelain, Zirconia, Emax": 8000,
-    "Fixed Bridge": 10000,
-    "Braces": 45000,
-    "Retainers": 2000
-  };
 
   // --- Helper Functions ---
   function sortTimeSlots(slots: string[]): string[] {
@@ -397,13 +354,7 @@
       }
 
       try {
-          // Calculate total amount
-          let totalAmount = servicePrices[selectedService];
-          if (selectedSubServices && selectedSubServices.length > 0) {
-              selectedSubServices.forEach(subService => {
-                  totalAmount += subServicePrices[subService as SubServiceType] || 0;
-              });
-          }
+          let totalAmount = 500; // Use a fixed default value
 
           await runTransaction(db, async (transaction) => {
               const slotQuery = query(
@@ -729,14 +680,7 @@
       const appointment = upcomingAppointments.find(a => a.id === selectedAppointmentId);
       if (!appointment) throw new Error('Appointment not found');
 
-      // Calculate total amount with type assertions
-      let totalAmount = servicePrices[appointment.service as ServiceType] || 500;
-      
-      if (appointment.subServices && appointment.subServices.length > 0) {
-        appointment.subServices.forEach(subService => {
-          totalAmount += subServicePrices[subService as SubServiceType] || 0;
-        });
-      }
+      let totalAmount = 500; // Use a fixed default value
 
       // Create a payment session
       const response = await fetch('/api/create-payment-session', {
@@ -760,13 +704,6 @@
       const { id: sessionId } = await response.json();
       if (!sessionId) throw new Error('No session ID received');
 
-      // Update appointment with payment amount
-      if (!selectedAppointmentId) throw new Error('No appointment selected');
-      const appointmentRef = doc(db, FIRESTORE_APPOINTMENTS_COLLECTION, selectedAppointmentId);
-      await updateDoc(appointmentRef, {
-        paymentAmount: totalAmount
-      });
-
       // Redirect to Stripe Checkout
       const result = await stripe.redirectToCheckout({
         sessionId: sessionId
@@ -787,16 +724,7 @@
 
   function openPaymentModal(appointmentId: string) {
     selectedAppointmentId = appointmentId;
-    const appointment = upcomingAppointments.find(a => a.id === appointmentId);
-    if (appointment) {
-      let totalAmount = servicePrices[appointment.service as ServiceType] || 500;
-      if (appointment.subServices && appointment.subServices.length > 0) {
-        appointment.subServices.forEach(subService => {
-          totalAmount += subServicePrices[subService as SubServiceType] || 0;
-        });
-      }
-      paymentAmount = totalAmount;
-    }
+    paymentAmount = 500; // Use a fixed default value
     paymentModal = true;
     paymentStatus = null;
   }
@@ -903,7 +831,7 @@
 
           {#if selectedService && selectedService in subServices}
           <div class="pt-2">
-              <label for="subservices-group" class="block text-sm font-medium text-gray-700 mb-1">Sub-services (Optional)</label>
+              <label for="subservices-group" class="block text-sm font-medium text-gray-700 mb-1"> </label>
                <div id="subservices-group" class="space-y-1">
                    {#each subServices[selectedService as ServiceWithSubServices] as subService}
                    <label for={`sub-${subService}`} class="flex items-center">
