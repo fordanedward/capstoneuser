@@ -195,8 +195,13 @@
         justify-content: space-between;
         align-items: center;
         font-size: 1.1rem;
-        transition: background 0.2s;
+        transition: background 0.2s, transform 0.15s ease, box-shadow 0.15s ease;
         touch-action: manipulation;
+    }
+    .list-item:hover {
+        background: #0b457e;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(10, 55, 97, 0.2);
     }
     .list-item:active {
         background: #08406e;
@@ -226,6 +231,11 @@
         border: 2px solid #073055;
         font-size: 0.95rem;
         flex: 0 0 auto;
+        transition: transform 0.15s ease, background-color 0.2s ease;
+    }
+    .list-item:hover .info-icon {
+        transform: scale(1.05);
+        background: #0c4f90;
     }
 
     /* Modal Styles */
@@ -392,7 +402,11 @@
             {#each $filteredMedicines as med}
                 <div
                     class="list-item"
+                    role="button"
+                    tabindex="0"
+                    aria-label={`Show information for ${med.name}`}
                     on:click={() => showMedicineInfo(med)}
+                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showMedicineInfo(med); } }}
                 >
                     <span class="list-item-name">{med.name}</span>
                     <span class="info-icon">i</span>
@@ -430,7 +444,7 @@
 
 <!-- Medicine Information Modal -->
 {#if showModal}
-    <div class="modal-backdrop" on:click={handleBackdropClick}>
+    <div class="modal-backdrop" role="button" tabindex="0" aria-label="Close modal" on:click={handleBackdropClick} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeModal(); } }}>
         <div class="modal-container" class:show={showModal}>
             <div class="modal-header">
                 <h3 class="modal-title">Medicine Information</h3>

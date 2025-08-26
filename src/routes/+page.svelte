@@ -193,6 +193,40 @@
         animation: iconPop 1.2s 1.2s both;
     }
 
+    /* Social links below hero subtitle */
+    .social-links {
+        margin-left: 2rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeUp 1.2s ease-out forwards;
+        animation-delay: 1.6s;
+    }
+    .social-links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        padding: 0 14px;
+        gap: 8px;
+        border-radius: 9999px;
+        background-color: #0b2d56;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        box-shadow: 0 6px 14px rgba(11,45,86,0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+    .social-links a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 18px rgba(11,45,86,0.28);
+        background-color: #123a6e;
+    }
+
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -281,6 +315,9 @@
             font-size: 1rem;
             max-width: 100%;
         }
+        .social-links {
+            margin-left: 0;
+        }
         .right-section {
             width: 100%;
             justify-content: center;
@@ -344,6 +381,14 @@
     <div class="left-section">
         <h1>Welcome to PHP Digital Member Portal</h1>
         <h2>We provide health solutions so we can achieve healthy, happy, and productive lives.</h2>
+        <div class="social-links" aria-label="Social media links">
+            <a href="https://www.facebook.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Facebook Page">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M22.675 0h-21.35C.597 0 0 .597 0 1.326v21.348C0 23.403.597 24 1.326 24h11.49v-9.294H9.692V11.08h3.124V8.41c0-3.1 1.893-4.787 4.659-4.787 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.312h3.59l-.467 3.626h-3.123V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .597 23.403 0 22.675 0z"/>
+                </svg>
+                <span>Permanente Health Plan</span>
+            </a>
+        </div>
     </div>
     <div class="right-section">
         <img src="/images/digital member portal.png" alt="Landing Logo" height="400" />
