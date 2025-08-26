@@ -41,8 +41,25 @@
             )
     );
 
+    // Modal state
+    let showModal = false;
+    let selectedMedicine: { name: string; info: string } | null = null;
+
     function showMedicineInfo(med: { name: string; info: string }) {
-        alert(`${med.name}\n\n${med.info}`);
+        selectedMedicine = med;
+        showModal = true;
+    }
+
+    function closeModal() {
+        showModal = false;
+        selectedMedicine = null;
+    }
+
+    // Close modal when clicking outside
+    function handleBackdropClick(event: MouseEvent) {
+        if (event.target === event.currentTarget) {
+            closeModal();
+        }
     }
 </script>
 
@@ -210,6 +227,137 @@
         font-size: 0.95rem;
         flex: 0 0 auto;
     }
+
+    /* Modal Styles */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .modal-container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow: hidden;
+        animation: slideIn 0.3s ease-out;
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #0a3761, #0b457e);
+        color: white;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .close-button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .close-button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-content {
+        padding: 2rem;
+    }
+
+    .medicine-name {
+        color: #0a3761;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 1rem 0;
+        line-height: 1.3;
+    }
+
+    .medicine-info {
+        color: #4a5568;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin: 0;
+        background: #f7fafc;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #0a3761;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* Mobile responsive styles */
+    @media (max-width: 700px) {
+        .modal-container {
+            width: 95%;
+            margin: 1rem;
+        }
+
+        .modal-header {
+            padding: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+        }
+
+        .medicine-name {
+            font-size: 1.3rem;
+        }
+
+        .medicine-info {
+            font-size: 1rem;
+        }
+    }
 </style>
 
 <div class="prescription-page-container">
@@ -279,4 +427,27 @@
         </div>
     </div>
 </div>
+
+<!-- Medicine Information Modal -->
+{#if showModal}
+    <div class="modal-backdrop" on:click={handleBackdropClick}>
+        <div class="modal-container" class:show={showModal}>
+            <div class="modal-header">
+                <h3 class="modal-title">Medicine Information</h3>
+                <button class="close-button" on:click={closeModal} aria-label="Close">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-content">
+                {#if selectedMedicine}
+                    <h4 class="medicine-name">{selectedMedicine.name}</h4>
+                    <p class="medicine-info">{selectedMedicine.info}</p>
+                {/if}
+            </div>
+        </div>
+    </div>
+{/if}
 </div>

@@ -25,6 +25,7 @@
  
 	// --- Stores (from OriginalComponent) ---
 	export const username = writable<string>('');
+	export const patientId = writable<string>('');
 	let loading = writable(false);
  
 	// --- Layout Logic (from TemplateComponent, adapted) ---
@@ -108,6 +109,7 @@
 					.then(() => {
 						console.log('User signed out');
 						username.set(''); // Clear username store
+						patientId.set(''); // Clear patient ID store
 						goto('/'); // <-- changed from '/loginPatient' to '/welcome'
 					})
 					.catch((error) => {
@@ -131,7 +133,7 @@
         // Firebase Auth Listener (from OriginalComponent)
         let unsubscribeAuthState: (() => void) | null = null;
         if (auth) {
-             unsubscribeAuthState = onAuthStateChanged(auth, (user) => {
+             unsubscribeAuthState = onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     const maxLength = 15; // Keep truncation logic
                     let displayName = user.displayName ?? user.email ?? 'User';
@@ -139,8 +141,32 @@
                         displayName = displayName.substring(0, maxLength) + '...';
                     }
                     username.set(displayName);
+                    
+                    // Get the actual patient ID from the users collection (matching profile page logic)
+                    try {
+                        if (app) {
+                            const { getFirestore, doc, getDoc } = await import("firebase/firestore");
+                            const db = getFirestore(app);
+                            const userRef = doc(db, "users", user.uid);
+                            const userDoc = await getDoc(userRef);
+                            
+                            if (userDoc.exists()) {
+                                const userData = userDoc.data();
+                                const customUserId = userData.customUserId || "N/A";
+                                patientId.set(`ID: ${customUserId}`);
+                            } else {
+                                patientId.set("ID: N/A");
+                            }
+                        } else {
+                            patientId.set("ID: N/A");
+                        }
+                    } catch (error) {
+                        console.error("Error fetching patient ID:", error);
+                        patientId.set("ID: N/A");
+                    }
                 } else {
                     username.set(''); // Clear username when logged out
+                    patientId.set(''); // Clear patient ID when logged out
                     // Optional: Redirect if user becomes unauthenticated while on protected page
                     // if (!['/loginPatient', '/registerPatient'].includes($page.url.pathname)) {
                     //     goto('/loginPatient');
@@ -211,8 +237,8 @@
 			<!-- Display username when expanded (desktop) or sidebar is open (mobile) -->
 			{#if (!isMobile && !isCollapsed) || (isMobile && isSidebarOpen)}
 				<div class="name-container"> <!-- Use name-container div -->
-					<span>{$username || '...'}</span> <!-- Display username from store -->
-					 <!-- Remove second name span unless needed -->
+					<span class="username">{$username || '...'}</span> <!-- Display username from store -->
+					<span class="patient-id">{$patientId || ''}</span> <!-- Display patient ID below username -->
 				</div>
 			{/if}
 		</div>
@@ -405,7 +431,7 @@
         width: 100%; /* Allow text centering */
 	}
  
-	.name-container span {
+	.name-container .username {
         margin-top: 2px;
         font-size: 0.9rem; /* Match template */
         white-space: normal; /* Allow wrapping */
@@ -413,6 +439,17 @@
         overflow-wrap: break-word;
         max-width: calc(var(--sidebar-width-desktop) - 40px); /* Limit width */
         line-height: 1.3;
+	}
+
+	.name-container .patient-id {
+		margin-top: 2px;
+		font-size: 0.7rem; /* Smaller font for patient ID */
+		color: #b0b0b0; /* Lighter color for patient ID */
+		white-space: normal;
+		text-align: center;
+		overflow-wrap: break-word;
+		max-width: calc(var(--sidebar-width-desktop) - 40px);
+		line-height: 1.2;
 	}
  
 	/* --- Sidebar Menu --- */
@@ -521,9 +558,13 @@
 			height: 70px;
 		}
  
-         .name-container span {
+         .name-container .username {
              max-width: calc(var(--sidebar-width-mobile) - 40px);
          }
+
+		 .name-container .patient-id {
+			 max-width: calc(var(--sidebar-width-mobile) - 40px);
+		 }
  
 		.sidebar-menu a .icon {
             margin-right: 15px; /* Ensure margin exists */
