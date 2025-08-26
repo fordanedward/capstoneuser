@@ -2,15 +2,11 @@
     import { writable, derived } from 'svelte/store';
     import type { PageData } from './$types';
 
-    let coveredMedicines = [
-        { name: "Acetaminophen (Paracetamol)", info: "Pain reliever and fever reducer." },
-        { name: "Acetylcysteine (Fluimucil)", info: "Mucolytic agent." },
-        { name: "Acyclovir", info: "Antiviral medication." },
-        { name: "Allopurinol", info: "Reduces uric acid." },
-        { name: "Budenoside", info: "Steroid for inflammation." },
-        { name: "Carbamazepine", info: "Anticonvulsant." }
-        // ...add more as needed...
-    ];
+    import { coveredMedicines as coveredMedicinesData, fetchCoveredMedicines } from '$lib/data/coveredMedicines';
+    let coveredMedicines = coveredMedicinesData;
+
+    // Load from CSV at runtime (fallback to embedded list on failure)
+    fetchCoveredMedicines().then((list) => { coveredMedicines = list; });
     let availableServices = [
         { name: "Complete Blood Count (CBC)" },
         { name: "Urinalysis" },
@@ -44,8 +40,8 @@
 
             const queryTokens = normalizedQuery.split(' ').filter(Boolean);
 
-            return coveredMedicines.filter((m: { name: string; info: string }) => {
-                const haystack = normalize(`${m.name} ${m.info}`);
+            return coveredMedicines.filter((m: { name: string; info: string; dosage?: string }) => {
+                const haystack = normalize(`${m.name} ${m.info} ${m.dosage ?? ''}`);
                 // Match full phrase OR all tokens
                 return haystack.includes(normalizedQuery) || queryTokens.every((tok) => haystack.includes(tok));
             });
@@ -61,9 +57,9 @@
 
     // Modal state
     let showModal = false;
-    let selectedMedicine: { name: string; info: string } | null = null;
+    let selectedMedicine: { name: string; info: string; dosage?: string } | null = null;
 
-    function showMedicineInfo(med: { name: string; info: string }) {
+    function showMedicineInfo(med: { name: string; info: string; dosage?: string }) {
         selectedMedicine = med;
         showModal = true;
     }
@@ -477,6 +473,11 @@
                 {#if selectedMedicine}
                     <h4 class="medicine-name">{selectedMedicine.name}</h4>
                     <p class="medicine-info">{selectedMedicine.info}</p>
+                    {#if selectedMedicine.dosage}
+                        <p class="medicine-info" style="margin-top: 0.75rem;">
+                            <strong>Dosage:</strong> {selectedMedicine.dosage}
+                        </p>
+                    {/if}
                 {/if}
             </div>
         </div>
