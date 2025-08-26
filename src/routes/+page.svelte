@@ -386,7 +386,19 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M22.675 0h-21.35C.597 0 0 .597 0 1.326v21.348C0 23.403.597 24 1.326 24h11.49v-9.294H9.692V11.08h3.124V8.41c0-3.1 1.893-4.787 4.659-4.787 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.312h3.59l-.467 3.626h-3.123V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .597 23.403 0 22.675 0z"/>
                 </svg>
-                <span>Permanente Health Plan</span>
+                <span>Facebook</span>
+            </a>
+            <a href="https://www.instagram.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram Profile">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M7 2C4.239 2 2 4.239 2 7v10c0 2.761 2.239 5 5 5h10c2.761 0 5-2.239 5-5V7c0-2.761-2.239-5-5-5H7zm0 2h10c1.654 0 3 1.346 3 3v10c0 1.654-1.346 3-3 3H7c-1.654 0-3-1.346-3-3V7c0-1.654 1.346-3 3-3zm5 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm6.5-2a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/>
+                </svg>
+                <span>Instagram</span>
+            </a>
+            <a href="https://twitter.com/permanenteplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Twitter Profile">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.292 4.292 0 001.88-2.37 8.59 8.59 0 01-2.72 1.04 4.28 4.28 0 00-7.29 3.9A12.14 12.14 0 013 4.79a4.28 4.28 0 001.32 5.71 4.26 4.26 0 01-1.94-.54v.05a4.28 4.28 0 003.43 4.19c-.47.13-.97.2-1.48.2-.36 0-.71-.03-1.05-.1a4.29 4.29 0 004 2.98A8.6 8.6 0 012 19.54a12.12 12.12 0 006.56 1.92c7.88 0 12.2-6.53 12.2-12.2 0-.19-.01-.38-.02-.57A8.7 8.7 0 0024 5.5a8.52 8.52 0 01-2.54.7z"/>
+                </svg>
+                <span>Twitter</span>
             </a>
         </div>
     </div>
