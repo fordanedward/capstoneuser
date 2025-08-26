@@ -245,7 +245,7 @@
     </div>
 {/if}
 
-<div class="min-h-screen bg-gradient-to-r from-[#094361] to-[#f4c542] flex items-center justify-center px-4 sm:px-8 md:px-16 lg:px-24">
+<div class="min-h-screen bg-[#0b2d56] flex items-center justify-center px-4 sm:px-8 md:px-16 lg:px-24">
     <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"> 
         <div class="flex items-center mb-4">
             <img src="/images/lock.png" alt="Lock Icon" class="w-12 h-12 mr-4" />
