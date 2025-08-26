@@ -25,13 +25,31 @@
     const medicineSearch = writable('');
     const serviceSearch = writable('');
 
+    function normalize(text: string): string {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     // Use derived stores for filtered lists
     const filteredMedicines = derived(
         [medicineSearch],
-        ([$medicineSearch]) =>
-            coveredMedicines.filter((m: { name: string; info: string }) =>
-                m.name.toLowerCase().includes($medicineSearch.toLowerCase())
-            )
+        ([$medicineSearch]) => {
+            const normalizedQuery = normalize($medicineSearch);
+            if (!normalizedQuery) return coveredMedicines;
+
+            const queryTokens = normalizedQuery.split(' ').filter(Boolean);
+
+            return coveredMedicines.filter((m: { name: string; info: string }) => {
+                const haystack = normalize(`${m.name} ${m.info}`);
+                // Match full phrase OR all tokens
+                return haystack.includes(normalizedQuery) || queryTokens.every((tok) => haystack.includes(tok));
+            });
+        }
     );
     const filteredServices = derived(
         [serviceSearch],
@@ -387,7 +405,7 @@
         <div class="search-wrap">
             <input
                 type="text"
-                placeholder="Search medicines"
+                placeholder="Search medicines or info (e.g., pain reliever)"
                 class="search-field"
                 bind:value={$medicineSearch}
             />
