@@ -79,7 +79,7 @@
 
     .left-section h2 {
         margin-left: 2rem;
-        margin-top: 0rem;
+        margin-top: 1rem;
         font-size: 1.5rem;
         color: #0b2d56;
         font-weight: 400;

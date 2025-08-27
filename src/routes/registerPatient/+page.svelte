@@ -28,6 +28,7 @@
         getDocs
     } from "firebase/firestore";
     import { goto } from '$app/navigation';
+    import { onMount } from 'svelte';
 
     const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
@@ -44,7 +45,8 @@
     let toastDuration: number = 3000;
     let toastTimeoutId: number | null = null;
 
-    let isGoogleSigningIn = false; 
+    let isGoogleSigningIn = false;
+    let isPageLoaded = false; 
 
     function showToast(message: string, type: ToastType = 'info', duration: number = 3000) {
         toastMessage = message;
@@ -252,6 +254,13 @@
         }
     }
 
+    onMount(() => {
+        // Trigger page load animation
+        setTimeout(() => {
+            isPageLoaded = true;
+        }, 100);
+    });
+
 </script>
 
 {#if toastVisible}
@@ -275,6 +284,104 @@
     </div>
 {/if}
 
+<style>
+/* Animation styles for register page */
+.register-container {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.register-container.loaded {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.register-logo {
+    opacity: 0;
+    transform: scale(0.8) rotate(-5deg);
+    transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
+}
+
+.register-logo.loaded {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+}
+
+.register-form {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+}
+
+.register-form.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.register-title {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+}
+
+.register-title.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.register-field {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.register-field.loaded {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.register-field:nth-child(1) { transition-delay: 0.4s; }
+.register-field:nth-child(2) { transition-delay: 0.5s; }
+.register-field:nth-child(3) { transition-delay: 0.6s; }
+.register-field:nth-child(4) { transition-delay: 0.7s; }
+.register-field:nth-child(5) { transition-delay: 0.8s; }
+.register-field:nth-child(6) { transition-delay: 0.9s; }
+
+.register-button {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1s;
+}
+
+.register-button.loaded {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.google-register-button {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1.1s;
+}
+
+.google-register-button.loaded {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.login-link {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) 1.2s;
+}
+
+.login-link.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>
+
 <div class="min-h-screen bg-[#0b2d56] flex items-center justify-center px-4 py-8">
     <div class="flex items-center w-full max-w-6xl">
         <!-- Logo on the left side -->
@@ -282,59 +389,61 @@
             <img 
                 src="/images/digital member portal.png" 
                 alt="Digital Member Portal Logo" 
-                class="max-w-full h-auto" 
+                class="register-logo {isPageLoaded ? 'loaded' : ''} max-w-full h-auto" 
                 style="width: 570px;"
                 />
         </div>
         
         <!-- Registration form on the right side -->
-        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div class="register-container {isPageLoaded ? 'loaded' : ''} bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
             <div class="flex justify-center mb-6">
-                <h2 class="text-3xl font-semibold text-gray-800 text-center">Register to become a Member</h2>
+                <h2 class="register-title {isPageLoaded ? 'loaded' : ''} text-3xl font-semibold text-gray-800 text-center">Register to become a Member</h2>
             </div>
 
-        <form on:submit|preventDefault={handleRegistration}>
-            <div class="mb-6">
-                <Label for="email" class="block mb-2">Email</Label>
-                <Input type="email" id="email" placeholder="Enter your email" class="border p-2 w-full" bind:value={email} required />
+        <div class="register-form {isPageLoaded ? 'loaded' : ''}">
+            <form on:submit|preventDefault={handleRegistration}>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="email" class="block mb-2">Email</Label>
+                    <Input type="email" id="email" placeholder="Enter your email" class="border p-2 w-full" bind:value={email} required />
+                </div>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="password" class="block mb-2">Password</Label>
+                    <Input type="password" id="password" placeholder="Enter your password" class="border p-2 w-full" bind:value={password} required />
+                </div>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="confirmPassword" class="block mb-2">Confirm Password</Label>
+                    <Input type="password" id="confirmPassword" placeholder="Confirm your password" class="border p-2 w-full" bind:value={confirmPassword} required />
+                </div>
+                <div class="register-button {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Button type="submit" class="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                        Register
+                    </Button>
+                </div>
+            </form>
+
+            <div class="my-6 flex items-center">
+                <hr class="flex-grow border-gray-300">
+                <span class="mx-4 text-gray-500 text-sm">OR</span>
+                <hr class="flex-grow border-gray-300">
             </div>
-            <div class="mb-6">
-                <Label for="password" class="block mb-2">Password</Label>
-                <Input type="password" id="password" placeholder="Enter your password" class="border p-2 w-full" bind:value={password} required />
-            </div>
-            <div class="mb-6">
-                <Label for="confirmPassword" class="block mb-2">Confirm Password</Label>
-                <Input type="password" id="confirmPassword" placeholder="Confirm your password" class="border p-2 w-full" bind:value={confirmPassword} required />
-            </div>
-            <div class="mb-6">
-                <Button type="submit" class="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                    Register
+
+            <div class="google-register-button {isPageLoaded ? 'loaded' : ''} mb-6">
+                <Button
+                    on:click={handleGoogleSignIn}
+                    disabled={isGoogleSigningIn}
+                    class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 flex items-center justify-center"
+                >
+                    <GoogleSolid class="w-5 h-5 mr-2" />
+                    {isGoogleSigningIn ? 'Connecting...' : 'Sign up with Google'}
                 </Button>
             </div>
-        </form>
 
-        <div class="my-6 flex items-center">
-            <hr class="flex-grow border-gray-300">
-            <span class="mx-4 text-gray-500 text-sm">OR</span>
-            <hr class="flex-grow border-gray-300">
-        </div>
-
-        <div class="mb-6">
-            <Button
-                on:click={handleGoogleSignIn}
-                disabled={isGoogleSigningIn}
-                class="w-full p-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 flex items-center justify-center"
-            >
-                <GoogleSolid class="w-5 h-5 mr-2" />
-                {isGoogleSigningIn ? 'Connecting...' : 'Sign up with Google'}
-            </Button>
-        </div>
-
-        <div class="text-center pt-2">
-            <span class="text-sm text-gray-600">Already have an account?</span>
-            <a href="/loginPatient" class="ml-1 text-sm font-medium text-blue-600 hover:text-blue-500">
-              Sign in
-            </a>
+            <div class="login-link {isPageLoaded ? 'loaded' : ''} text-center pt-2">
+                <span class="text-sm text-gray-600">Already have an account?</span>
+                <a href="/loginPatient" class="ml-1 text-sm font-medium text-blue-600 hover:text-blue-500">
+                  Sign in
+                </a>
+            </div>
         </div>
         </div>
     </div>
