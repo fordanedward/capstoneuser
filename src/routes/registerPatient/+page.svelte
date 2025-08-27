@@ -34,6 +34,9 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    let firstName: string = '';
+    let lastName: string = '';
+    let phone: string = '';
     let email: string = '';
     let password: string = '';
     let confirmPassword: string = '';
@@ -89,6 +92,18 @@
     }
 
     async function handleRegistration() {
+        // Basic validations
+        if (!firstName.trim() || !lastName.trim()) {
+            showToast("Please enter your first and last name.", "warning");
+            return;
+        }
+
+        const cleanedPhone = phone.replace(/\D/g, '');
+        if (cleanedPhone.length !== 11) {
+            showToast("Phone number must be exactly 11 digits.", "warning");
+            return;
+        }
+
         if (password !== confirmPassword) {
             showToast("Passwords do not match.", "warning");
             return;
@@ -121,11 +136,26 @@
                 customUserId: customPatientId,
                 email: user.email,
                 role: 'userPatient',
-                displayName: user.email?.split('@')[0] || 'Patient',
+                displayName: `${firstName} ${lastName}`.trim() || user.email?.split('@')[0] || 'Patient',
                 photoURL: user.photoURL || null,
                 providerId: user.providerData[0]?.providerId || 'password',
                 registrationDate: new Date().toISOString()
             });
+
+            // Create initial patient profile so profile page is pre-filled
+            const profileData = {
+                name: firstName.trim(),
+                lastName: lastName.trim(),
+                id: customPatientId,
+                age: '',
+                gender: '',
+                email: email.trim(),
+                phone: cleanedPhone,
+                address: '',
+                birthday: '',
+                profileImage: ''
+            };
+            await setDoc(doc(db, "patientProfiles", user.uid), profileData);
 
             showToast(`Patient registration successful! Your Patient ID: ${customPatientId}. Welcome, ${user.email}`, "success", 5000);
             setTimeout(() => {
@@ -382,26 +412,53 @@
 }
 </style>
 
-<div class="min-h-screen bg-[#0b2d56] flex items-center justify-center px-4 py-8">
+<div class="h-screen bg-[#0b2d56] flex items-center justify-center px-4 py-4 overflow-hidden">
     <div class="flex items-center w-full max-w-6xl">
         <!-- Logo on the left side -->
-        <div class="flex-1 flex justify-center">
+        <div class="flex-1 hidden lg:flex justify-center">
             <img 
                 src="/images/digital member portal.png" 
                 alt="Digital Member Portal Logo" 
                 class="register-logo {isPageLoaded ? 'loaded' : ''} max-w-full h-auto" 
-                style="width: 570px;"
+                style="width: clamp(360px, 32vw, 480px); max-height: 70vh;"
                 />
         </div>
         
         <!-- Registration form on the right side -->
-        <div class="register-container {isPageLoaded ? 'loaded' : ''} bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <div class="register-container {isPageLoaded ? 'loaded' : ''} bg-white p-6 rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-auto">
             <div class="flex justify-center mb-6">
                 <h2 class="register-title {isPageLoaded ? 'loaded' : ''} text-3xl font-semibold text-gray-800 text-center">Register to become a Member</h2>
             </div>
 
         <div class="register-form {isPageLoaded ? 'loaded' : ''}">
             <form on:submit|preventDefault={handleRegistration}>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="firstName" class="block mb-2">First Name</Label>
+                    <Input type="text" id="firstName" placeholder="Enter your first name" class="border p-2 w-full" bind:value={firstName} required />
+                </div>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="lastName" class="block mb-2">Last Name</Label>
+                    <Input type="text" id="lastName" placeholder="Enter your last name" class="border p-2 w-full" bind:value={lastName} required />
+                </div>
+                <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="phone" class="block mb-2">Phone Number</Label>
+                    <Input
+                        type="tel"
+                        id="phone"
+                        placeholder="e.g., 09123456789"
+                        class="border p-2 w-full"
+                        bind:value={phone}
+                        on:input={(e) => {
+                            const input = e.currentTarget as HTMLInputElement;
+                            phone = input.value.replace(/\D/g, '');
+                            if (phone.length > 11) {
+                                phone = phone.slice(0, 11);
+                            }
+                        }}
+                        maxlength="11"
+                        required
+                    />
+                </div>
                 <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
                     <Label for="email" class="block mb-2">Email</Label>
                     <Input type="email" id="email" placeholder="Enter your email" class="border p-2 w-full" bind:value={email} required />
@@ -414,7 +471,7 @@
                     <Label for="confirmPassword" class="block mb-2">Confirm Password</Label>
                     <Input type="password" id="confirmPassword" placeholder="Confirm your password" class="border p-2 w-full" bind:value={confirmPassword} required />
                 </div>
-                <div class="register-button {isPageLoaded ? 'loaded' : ''} mb-6">
+                <div class="register-button {isPageLoaded ? 'loaded' : ''} mb-4">
                     <Button type="submit" class="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300">
                         Register
                     </Button>
@@ -427,7 +484,7 @@
                 <hr class="flex-grow border-gray-300">
             </div>
 
-            <div class="google-register-button {isPageLoaded ? 'loaded' : ''} mb-6">
+            <div class="google-register-button {isPageLoaded ? 'loaded' : ''} mb-4">
                 <Button
                     on:click={handleGoogleSignIn}
                     disabled={isGoogleSigningIn}
