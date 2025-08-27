@@ -13,8 +13,12 @@
         { name: "Chest X-Ray" },
         { name: "Physical Examination" },
         { name: "Drug Screening" },
+        { name: "Serum hCG" },
+        { name: "Consultations" },
+        { name: "Ultrasound" },
+        { name: "Laboratory" },
+        { name: "Multispecialty Membership" },
         { name: "Fecalysis" }
-        // ...add more as needed...
     ];
 
     // Use writable stores for search

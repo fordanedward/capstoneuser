@@ -276,11 +276,22 @@
 {/if}
 
 <div class="min-h-screen bg-[#0b2d56] flex items-center justify-center px-4 py-8">
-    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-        <div class="flex items-center mb-6">
-            <img src="/images/lock.png" alt="Lock Icon" class="w-12 h-12 mr-4" />
-            <h2 class="text-3xl font-semibold text-gray-800">PATIENT REGISTRATION</h2>
+    <div class="flex items-center w-full max-w-6xl">
+        <!-- Logo on the left side -->
+        <div class="flex-1 flex justify-center">
+            <img 
+                src="/images/digital member portal.png" 
+                alt="Digital Member Portal Logo" 
+                class="max-w-full h-auto" 
+                style="width: 570px;"
+                />
         </div>
+        
+        <!-- Registration form on the right side -->
+        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <div class="flex justify-center mb-6">
+                <h2 class="text-3xl font-semibold text-gray-800 text-center">Register to become a Member</h2>
+            </div>
 
         <form on:submit|preventDefault={handleRegistration}>
             <div class="mb-6">
@@ -324,6 +335,7 @@
             <a href="/loginPatient" class="ml-1 text-sm font-medium text-blue-600 hover:text-blue-500">
               Sign in
             </a>
+        </div>
         </div>
     </div>
 </div>

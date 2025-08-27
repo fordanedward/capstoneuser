@@ -452,12 +452,14 @@
 		line-height: 1.2;
 	}
  
-	/* --- Sidebar Menu --- */
+	    /* --- Sidebar Menu --- */
     .sidebar-menu {
 		list-style: none;
 		padding: 15px 0; /* Vertical padding */
 		margin: 0;
 		flex-grow: 1; /* Take remaining space */
+		display: flex;
+		flex-direction: column; /* Ensure proper flex layout */
 	}
  
 	.sidebar-menu li {
@@ -524,6 +526,8 @@
 		justify-content: center;
 		flex-shrink: 0;
 		gap: 8px;
+		position: relative; /* Ensure it's positioned correctly */
+		z-index: 10; /* Make sure it's above other elements */
 	}
  
 	.logout-btn:hover {
@@ -547,6 +551,10 @@
 			z-index: 1000; /* Above backdrop and content */
 			transition: transform var(--sidebar-transition);
             box-shadow: 4px 0 6px rgba(0,0,0,0.2); /* Stronger shadow for mobile */
+			height: 100vh; /* Ensure full height */
+			overflow-y: auto; /* Allow scrolling if content overflows */
+			display: flex;
+			flex-direction: column; /* Ensure proper flex layout */
 		}
  
 		.sidebar.open {
@@ -576,13 +584,18 @@
             margin-left: 15px;
 		}
  
-		.logout-btn {
-			padding: 10px 15px; /* Ensure padding */
+				.logout-btn {
+			padding: 12px 20px; /* Increased padding for better touch target */
             margin: 20px; /* Consistent margin */
+			margin-top: auto; /* Ensure it stays at bottom */
+			position: relative; /* Ensure proper positioning */
+			z-index: 10; /* Above other elements */
+			min-height: 48px; /* Minimum touch target size */
 		}
- 
+
 		.logout-btn span {
 			display: inline; /* Text always visible */
+			font-size: 1rem; /* Slightly larger text for mobile */
 		}
  
 		.content.mobile {
@@ -633,10 +646,19 @@
 		}
  
 		/* Use .sidebar.open + .backdrop selector */
-        .sidebar.open + .backdrop {
+        		.sidebar.open + .backdrop {
 			opacity: 1;
 			visibility: visible;
 			transition: opacity 0.3s ease-in-out, visibility 0s linear 0s;
+		}
+
+		/* Ensure logout button is always visible and at bottom on mobile */
+		.sidebar .logout-btn {
+			margin-top: auto !important; /* Force to bottom */
+			position: sticky; /* Stick to bottom if needed */
+			bottom: 0;
+			background-color: rgba(30, 58, 102, 0.95); /* Slightly opaque background */
+			border: 2px solid rgba(255, 255, 255, 0.7); /* More visible border */
 		}
 	}
  
