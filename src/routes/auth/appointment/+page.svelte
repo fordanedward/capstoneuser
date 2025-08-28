@@ -32,7 +32,7 @@
       "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:30 AM", "12:00 PM", "12:30 PM",
   ];
   const ALL_POSSIBLE_AFTERNOON_SLOTS = [
-      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", 
+      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM",
   ];
   const ALL_POSSIBLE_SLOTS = [...ALL_POSSIBLE_MORNING_SLOTS, ...ALL_POSSIBLE_AFTERNOON_SLOTS];
 
@@ -95,7 +95,7 @@
   let patientId: string | null = null;
   let hasCompleteProfile: boolean = false;
 
-  let defaultWorkingDays: number[] = [1, 2, 3, 4, 5]; // Default fallback
+  let defaultWorkingDays: number[] = [1, 2, 3, 4, 5, 6, 7]; // Default fallback
   let fetchedBookingSlots: string[] = [];
   let isBookingDateWorking: boolean = false;
   let isLoadingBookingSlots: boolean = true;
@@ -203,8 +203,9 @@
             defaultWorkingDays = docSnap.data().defaultWorkingDays;
             console.log("Loaded default working days:", defaultWorkingDays);
         } else {
-            console.warn("Default working days not found or invalid in Firestore. Using code default [1,2,3,4,5].");
-            defaultWorkingDays = [1, 2, 3, 4, 5];
+            console.warn("Default working days not found or invalid in Firestore. Using code default [0,1,2,3,4,5,6] (Sun-Sat). ");
+            // Use 0-6 (Sun-Sat) so weekends are included by default
+            defaultWorkingDays = [0, 1, 2, 3, 4, 5, 6];
         }
     } catch (error) {
         console.error("Error loading default working days:", error);
@@ -243,7 +244,8 @@
         } else {
             const dateObj = new Date(date + 'T00:00:00Z');
             const dayOfWeek = dateObj.getUTCDay();
-            isWorking = defaultWorkingDays.includes(dayOfWeek);
+            // Treat Saturday(6) and Sunday(0) as working days as well
+            isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
             if (isWorking) {
                 slots = ALL_POSSIBLE_SLOTS;
             }

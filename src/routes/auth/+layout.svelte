@@ -269,6 +269,13 @@
 					<span class="text">History</span>
 				</a>
 			</li>
+			<li>
+				<a href="./notifications">
+					<img class="icon" src="/images/notification.png" alt="Notification Icon" />
+					<span class="text">Notification</span>
+				</a>
+			</li>
+			
 		</ul>
  
 		<!-- Logout Button (using combined logic) -->

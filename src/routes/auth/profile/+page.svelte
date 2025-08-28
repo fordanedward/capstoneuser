@@ -60,6 +60,8 @@
     let isDropdownOpen = true;
     let showDetails = false;
     let isMobile = false;
+    let isArchived: boolean = false;
+    $: accountStatus = isArchived ? 'Inactive' : 'Active';
 
 onMount(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -80,6 +82,11 @@ onMount(() => {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         patientProfile.id = userData.customUserId || "N/A";
+                        isArchived = Boolean(userData.isArchived ?? userData.archived ?? false);
+                    } else {
+                        // Fallback: some projects store archive flag on profile
+                        const archivedFlag = (patientDoc.data() as any)?.isArchived ?? (patientDoc.data() as any)?.archived;
+                        isArchived = Boolean(archivedFlag ?? false);
                     }
                     console.log("Loaded patient profile from Firestore: ", patientProfile);
                 } else {
@@ -88,6 +95,7 @@ onMount(() => {
                     const userRef = doc(db, "users", currentUser.uid);
                     const userDoc = await getDoc(userRef);
                     const customUserId = userDoc.exists() ? userDoc.data().customUserId : "N/A";
+                    isArchived = userDoc.exists() ? Boolean(userDoc.data().isArchived ?? userDoc.data().archived ?? false) : false;
                     
                     patientProfile = {
                         name: '',
@@ -151,6 +159,7 @@ onMount(() => {
             };
             doneAppointments = [];
             prescriptions = [];
+            isArchived = false;
             console.log("User is not logged in.");
         }
     });
@@ -402,6 +411,9 @@ function toggleEditProfile() {
         </div>
         <div class="patient-info">
             <h1>{`${patientProfile.name} ${patientProfile.lastName}` || "<Patient Name>"}</h1>
+            <div class="status-row">
+                <span class={`status-badge ${accountStatus === 'Active' ? 'active' : 'inactive'}`}>Status: {accountStatus}</span>
+            </div>
             {#if isMobile}
                 <button class="toggle-details-btn" on:click={() => showDetails = !showDetails}>
                     {showDetails ? 'Hide Details' : 'Show Details'}
@@ -632,6 +644,28 @@ function toggleEditProfile() {
         border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         padding-bottom: 8px;
         word-break: break-word;
+    }
+
+    .status-row {
+        margin: 6px 0 10px 0;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 1px solid rgba(255,255,255,0.6);
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+    }
+    .status-badge.active {
+        background: rgba(34,197,94,0.25);
+        border-color: rgba(34,197,94,0.6);
+    }
+    .status-badge.inactive {
+        background: rgba(239,68,68,0.25);
+        border-color: rgba(239,68,68,0.6);
     }
 
     .patient-info .info-grid {
