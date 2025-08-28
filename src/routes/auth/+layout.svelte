@@ -93,7 +93,7 @@
 			confirmButtonColor: '#3085d6', // Keep Swal styling
 			cancelButtonColor: '#d33',
 			confirmButtonText: 'Yes, log out!',
-			cancelButtonText: 'Cancel'
+			cancelButtonText: 'No, keep me logged in'
 		}).then((result) => {
 			if (result.isConfirmed) {
 				loading.set(true); // Show loading state
