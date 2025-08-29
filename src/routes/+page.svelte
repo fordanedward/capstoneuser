@@ -434,7 +434,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 6.5A16.5 16.5 0 0117.5 22M2 6.5V2a1 1 0 011-1h3.5a1 1 0 011 1v4.5a1 1 0 01-1 1H3a1 1 0 01-1-1z" />
                 </svg>
-                0968 856 1807
+                0968 856 1807/ 0917 132 1756
             </span>
             <span>
                 <!-- Location Icon SVG -->

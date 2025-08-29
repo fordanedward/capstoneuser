@@ -131,7 +131,7 @@ Metrformin, 500 mg, Antidiabetic.
 Metronidazole, 500 mg, Antiprotozoal.
 Metropolol, 50 mg, Beta 1 Blocker (HTN).
 Miconazole, 20 mg; 40 mg, Antifungal.
-Montelukast, 4 mg; 5 mg, 10 mg, Anti-Asthma.
+Montelukast, 4 mg; 5 mg; 10 mg, Anti-Asthma.
 Montelukast+Levocitrizine (Zykast), 10/5 mg, Anti-Asthma + Anti-Allergy.
 Nifedipine, 20 mg, Calcium Channel Blocker (HTN).
 Omeprazole, 20 mg; 40 mg, Antacid, Gerd.
