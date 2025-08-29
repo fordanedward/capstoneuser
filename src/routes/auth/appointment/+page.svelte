@@ -134,8 +134,24 @@
 
   const subServices = {
     "Imaging": ["X-ray", "ECG", "Ultrasound"],
-    "Laboratory": ["FBS", "CBC", "SGPT", "SGOT", "HBSAG", "Cholesterol", "Lipid Profile"],
-    "Doctor's Consultation": ["Simple & Deep Scaling", "Fluoride"]
+    "Laboratory": ["FBS", "CBC", "SGPT", "SGOT", "HBSAG", "Cholesterol", "Lipid Profile", "Fecalysis", "Creatinine"],
+    "Doctor's Consultation": [
+      "Adult Non-Urgent Cases",
+      "Travel Clearance", 
+      "New Prescription",
+      "Fit to Work Certification",
+      "Medical Certification",
+      "Prescription Refills",
+      "Routine Wellness Check Up",
+      "Laboratory Request",
+      "Tumor Marker (CEA/PSA)",
+      "Imaging Request",
+      "Thyroid Function (FT3, FT4, TSH)",
+      "ECG/EKG/X-Ray/Ultrasound",
+      "Troponin I",
+      "Lab Result Interpretation",
+      "HbA1c"
+    ]
   } as const;
 
   // --- Helper Functions ---
@@ -834,14 +850,14 @@
           {#if selectedService && selectedService in subServices}
           <div class="pt-2">
               <label for="subservices-group" class="block text-sm font-medium text-gray-700 mb-1"> </label>
-               <div id="subservices-group" class="space-y-1">
-                   {#each subServices[selectedService as ServiceWithSubServices] as subService}
-                   <label for={`sub-${subService}`} class="flex items-center">
-                       <Checkbox id={`sub-${subService}`} value={subService} on:change={() => toggleSubService(subService)} disabled={isLoadingBookingSlots} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
-                       <span class="ml-2 text-sm text-gray-600">{subService}</span>
-                      </label>
-                   {/each}
-               </div>
+                               <div id="subservices-group" class="grid grid-cols-2 gap-2">
+                    {#each subServices[selectedService as ServiceWithSubServices] as subService}
+                    <label for={`sub-${subService}`} class="flex items-center">
+                        <Checkbox id={`sub-${subService}`} value={subService} on:change={() => toggleSubService(subService)} disabled={isLoadingBookingSlots} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
+                        <span class="ml-2 text-sm text-gray-600">{subService}</span>
+                       </label>
+                    {/each}
+                </div>
           </div>
           {/if}
 
