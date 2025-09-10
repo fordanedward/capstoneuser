@@ -256,6 +256,77 @@
         background: #0c4f90;
     }
 
+    /* Diagnostic Packages */
+    .packages-section {
+        margin-top: 2rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.5rem;
+        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        padding: 2rem;
+    }
+    .packages-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    .packages-scroll {
+        max-height: 24rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 0.25rem;
+    }
+    .package-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1rem;
+        height: 100%;
+        background: #f9fbfd;
+    }
+    .package-title {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        color: #0a3761;
+        font-weight: 800;
+        font-size: 1.15rem;
+    }
+    .price-badge {
+        background: #f4c542;
+        color: #0a3761;
+        font-weight: 900;
+        border-radius: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        white-space: nowrap;
+    }
+    .package-list {
+        margin: 0;
+        padding-left: 1.25rem;
+        color: #0a3761;
+        line-height: 1.5;
+    }
+    .packages-notes {
+        margin-top: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        color: #0a3761;
+        font-weight: 700;
+    }
+    .note {
+        background: #fff7e0;
+        border: 1px solid #f4c542;
+        border-radius: 0.75rem;
+        padding: 0.5rem 0.75rem;
+    }
+    @media (max-width: 900px) {
+        .packages-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 550px) {
+        .packages-grid { grid-template-columns: 1fr; }
+        .packages-scroll { max-height: none; }
+    }
     /* Modal Styles */
     .modal-backdrop {
         position: fixed;
@@ -457,6 +528,72 @@
                 </div>
             {/each}
         </div>
+    </div>
+</div>
+
+<div class="packages-section">
+    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Diagnostic Laboratory (Packages)</h2>
+    <div class="packages-grid packages-scroll">
+        <div class="package-card">
+            <div class="package-title">
+                <span>Package A</span>
+                <span class="price-badge">₱332</span>
+            </div>
+            <ul class="package-list">
+                <li>FBS</li>
+                <li>Cholesterol</li>
+                <li>Creatinine</li>
+                <li>SGPT</li>
+            </ul>
+        </div>
+        <div class="package-card">
+            <div class="package-title">
+                <span>Package B</span>
+                <span class="price-badge">₱900</span>
+            </div>
+            <ul class="package-list">
+                <li>FBS</li>
+                <li>Lipid Profile</li>
+                <li>Creatinine</li>
+                <li>Cholesterol</li>
+                <li>SGPT</li>
+                <li>SGOT</li>
+                <li>Urinalysis</li>
+            </ul>
+        </div>
+        <div class="package-card">
+            <div class="package-title">
+                <span>Package C</span>
+                <span class="price-badge">₱1,300</span>
+            </div>
+            <ul class="package-list">
+                <li>FBS</li>
+                <li>Lipid Profile</li>
+                <li>Creatinine</li>
+                <li>BUN</li>
+                <li>SGPT/ALS</li>
+                <li>SGOT/AST</li>
+                <li>Urinalysis</li>
+                <li>Fecalysis</li>
+                <li>CBC with Platelet Count</li>
+            </ul>
+        </div>
+        <div class="package-card">
+            <div class="package-title">
+                <span>Package D (Child Health)</span>
+                <span class="price-badge">₱380</span>
+            </div>
+            <ul class="package-list">
+                <li>Urinalysis</li>
+                <li>Fecalysis</li>
+                <li>CBC with Platelet Count</li>
+            </ul>
+        </div>
+    </div>
+    <div class="packages-notes">
+        <div class="note">Fasting Hours: FBS and Lipid — 10 to 12 hours</div>
+        <div class="note">Open: Monday to Sunday</div>
+        <div class="note">Free Consultation</div>
     </div>
 </div>
 
