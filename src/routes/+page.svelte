@@ -129,7 +129,6 @@
         border-bottom-left-radius: 25%;
         border-bottom-right-radius: 0;
         border-top-right-radius: 0;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         animation: imageBounceIn 1.5s cubic-bezier(.68,-0.55,.27,1.55);
     }
 
@@ -216,12 +215,10 @@
         background-color: #0b2d56;
         color: white;
         text-decoration: none;
-        box-shadow: 0 6px 14px rgba(11,45,86,0.25);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        transition: transform 0.2s ease, background-color 0.2s ease;
     }
     .social-links a:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 18px rgba(11,45,86,0.28);
         background-color: #123a6e;
     }
 
@@ -358,6 +355,82 @@
             max-width: 90%;
         }
     }
+
+    /* Locations section */
+    .locations-section {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        min-height: 520px;
+        width: 100%;
+        margin: 0;
+    }
+    .location-left {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #e1a800; /* gold tone */
+        padding: 2.5rem 1rem;
+        text-align: center;
+    }
+    .location-left img {
+        width: 180px;
+        height: 180px;
+        object-fit: contain;
+        margin-bottom: 1.25rem;
+    }
+    .location-left h3 {
+        margin: 0.25rem 0 0.75rem 0;
+        color: #0b2d56;
+        font-size: 2rem;
+        letter-spacing: 2px;
+    }
+    .location-left p {
+        max-width: 560px;
+        color: #0b2d56;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+    .location-right {
+        position: relative;
+        min-height: 520px;
+        width: 100%;
+    }
+    .location-right iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+    }
+    .locations-title {
+        width: 100%;
+        text-align: center;
+        margin: 3rem 0 1rem 0;
+        color: #0b2d56;
+        font-weight: 800;
+        font-size: 2rem;
+        letter-spacing: 3px;
+    }
+    @media (max-width: 900px) {
+        .locations-section {
+            grid-template-columns: 1fr;
+        }
+        .location-left {
+            padding: 2rem 1.25rem;
+        }
+        .location-left img {
+            width: 140px;
+            height: 140px;
+        }
+        .locations-title {
+            margin-top: 2rem;
+        }
+        .location-right, .location-right iframe {
+            min-height: 380px;
+            height: 380px;
+        }
+    }
 </style>
 
 <script>
@@ -395,19 +468,10 @@
         <h1>Welcome to PHP Digital Member Portal</h1>
         <h2>We provide health solutions so we can achieve healthy, happy, and productive lives.</h2>
         <div class="social-links" aria-label="Social media links">
+            <span>Like us on Facebook</span>
             <a href="https://www.facebook.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Facebook Page">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M22.675 0h-21.35C.597 0 0 .597 0 1.326v21.348C0 23.403.597 24 1.326 24h11.49v-9.294H9.692V11.08h3.124V8.41c0-3.1 1.893-4.787 4.659-4.787 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.312h3.59l-.467 3.626h-3.123V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .597 23.403 0 22.675 0z"/>
-                </svg>
-            </a>
-            <a href="https://www.instagram.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Instagram Profile">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                    <path d="M7 2C4.239 2 2 4.239 2 7v10c0 2.761 2.239 5 5 5h10c2.761 0 5-2.239 5-5V7c0-2.761-2.239-5-5-5H7zm0 2h10c1.654 0 3 1.346 3 3v10c0 1.654-1.346 3-3 3H7c-1.654 0-3-1.346-3-3V7c0-1.654 1.346-3 3-3zm5 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6zm6.5-2a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/>
-                </svg>
-            </a>
-           <a href="https://x.com/permanenteplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our X Profile">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-                    <path d="M18.244 2H21.5L14.026 10.51 22.818 22h-6.89l-5.4-7.514L3.6 22H.338l7.884-8.883L0 2h6.998l5.18 7.078L18.244 2zm-1.21 18.37h1.905L6.04 3.69H3.98z"/>
                 </svg>
             </a>
         </div>
@@ -431,8 +495,8 @@
         <div class="about-contact">
             <span>
                 <!-- Phone Icon SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 6.5A16.5 16.5 0 0117.5 22M2 6.5V2a1 1 0 011-1h3.5a1 1 0 011 1v4.5a1 1 0 01-1 1H3a1 1 0 01-1-1z" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.25 6.75c0 8.284 6.716 15 15 15h1.5a.75.75 0 00.75-.75v-3.003a.75.75 0 00-.593-.73l-3.248-.65a.75.75 0 00-.788.347l-.853 1.279a11.25 11.25 0 01-5.58-5.58l1.279-.853a.75.75 0 00.347-.788l-.65-3.248a.75.75 0 00-.73-.593H3a.75.75 0 00-.75.75v1.5z" />
                 </svg>
                 0968 856 1807/ 0917 132 1756
             </span>
@@ -446,3 +510,26 @@
         </div>
     </div>
 </div>
+
+
+<!-- Locations -->
+<h2 class="locations-title">LOCATION</h2>
+<section class="locations-section" aria-label="PHP Locations">
+    <div class="location-left">
+        <img src="/images/logo(landing).png" alt="PHP Seal" />
+        <h3>HEADQUARTERS</h3>
+        <p>
+            Block 7, Lot 19-23 Mayumi Street, Barangay Santa Rita,<br/>
+            Olongapo City, Zambales 2200
+        </p>
+    </div>
+    <div class="location-right">
+        <iframe
+            title="PHP Headquarters Map"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d616.321993588706!2d120.279708!3d14.857400!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3396702d6b6f0a1b%3A0x0!2sMayumi%20St%2C%20Santa%20Rita%2C%20Olongapo%20City%2C%20Zambales!5e0!3m2!1sen!2sPH!4v1700000000000">
+        </iframe>
+    </div>
+    
+</section>
