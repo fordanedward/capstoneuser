@@ -217,6 +217,9 @@
 			</button>
 			<!-- Optional Header Title -->
 			<!-- <span class="header-title">App Name</span> -->
+			<button on:click={logout} class="header-logout-btn" aria-label="Logout">
+				<img src="/images/logout-icon.png" alt="Logout" />
+			</button>
 		</header>
 	{/if}
  
@@ -278,17 +281,17 @@
 			
 		</ul>
  
-		<!-- Logout Button (using combined logic) -->
-		<button class="logout-btn" on:click={logout} title="Logout">
-			{#if isMobile || (!isMobile && !isCollapsed)}
-				<!-- Icon and Text for Mobile Open OR Desktop Expanded -->
-				<img src="/images/logout-icon.png" alt="Logout" class="logout-icon" />
-				<span>Logout</span>
-			{:else if !isMobile && isCollapsed}
-				<!-- Icon Only for Desktop Collapsed -->
-				<img src="/images/logout-icon.png" alt="Logout" class="logout-icon" />
-			{/if}
-		</button>
+		<!-- Logout Button: show only on desktop (mobile uses header icon) -->
+		{#if !isMobile}
+			<button class="logout-btn" on:click={logout} title="Logout">
+				{#if !isCollapsed}
+					<img src="/images/logout-icon.png" alt="Logout" class="logout-icon" />
+					<span>Logout</span>
+				{:else}
+					<img src="/images/logout-icon.png" alt="Logout" class="logout-icon" />
+				{/if}
+			</button>
+		{/if}
  
 		<!-- Desktop Toggle Button (using OriginalComponent's arrows) -->
 		
@@ -376,6 +379,22 @@
 		display: block;
 		width: 24px;
 		height: 24px;
+	}
+
+	.header-logout-btn {
+		margin-left: auto;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 6px;
+		border-radius: 9999px;
+		color: var(--sidebar-text-color);
+	}
+
+	.header-logout-btn img {
+		width: 20px;
+		height: 20px;
+		filter: brightness(0) invert(1);
 	}
  
 	.header-title { /* Optional title styling */
@@ -560,6 +579,7 @@
             box-shadow: 4px 0 6px rgba(0,0,0,0.2); /* Stronger shadow for mobile */
 			height: 100vh; /* Ensure full height */
 			overflow-y: auto; /* Allow scrolling if content overflows */
+			padding-bottom: max(20px, env(safe-area-inset-bottom)); /* Prevent content under system bar */
 			display: flex;
 			flex-direction: column; /* Ensure proper flex layout */
 		}
@@ -591,11 +611,12 @@
             margin-left: 15px;
 		}
  
-				.logout-btn {
+			.logout-btn {
 			padding: 12px 20px; /* Increased padding for better touch target */
             margin: 20px; /* Consistent margin */
 			margin-top: auto; /* Ensure it stays at bottom */
-			position: relative; /* Ensure proper positioning */
+			position: sticky; /* Stick to bottom */
+			bottom: max(12px, env(safe-area-inset-bottom));
 			z-index: 10; /* Above other elements */
 			min-height: 48px; /* Minimum touch target size */
 		}

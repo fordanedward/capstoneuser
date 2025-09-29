@@ -501,6 +501,11 @@
                   Sign in
                 </a>
             </div>
+            <div class="login-link {isPageLoaded ? 'loaded' : ''} text-center mt-4">
+                <a href="/" class="text-sm font-medium text-gray-600 hover:text-gray-800 underline">
+                    Back to Home
+                </a>
+            </div>
         </div>
         </div>
     </div>
