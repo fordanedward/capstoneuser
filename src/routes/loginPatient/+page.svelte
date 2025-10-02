@@ -13,11 +13,13 @@
         getAuth,
         signInWithEmailAndPassword,
         GoogleAuthProvider,
-        signInWithPopup
+        signInWithPopup,
+        signInAnonymously,
+        signOut
     } from 'firebase/auth';
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
-    import { getFirestore, doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+    import { getFirestore, doc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
 
@@ -26,9 +28,13 @@
     const db = getFirestore(app);
 
     let email = '';
+    let patientIdInput = '';
     let password = '';
     let showPassword = false;
     let rememberMe = false;
+
+    // 'email' | 'patientId'
+    let loginMode = 'email';
 
     type ToastTypeFB = 'info' | 'success' | 'warning' | 'error'; 
     let toastVisibleFB: boolean = false;
@@ -132,14 +138,79 @@
     }
 
     async function handleLogin() { 
-        if (!email.trim() || !password.trim()) {
-            Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter both email and password.', showConfirmButton: true });
+        // Validate password first
+        if (!password.trim()) {
+            Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your password.', showConfirmButton: true });
             return;
         }
+
+        // Resolve email depending on mode
+        let resolvedEmail: string | null = null;
+        if (loginMode === 'email') {
+            if (!email.trim()) {
+                Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your email.', showConfirmButton: true });
+                return;
+            }
+            resolvedEmail = email.trim();
+        } else {
+            const trimmedId = patientIdInput.trim();
+            if (!trimmedId) {
+                Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your Patient ID.', showConfirmButton: true });
+                return;
+            }
+            // Look up by customUserId
+            try {
+                // Ensure we're authenticated for Firestore rules
+                let cleanupAnon = false;
+                if (!auth.currentUser) {
+                    try {
+                        await signInAnonymously(auth);
+                        cleanupAnon = true;
+                    } catch (anonError) {
+                        console.error('Anonymous sign-in failed:', anonError);
+                        Swal.fire({ 
+                            icon: 'error', 
+                            title: 'Configuration Error', 
+                            text: 'Patient ID login is not properly configured. Please use email login or contact support.', 
+                            showConfirmButton: true 
+                        });
+                        return;
+                    }
+                }
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('customUserId', '==', trimmedId));
+                const snap = await getDocs(q);
+                if (snap.empty) {
+                    if (cleanupAnon) {
+                        try { await signOut(auth); } catch {}
+                    }
+                    Swal.fire({ icon: 'error', title: 'Patient ID Not Found', text: 'Please check your Patient ID and try again.', showConfirmButton: true });
+                    return;
+                }
+                const userDocData = snap.docs[0].data();
+                resolvedEmail = (userDocData && userDocData.email) ? String(userDocData.email) : null;
+                if (!resolvedEmail) {
+                    if (cleanupAnon) {
+                        try { await signOut(auth); } catch {}
+                    }
+                    Swal.fire({ icon: 'error', title: 'Missing Email', text: 'Account email is missing. Please contact support.', showConfirmButton: true });
+                    return;
+                }
+                // Sign out anonymous session before real login
+                if (cleanupAnon) {
+                    try { await signOut(auth); } catch {}
+                }
+            } catch (lookupErr) {
+                console.error('Patient ID lookup error:', lookupErr);
+                Swal.fire({ icon: 'error', title: 'Login Failed', text: 'Unable to verify Patient ID. Please try again later.', showConfirmButton: true });
+                return;
+            }
+        }
+
         isLoggingIn = true;
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+            const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail!, password);
             await processSuccessfulLogin(userCredential.user, 'password');
         } catch (error) {
             console.error('Error during login:', error);
@@ -149,7 +220,7 @@
                     case 'auth/invalid-credential':
                     case 'auth/user-not-found':
                     case 'auth/wrong-password':
-                        errorMessage = 'Invalid email or password. Please try again.';
+                        errorMessage = loginMode === 'email' ? 'Invalid email or password. Please try again.' : 'Invalid Patient ID or password. Please try again.';
                         break;
                     case 'auth/invalid-email':
                         errorMessage = 'The email address is not valid.';
@@ -356,16 +427,38 @@
           
 
         <div class="login-form {isPageLoaded ? 'loaded' : ''}">
+            <form on:submit|preventDefault={handleLogin}>
+            <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-4 flex gap-2">
+                <button type="button" class={`px-3 py-1 rounded ${loginMode === 'email' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`} on:click={() => loginMode = 'email'}>
+                    Email Login
+                </button>
+                <button type="button" class={`px-3 py-1 rounded ${loginMode === 'patientId' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`} on:click={() => loginMode = 'patientId'}>
+                    Patient ID Login
+                </button>
+            </div>
             <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                <Label for="email" class="block mb-2">Email</Label>
-                <Input
-                    type="email"
-                    id="email"
-                    placeholder="Enter your email"
-                    class="border p-2 w-full"
-                    bind:value={email}
-                    required
-                />
+                {#if loginMode === 'email'}
+                    <Label for="email" class="block mb-2">Email</Label>
+                    <Input
+                        type="email"
+                        id="email"
+                        placeholder="Enter your email"
+                        class="border p-2 w-full"
+                        bind:value={email}
+                        required
+                    />
+                {:else}
+                    <Label for="patientId" class="block mb-2">Patient ID</Label>
+                    <Input
+                        type="text"
+                        id="patientId"
+                        placeholder="Enter your Patient ID"
+                        class="border p-2 w-full"
+                        bind:value={patientIdInput}
+                        required
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Use the 5-digit ID you received at registration.</p>
+                {/if}
             </div>
 
             <!-- Password field -->
@@ -412,14 +505,14 @@
 
             <div class="login-button {isPageLoaded ? 'loaded' : ''} mb-6">
                 <button
-                    type="button" 
+                    type="submit" 
                     class="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    on:click={handleLogin}
                     disabled={isLoggingIn}
                 >
                     {isLoggingIn ? 'Logging in...' : 'Login'}
                 </button>
             </div>
+            </form>
 
             <div class="my-6 flex items-center">
                 <hr class="flex-grow border-gray-300">
