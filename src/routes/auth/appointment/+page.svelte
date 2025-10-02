@@ -1003,19 +1003,10 @@
                                            {appointment.status || 'Unknown'}
                                         {/if}
                                     </div>
-                                    {#if appointment.paymentStatus}
+                                    {#if appointment.paymentStatus === 'refund_pending' || appointment.paymentStatus === 'refunded'}
                                         <div class="status-badge {appointment.paymentStatus}-payment-status ml-2">
-                                            <i class="fas {appointment.paymentStatus === 'paid' ? 'fa-check-circle' : 
-                                                         appointment.paymentStatus === 'refund_pending' ? 'fa-clock' : 
-                                                         appointment.paymentStatus === 'refunded' ? 'fa-money-bill-wave' : 
-                                                         'fa-times-circle'} mr-1"></i>
-                                            {#if appointment.paymentStatus === 'refund_pending'}
-                                                Refund Pending
-                                            {:else if appointment.paymentStatus === 'refunded'}
-                                                Refunded
-                                            {:else}
-                                                {appointment.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
-                                            {/if}
+                                            <i class="fas {appointment.paymentStatus === 'refund_pending' ? 'fa-clock' : 'fa-money-bill-wave'} mr-1"></i>
+                                            {appointment.paymentStatus === 'refund_pending' ? 'Refund Pending' : 'Refunded'}
                                         </div>
                                     {/if}
                                     {#if appointment.paymentStatus === 'refunded' && appointment.refundAmount}
@@ -1052,6 +1043,16 @@
                                              <span class="text-xs italic text-yellow-700 px-2">Pending...</span>
                                          {/if}
                                          {#if appointment.cancellationStatus === 'Approved'}
+                                            <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
+                                                Reason: {appointment.cancelReason || 'N/A'}
+                                            </span>
+                                         {/if}
+                                         {#if appointment.cancellationStatus === 'decline'}
+                                            <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
+                                                Reason: {appointment.cancelReason || 'N/A'}
+                                            </span>
+                                         {/if}
+                                         {#if appointment.status === 'Decline'}
                                             <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
                                                 Reason: {appointment.cancelReason || 'N/A'}
                                             </span>
@@ -1104,6 +1105,16 @@
                                        {/if}
                                     </div>
                                      {#if appointment.cancellationStatus === 'Approved'}
+                                        <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
+                                            ({appointment.cancelReason || 'No reason'})
+                                        </span>
+                                     {/if}
+                                     {#if appointment.cancellationStatus === 'decline'}
+                                        <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
+                                            ({appointment.cancelReason || 'No reason'})
+                                        </span>
+                                     {/if}
+                                     {#if appointment.status === 'Decline'}
                                         <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
                                             ({appointment.cancelReason || 'No reason'})
                                         </span>
