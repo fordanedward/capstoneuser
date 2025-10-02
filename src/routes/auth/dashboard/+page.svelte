@@ -320,6 +320,64 @@
         border-radius: 0.75rem;
         padding: 0.5rem 0.75rem;
     }
+
+    /* Schedule & Hours Section */
+    .schedule-section {
+        margin-top: 2rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.5rem;
+        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        padding: 2rem;
+    }
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    .schedule-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        background: #f9fbfd;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .schedule-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(10, 55, 97, 0.1);
+    }
+    .schedule-title {
+        color: #0a3761;
+        font-weight: 800;
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .schedule-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #f4c542;
+    }
+    .schedule-content {
+        color: #005b80;
+        line-height: 1.6;
+        font-size: 1rem;
+    }
+    .schedule-hours {
+        font-weight: 700;
+        color: #003d50;
+        margin-bottom: 0.5rem;
+    }
+    .schedule-details {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    @media (max-width: 900px) {
+        .schedule-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 900px) {
         .packages-grid { grid-template-columns: 1fr 1fr; }
     }
@@ -594,6 +652,60 @@
         <div class="note">Fasting Hours: FBS and Lipid — 10 to 12 hours</div>
         <div class="note">Open: Monday to Sunday</div>
         <div class="note">Free Consultation</div>
+    </div>
+</div>
+
+<div class="schedule-section">
+    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Schedule & Hours</h2>
+    <div class="schedule-grid">
+        <div class="schedule-card">
+            <div class="schedule-title">
+                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12,6 12,12 16,14"></polyline>
+                </svg>
+                Clinic Hours
+            </div>
+            <div class="schedule-content">
+                <div class="schedule-hours">Open Daily</div>
+                <div class="schedule-details">Monday to Sunday</div>
+                <div class="schedule-details">8:00 AM - 2:00 AM</div>
+            </div>
+        </div>
+        
+        <div class="schedule-card">
+            <div class="schedule-title">
+                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 4 2V7l-5-5z"></path>
+                    <polyline points="14,2 14,8 20,8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10,9 9,9 8,9"></polyline>
+                </svg>
+                Laboratory Hours
+            </div>
+            <div class="schedule-content">
+                <div class="schedule-hours">Laboratory Services</div>
+                <div class="schedule-details">8:00 AM - 5:00 PM</div>
+                <div class="schedule-details">For diagnostic tests</div>
+            </div>
+        </div>
+        
+        <div class="schedule-card">
+            <div class="schedule-title">
+                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                Consultation Schedule
+            </div>
+            <div class="schedule-content">
+                <div class="schedule-hours">Internal Medicine</div>
+                <div class="schedule-details">Face-to-face: Mon-Fri</div>
+                <div class="schedule-details">8:00 AM - 5:00 PM</div>
+                <div class="schedule-details">Viber Consultation:</div>
+                <div class="schedule-details">Daily (Morning-Night)</div>
+            </div>
+        </div>
     </div>
 </div>
 
