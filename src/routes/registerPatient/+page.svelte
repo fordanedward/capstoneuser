@@ -113,7 +113,10 @@
         let createdAuthUser = null;
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const usePlaceholderEmail = !email.trim();
+            const emailForAuth = usePlaceholderEmail ? `${cleanedPhone}@noemail.local` : email.trim();
+
+            const userCredential = await createUserWithEmailAndPassword(auth, emailForAuth, password);
             const user = userCredential.user;
             createdAuthUser = user;
 
@@ -134,9 +137,9 @@
             await setDoc(doc(db, "users", user.uid), {
                 firebaseUid: user.uid,
                 customUserId: customPatientId,
-                email: user.email,
+                email: usePlaceholderEmail ? null : email.trim(),
                 role: 'userPatient',
-                displayName: `${firstName} ${lastName}`.trim() || user.email?.split('@')[0] || 'Patient',
+                displayName: `${firstName} ${lastName}`.trim() || 'Patient',
                 photoURL: user.photoURL || null,
                 providerId: user.providerData[0]?.providerId || 'password',
                 registrationDate: new Date().toISOString()
@@ -157,7 +160,7 @@
             };
             await setDoc(doc(db, "patientProfiles", user.uid), profileData);
 
-            showToast(`Patient registration successful! Your Patient ID: ${customPatientId}. Welcome, ${user.email}`, "success", 5000);
+            showToast(`Patient registration successful! Your Patient ID: ${customPatientId}. Welcome, ${firstName.trim() || 'Patient'}` , "success", 5000);
             setTimeout(() => {
                 goto('/auth/profile'); 
                 toastVisible = false;
@@ -460,8 +463,8 @@
                     />
                 </div>
                 <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                    <Label for="email" class="block mb-2">Email</Label>
-                    <Input type="email" id="email" placeholder="Enter your email" class="border p-2 w-full" bind:value={email} required />
+                    <Label for="email" class="block mb-2">Email (optional)</Label>
+                    <Input type="email" id="email" placeholder="Enter your email (optional)" class="border p-2 w-full" bind:value={email} />
                 </div>
                 <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
                     <Label for="password" class="block mb-2">Password</Label>

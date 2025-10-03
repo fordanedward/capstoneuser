@@ -324,7 +324,7 @@
                 profileData.lastName && 
                 profileData.age && 
                 profileData.gender && 
-                profileData.email && 
+                // profileData.email && 
                 profileData.phone && 
                 profileData.address);
     } catch (error) {

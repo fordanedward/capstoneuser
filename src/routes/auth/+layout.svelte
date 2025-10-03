@@ -134,37 +134,56 @@
         let unsubscribeAuthState: (() => void) | null = null;
         if (auth) {
              unsubscribeAuthState = onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const maxLength = 15; // Keep truncation logic
-                    let displayName = user.displayName ?? user.email ?? 'User';
-                    if (displayName.length > maxLength) {
-                        displayName = displayName.substring(0, maxLength) + '...';
-                    }
-                    username.set(displayName);
-                    
-                    // Get the actual patient ID from the users collection (matching profile page logic)
-                    try {
-                        if (app) {
-                            const { getFirestore, doc, getDoc } = await import("firebase/firestore");
-                            const db = getFirestore(app);
-                            const userRef = doc(db, "users", user.uid);
-                            const userDoc = await getDoc(userRef);
-                            
-                            if (userDoc.exists()) {
-                                const userData = userDoc.data();
-                                const customUserId = userData.customUserId || "N/A";
-                                patientId.set(`ID: ${customUserId}`);
-                            } else {
-                                patientId.set("ID: N/A");
-                            }
-                        } else {
-                            patientId.set("ID: N/A");
-                        }
-                    } catch (error) {
-                        console.error("Error fetching patient ID:", error);
-                        patientId.set("ID: N/A");
-                    }
-                } else {
+               if (user) {
+                   const maxLength = 15; // Keep truncation logic
+                   let computedName = user.displayName ?? user.email ?? 'User';
+                   
+                   // Get the actual patient ID and prefer full name from profile/users
+                   try {
+                       if (app) {
+                           const { getFirestore, doc, getDoc } = await import("firebase/firestore");
+                           const db = getFirestore(app);
+                           const userRef = doc(db, "users", user.uid);
+                           const userDoc = await getDoc(userRef);
+
+                           // Prefer profile full name if available
+                           const profileRef = doc(db, "patientProfiles", user.uid);
+                           const profileDoc = await getDoc(profileRef);
+
+                           if (profileDoc.exists()) {
+                               const pd = profileDoc.data() as any;
+                               const fullName = `${(pd.name || '').toString().trim()} ${(pd.lastName || '').toString().trim()}`.trim();
+                               if (fullName) {
+                                   computedName = fullName;
+                               }
+                           } else if (userDoc.exists()) {
+                               const ud = userDoc.data() as any;
+                               if (ud && typeof ud.displayName === 'string' && ud.displayName.trim()) {
+                                   computedName = ud.displayName.trim();
+                               }
+                           }
+
+                           // Set patient ID label
+                           if (userDoc.exists()) {
+                               const userData = userDoc.data();
+                               const customUserId = userData.customUserId || "N/A";
+                               patientId.set(`ID: ${customUserId}`);
+                           } else {
+                               patientId.set("ID: N/A");
+                           }
+                       } else {
+                           patientId.set("ID: N/A");
+                       }
+                   } catch (error) {
+                       console.error("Error fetching patient display info:", error);
+                       patientId.set("ID: N/A");
+                   }
+
+                   if (computedName.length > maxLength) {
+                       computedName = computedName.substring(0, maxLength) + '...';
+                   }
+                   username.set(computedName);
+               } else {
                     username.set(''); // Clear username when logged out
                     patientId.set(''); // Clear patient ID when logged out
                     // Optional: Redirect if user becomes unauthenticated while on protected page
@@ -276,6 +295,13 @@
 				<a href="./notifications">
 					<img class="icon" src="/images/notification.png" alt="Notification Icon" />
 					<span class="text">Notification</span>
+				</a>
+			</li>
+			<!-- External: Permanente Health Plan Facebook Page -->
+			<li>
+				<a href="https://www.facebook.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Facebook page">
+					<i class="fab fa-facebook-f icon" aria-hidden="true"></i>
+					<span class="text">Facebook</span>
 				</a>
 			</li>
 			

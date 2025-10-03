@@ -27,14 +27,12 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let email = '';
-    let patientIdInput = '';
+    let identifier = '';
     let password = '';
     let showPassword = false;
     let rememberMe = false;
 
-    // 'email' | 'patientId'
-    let loginMode = 'email';
+    // single identifier (email or patient ID)
 
     type ToastTypeFB = 'info' | 'success' | 'warning' | 'error'; 
     let toastVisibleFB: boolean = false;
@@ -63,7 +61,7 @@
 
     onMount(() => {
         if (typeof localStorage !== 'undefined' && localStorage.getItem('rememberMe') === 'true') {
-            email = localStorage.getItem('email') || '';
+            identifier = localStorage.getItem('email') || '';
             password = localStorage.getItem('password') || '';
             rememberMe = true;
         }
@@ -111,7 +109,7 @@
             });
 
             if (rememberMe && providerId === 'password') {
-                localStorage.setItem('email', email);
+                localStorage.setItem('email', identifier);
                 localStorage.setItem('password', password);
                 localStorage.setItem('rememberMe', 'true');
             } else if (providerId === 'password') {
@@ -144,20 +142,72 @@
             return;
         }
 
-        // Resolve email depending on mode
+        // Determine if identifier is an email or a patient ID
         let resolvedEmail: string | null = null;
-        if (loginMode === 'email') {
-            if (!email.trim()) {
-                Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your email.', showConfirmButton: true });
-                return;
+        const input = identifier.trim();
+        if (!input) {
+            Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your Email or Patient ID.', showConfirmButton: true });
+            return;
+        }
+        const looksLikeEmail = /.+@.+\..+/.test(input);
+        if (looksLikeEmail) {
+            // Try to resolve to the actual auth email. Users might have set email only in profile.
+            try {
+                let cleanupAnon = false;
+                if (!auth.currentUser) {
+                    try {
+                        await signInAnonymously(auth);
+                        cleanupAnon = true;
+                    } catch (anonErr) {
+                        console.error('Anonymous sign-in failed (email resolution):', anonErr);
+                    }
+                }
+
+                // First, check users collection for exact email match
+                const usersRef = collection(db, 'users');
+                const uq = query(usersRef, where('email', '==', input));
+                const uSnap = await getDocs(uq);
+                if (!uSnap.empty) {
+                    resolvedEmail = input;
+                } else {
+                    // Next, check patientProfiles by email to find uid, then map to users.email or phone placeholder
+                    const profilesRef = collection(db, 'patientProfiles');
+                    const pq = query(profilesRef, where('email', '==', input));
+                    const pSnap = await getDocs(pq);
+                    if (!pSnap.empty) {
+                        const profileDoc = pSnap.docs[0];
+                        const profileUid = profileDoc.id;
+                        const userRef = doc(db, 'users', profileUid);
+                        const userSnap = await getDoc(userRef);
+                        if (userSnap.exists()) {
+                            const u = userSnap.data() as any;
+                            if (u && typeof u.email === 'string' && u.email) {
+                                resolvedEmail = String(u.email);
+                            } else {
+                                const phoneRaw = String((profileDoc.data() as any).phone || '');
+                                const cleanedPhone = phoneRaw.replace(/\D/g, '');
+                                if (cleanedPhone) {
+                                    resolvedEmail = `${cleanedPhone}@noemail.local`;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!resolvedEmail) {
+                    // Fallback: try the input as typed
+                    resolvedEmail = input;
+                }
+
+                if (cleanupAnon) {
+                    try { await signOut(auth); } catch {}
+                }
+            } catch (e) {
+                console.error('Error resolving email identifier:', e);
+                resolvedEmail = input; // fallback to attempt login with typed email
             }
-            resolvedEmail = email.trim();
         } else {
-            const trimmedId = patientIdInput.trim();
-            if (!trimmedId) {
-                Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your Patient ID.', showConfirmButton: true });
-                return;
-            }
+            const trimmedId = input;
             // Look up by customUserId
             try {
                 // Ensure we're authenticated for Firestore rules
@@ -187,13 +237,32 @@
                     Swal.fire({ icon: 'error', title: 'Patient ID Not Found', text: 'Please check your Patient ID and try again.', showConfirmButton: true });
                     return;
                 }
-                const userDocData = snap.docs[0].data();
+                const userDoc = snap.docs[0];
+                const userDocData = userDoc.data();
                 resolvedEmail = (userDocData && userDocData.email) ? String(userDocData.email) : null;
+
+                // If email is missing (email-optional accounts), derive the placeholder from profile phone
+                if (!resolvedEmail) {
+                    try {
+                        const profileRef = doc(db, 'patientProfiles', userDoc.id);
+                        const profileSnap = await getDoc(profileRef);
+                        if (profileSnap.exists()) {
+                            const phoneRaw = String((profileSnap.data() as any).phone || '');
+                            const cleanedPhone = phoneRaw.replace(/\D/g, '');
+                            if (cleanedPhone) {
+                                resolvedEmail = `${cleanedPhone}@noemail.local`;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error deriving placeholder email from profile:', e);
+                    }
+                }
+
                 if (!resolvedEmail) {
                     if (cleanupAnon) {
                         try { await signOut(auth); } catch {}
                     }
-                    Swal.fire({ icon: 'error', title: 'Missing Email', text: 'Account email is missing. Please contact support.', showConfirmButton: true });
+                    Swal.fire({ icon: 'error', title: 'Login Unavailable', text: 'Could not resolve your login email from Patient ID. Please contact support.', showConfirmButton: true });
                     return;
                 }
                 // Sign out anonymous session before real login
@@ -428,37 +497,17 @@
 
         <div class="login-form {isPageLoaded ? 'loaded' : ''}">
             <form on:submit|preventDefault={handleLogin}>
-            <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-4 flex gap-2">
-                <button type="button" class={`px-3 py-1 rounded ${loginMode === 'email' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`} on:click={() => loginMode = 'email'}>
-                    Email Login
-                </button>
-                <button type="button" class={`px-3 py-1 rounded ${loginMode === 'patientId' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`} on:click={() => loginMode = 'patientId'}>
-                    Patient ID Login
-                </button>
-            </div>
             <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                {#if loginMode === 'email'}
-                    <Label for="email" class="block mb-2">Email</Label>
-                    <Input
-                        type="email"
-                        id="email"
-                        placeholder="Enter your email"
-                        class="border p-2 w-full"
-                        bind:value={email}
-                        required
-                    />
-                {:else}
-                    <Label for="patientId" class="block mb-2">Patient ID</Label>
-                    <Input
-                        type="text"
-                        id="patientId"
-                        placeholder="Enter your Patient ID"
-                        class="border p-2 w-full"
-                        bind:value={patientIdInput}
-                        required
-                    />
-                    <p class="text-xs text-gray-500 mt-1">Use the 5-digit ID you received at registration.</p>
-                {/if}
+                <Label for="identifier" class="block mb-2">Email or Patient ID</Label>
+                <Input
+                    type="text"
+                    id="identifier"
+                    placeholder="Enter your Email or Patient ID"
+                    class="border p-2 w-full"
+                    bind:value={identifier}
+                    required
+                />
+                <p class="text-xs text-gray-500 mt-1">You can type either your email address or your 5-digit Patient ID.</p>
             </div>
 
             <!-- Password field -->
