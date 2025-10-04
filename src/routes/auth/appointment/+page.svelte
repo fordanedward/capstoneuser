@@ -1032,11 +1032,7 @@
                                            <button title="Cancel Appointment" class="btn-action btn-cancel" on:click={() => openCancelModal(appointment.id)}>
                                                 <i class="fas fa-times"></i> <span class="hidden sm:inline ml-1">Cancel</span>
                                            </button>
-                                           {#if appointment.status === 'Accepted' && (!appointment.paymentStatus || appointment.paymentStatus !== 'paid')}
-                                           <button title="Make Payment" class="btn-action btn-payment" on:click={() => openPaymentModal(appointment.id)}>
-                                                <i class="fas fa-credit-card"></i> <span class="hidden sm:inline ml-1">Pay Now</span>
-                                           </button>
-                                           {/if}
+                   <!-- Pay Now button removed as requested -->
                                         {:else if appointment.status === 'Reschedule Requested'}
                                              <span class="text-xs italic text-purple-600 px-2">Pending...</span>
                                          {:else if appointment.cancellationStatus === 'requested'}
