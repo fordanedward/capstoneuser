@@ -133,61 +133,46 @@
     }
 
     .about-content {
-        max-width: 720px;
-        width: 100%;
-        padding: 2rem 2rem;
-        background: #1e3a66; /* deep blue panel */
-        color: #ffffff;
-        border-radius: 10px;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.15);
-        min-height: 560px; /* align with image height */
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
+        max-width: 600px;
+        padding: 2rem 1rem;
         animation: fadeUp 1.2s 0.5s both;
     }
 
     .about-content h1 {
-        font-size: 2.2rem;
+        font-size: 2.8rem;
         font-weight: 800;
-        color: #ffffff;
+        color: #0b2d56;
         margin-bottom: 1.2rem;
-        letter-spacing: 1px;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.16);
+        letter-spacing: -1px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
         animation: fadeUp 1.2s 0.7s both;
     }
 
     .about-content p {
-        font-size: 1.05rem;
-        color: #ffffff;
-        margin-bottom: 1.1rem;
-        line-height: 1.7;
+        font-size: 1.25rem;
+        color: #1e3a66;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
         animation: fadeUp 1.2s 0.9s both;
     }
 
-    .about-content a.website-link {
-        color: #f4c542;
-        font-weight: 900; /* extra bold */
-        font-size: 1.65rem; /* bigger */
+    .about-content a {
+        color: #0b2d56;
+        font-weight: bold;
+        font-size: 1.25rem;
         text-decoration: none;
-        letter-spacing: .5px;
-        display: inline-block;
-        margin-top: .25rem;
-        transition: transform .2s ease, color .2s ease;
+        transition: color 0.3s;
     }
-    .about-content a.website-link:hover,
-    .about-content a.website-link:focus,
-    .about-content a.website-link:active {
-        color: #e1a800; /* gold when toggled/hovered */
-        transform: translateY(-1px);
+    .about-content a:hover {
+        color: #f4c542;
     }
 
     .about-contact {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0.7rem;
         margin-top: 1.2rem;
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         animation: fadeUp 1.2s 1.1s both;
     }
 
@@ -195,12 +180,8 @@
         display: flex;
         align-items: center;
         gap: 0.7rem;
-        background: #ffffff;
         color: #0b2d56;
-        font-weight: 600;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        font-weight: 500;
     }
 
     .about-contact svg {
@@ -284,66 +265,6 @@
         100% { opacity: 1; transform: scale(1);}
     }
 
-    /* About section redesigned to mirror Locations layout */
-    .about-title {
-        width: 100%;
-        text-align: center;
-        margin: 3rem 0 1rem 0;
-        color: #0b2d56;
-        font-weight: 800;
-        font-size: 2rem;
-        letter-spacing: 3px;
-    }
-    .about-section {
-        display: grid;
-        grid-template-columns: 1fr 1.2fr;
-        min-height: 520px;
-        width: 100%;
-        margin: 0;
-    }
-    .about-left {
-        position: relative;
-        min-height: 520px;
-        width: 100%;
-        overflow: hidden;
-    }
-    .about-left img {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .about-right {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        background-color: #1e3a66; /* deep blue */
-        color: #ffffff;
-        padding: 2.5rem 2rem;
-    }
-    .about-right h3 {
-        margin: 0 0 1rem 0;
-        font-size: 1.8rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    @media (max-width: 900px) {
-        .about-section {
-            grid-template-columns: 1fr;
-        }
-        .about-left,
-        .about-left img {
-            position: relative;
-            min-height: 320px;
-            height: 320px;
-        }
-        .about-right {
-            padding: 1.5rem 1rem;
-        }
-    }
-
     @media (max-width: 900px) {
         .about-container {
             flex-direction: column;
@@ -356,9 +277,6 @@
         }
         .about-content {
             max-width: 95vw;
-            width: 95vw;
-            min-height: auto;
-            padding: 1.5rem 1rem;
         }
     }
 
@@ -563,18 +481,16 @@
     </div>
 </main>
 
-<h2 class="about-title">ABOUT PERMANENTE HEALTH PLAN</h2>
-<section class="about-section" aria-label="About Permanente Health Plan">
-    <div class="about-left">
-        <img src="/images/php building.jpg" alt="PHP Building" />
-    </div>
-    <div class="about-right">
+<div class="about-container">
+    <img src="/images/php building.jpg" alt="PHP Building" class="about-image" />
+    <div class="about-content">
+        <h1>About PHP</h1>
         <p>
             Permanente Health Plan was founded in 2019 with a mission to provide an affordable, trusted outpatient, labs, pharmacy, diagnostic imaging, dental, optometry, mental health and urgent care membership for the residents of the Philippines. Our vision is to build a future of health and wellness to all residents of the Philippines through preventive care. PHP was founded by Filipinos for Filipinos. Our contracted physician and medical health providers are all local in Olongapo. We also telemedicine option to our urgent care members.
         </p>
         <p>
             For a detailed list of our services and contracted providers, please visit our website at
-            <a class="website-link" href="https://www.permanentehealthplan.org" target="_blank" rel="noopener noreferrer">www.permanentehealthplan.org</a>
+            <a href="https://www.permanentehealthplan.org" target="_blank">www.permanentehealthplan.org</a>
         </p>
         <div class="about-contact">
             <span>
@@ -591,16 +507,9 @@
                 </svg>
                 Lot 19-23, Blk 7, Mayumi St, Sta Rita, Olongapo City
             </span>
-            <span>
-                <!-- Mail Icon SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M1.5 6.75A2.25 2.25 0 013.75 4.5h16.5a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0120.25 19.5H3.75A2.25 2.25 0 011.5 17.25V6.75zm2.46-.75a.75.75 0 00-.46.69v.177l7.77 4.86a1.5 1.5 0 001.54 0l7.77-4.86V6.69a.75.75 0 00-.46-.69H3.96zm16.29 12.75a.75.75 0 00.75-.75V9.36l-6.98 4.366a3 3 0 01-3.14 0L3.9 9.36v8.64c0 .414.336.75.75.75h15.6z"/>
-                </svg>
-                <a href="mailto:customerservice@permanentehealthplan.org" class="website-link" style="font-size:1.1rem; font-weight:700;">customerservice@permanentehealthplan.org</a>
-            </span>
         </div>
     </div>
-</section>
+</div>
 
 
 <!-- Locations -->
