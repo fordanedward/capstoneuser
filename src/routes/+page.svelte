@@ -482,7 +482,7 @@
 </main>
 
 <div class="about-container">
-    <img src="/images/php building.jpg" alt="PHP Building" class="about-image" />
+    <img src="/images/php animated.gif" alt="Permanente Health Plan Facility" class="about-image" />
     <div class="about-content">
         <h1>About PHP</h1>
         <p>
@@ -517,7 +517,7 @@
 <section class="locations-section" aria-label="PHP Locations">
     <div class="location-left">
         <img src="/images/logo(landing).png" alt="PHP Seal" />
-        <h3>HEADQUARTERS</h3>
+        <h3><b>HEADQUARTERS</b></h3>
         <p>
             Block 7, Lot 19-23 Mayumi Street, Barangay Santa Rita,<br/>
             Olongapo City, Zambales 2200
