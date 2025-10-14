@@ -268,9 +268,9 @@
 		<!-- Sidebar Menu (using OriginalComponent's items) -->
 		<ul class="sidebar-menu">
 			<li>
-				<a href="./dashboard">
+				<a href="./information">
 					<img class="icon" src="/images/dashboard.png" alt="Dashboard Icon" />
-					<span class="text">Dashboard</span>
+					<span class="text">Information</span>
 				</a>
 			</li>
 			<li>
@@ -285,23 +285,16 @@
 					<span class="text">Appointment</span>
 				</a>
 			</li>
-			<li>
+			<!-- <li>
 				<a href="./prescription">
 					<img class="icon" src="/images/history.png" alt="History Icon" />
 					<span class="text">History</span>
 				</a>
-			</li>
+			</li> -->
 			<li>
 				<a href="./notifications">
 					<img class="icon" src="/images/notification.png" alt="Notification Icon" />
 					<span class="text">Notification</span>
-				</a>
-			</li>
-			<!-- External: Permanente Health Plan Facebook Page -->
-			<li>
-				<a href="https://www.facebook.com/permanentehealthplan" target="_blank" rel="noopener noreferrer" aria-label="Visit our Facebook page">
-					<i class="fab fa-facebook-f icon" aria-hidden="true"></i>
-					<span class="text">Facebook</span>
 				</a>
 			</li>
 			

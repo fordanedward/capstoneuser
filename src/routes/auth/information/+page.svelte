@@ -1,6 +1,6 @@
 <script lang="ts">
     import { writable, derived } from 'svelte/store';
-    import type { PageData } from './$types';
+    import type { PageData } from '../information/$types';
 
     import { coveredMedicines as coveredMedicinesData, fetchCoveredMedicines } from '$lib/data/coveredMedicines';
     let coveredMedicines = coveredMedicinesData;
@@ -17,7 +17,6 @@
         { name: "Consultations" },
         { name: "Ultrasound" },
         { name: "Laboratory" },
-        { name: "Multispecialty Membership" },
         { name: "Fecalysis" }
     ];
 
