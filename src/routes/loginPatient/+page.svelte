@@ -3,7 +3,6 @@
     import Swal from 'sweetalert2'; 
     import { Label, Input, Button as FlowbiteButton, Toast } from 'flowbite-svelte'; 
     import {
-        GoogleSolid,
         CheckOutline,
         CloseOutline,
         ExclamationCircleOutline,
@@ -12,8 +11,6 @@
     import {
         getAuth,
         signInWithEmailAndPassword,
-        GoogleAuthProvider,
-        signInWithPopup,
         signInAnonymously,
         signOut
     } from 'firebase/auth';
@@ -42,7 +39,6 @@
     let toastTimeoutIdFB: number | null = null;
 
     let isLoggingIn = false;
-    let isGoogleLoggingIn = false;
     let isPageLoaded = false;
 
     function showAppToast(message: string, type: ToastTypeFB = 'info', duration: number = 3000) {
@@ -92,11 +88,7 @@
             }
 
             await setDoc(userDocRef, {
-                lastLoginAt: new Date().toISOString(),
-                ...(providerId === 'google.com' && {
-                    displayName: user.displayName || userData.displayName,
-                    photoURL: user.photoURL || userData.photoURL,
-                })
+                lastLoginAt: new Date().toISOString()
             }, { merge: true });
 
             Swal.fire({
@@ -315,39 +307,7 @@
         }
     }
 
-    async function handleGoogleLogin() {
-        isGoogleLoggingIn = true;
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            const success = await processSuccessfulLogin(result.user, 'google.com');
-            if (!success) {
-              
-            }
-        } catch (err: any) {
-            console.error("Google Login Error:", err);
-            let userFriendlyMessage = "Failed to sign in with Google. Please try again.";
-            if (err.code) {
-                switch (err.code) {
-                    case 'auth/popup-closed-by-user':
-                        userFriendlyMessage = "Google Sign-In cancelled.";
-                        break;
-                    case 'auth/account-exists-with-different-credential':
-                        userFriendlyMessage = "An account may already exist with this email using a different sign-in method.";
-                        break;
-                    case 'auth/popup-blocked':
-                        userFriendlyMessage = "Google Sign-In popup was blocked. Please allow popups.";
-                        break;
-                    default:
-                        userFriendlyMessage = "Google Sign-In failed. Please try again later.";
-                }
-            }
-            Swal.fire({ icon: 'error', title: 'Google Sign-In Failed', text: userFriendlyMessage, showConfirmButton: true });
-        } finally {
-            isGoogleLoggingIn = false;
-           
-        }
-    }
+    // Google sign-in removed
 
 </script>
 
@@ -569,17 +529,6 @@
                 <hr class="flex-grow border-gray-300">
             </div>
 
-            <div class="google-button {isPageLoaded ? 'loaded' : ''} mb-6">
-                <FlowbiteButton
-                    on:click={handleGoogleLogin}
-                    disabled={isGoogleLoggingIn}
-                    color="light" 
-                    class="w-full flex items-center justify-center"
-                >
-                    <GoogleSolid class="w-5 h-5 mr-2" />
-                    {isGoogleLoggingIn ? 'Connecting...' : 'Sign in with Google'}
-                </FlowbiteButton>
-            </div>
 
             <div class="register-link {isPageLoaded ? 'loaded' : ''} text-center">
                 <p class="text-gray-600 mb-2">Don't have an account?</p>
