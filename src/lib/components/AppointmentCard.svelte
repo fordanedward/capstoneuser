@@ -18,6 +18,10 @@
     function requestCancel() {
       dispatch('requestCancel', appointment.id);
     }
+
+    function getCancelReason(appt) {
+      return appt.cancelReason || appt.reason || appt.declineReason || appt.adminReason || '';
+    }
   </script>
   
   <div class="bg-white shadow-lg rounded-lg p-4 w-full max-w-sm border border-gray-300">
@@ -39,6 +43,9 @@
         <span class="text-red-600 font-semibold">Cancelled</span>
       {:else if appointment.cancellationStatus === 'decline'}
         <span class="text-red-600 font-semibold">Appointment Declined</span>
+        {#if getCancelReason(appointment)}
+          <p class="text-xs text-red-500 mt-1">Reason: {getCancelReason(appointment)}</p>
+        {/if}
          {:else if appointment.status === 'Reschedule Requested'}
         <span class="text-purple-600 font-semibold">Reschedule Requested</span>
       {:else if appointment.status === 'Rescheduled'}
@@ -55,6 +62,9 @@
         <span class="text-orange-600 font-semibold">Missed</span>
       {:else if appointment.status === 'Decline'}
         <span class="text-red-600 font-semibold">Cancellation Declined</span>
+        {#if getCancelReason(appointment)}
+          <p class="text-xs text-red-500 mt-1">Reason: {getCancelReason(appointment)}</p>
+        {/if}
       {:else if appointment.status === 'pending'}
         <span class="text-yellow-600 font-semibold">Pending</span>
       {:else if appointment.status === 'confirmed'}

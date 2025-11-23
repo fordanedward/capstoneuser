@@ -46,7 +46,7 @@
             items.push({ id: `appt-${apptId}-accepted`, createdAt: created, icon: 'fa-check-circle', color: '#16a34a', text: `Appointment on ${appt.date} at ${appt.time} has been accepted.` });
         }
         if (status === 'Decline') {
-            items.push({ id: `appt-${apptId}-rejected`, createdAt: created, icon: 'fa-times-circle', color: '#dc2626', text: `Appointment on ${appt.date} at ${appt.time} was rejected.` });
+            items.push({ id: `appt-${apptId}-rejected`, createdAt: created, icon: 'fa-times-circle', color: '#dc2626', text: `Appointment on ${appt.date} at ${appt.time} was declined.` });
         }
         if (status === 'Rescheduled') {
             items.push({ id: `appt-${apptId}-rescheduled`, createdAt: created, icon: 'fa-exchange-alt', color: '#7c3aed', text: `Appointment reschedule approved to ${appt.requestedDate || appt.date} at ${appt.requestedTime || appt.time}.` });
@@ -55,7 +55,7 @@
             items.push({ id: `appt-${apptId}-cancel-approved`, createdAt: created, icon: 'fa-ban', color: '#0ea5e9', text: `Your cancellation request was approved for ${appt.date} ${appt.time}.` });
         }
         if (canc === 'decline') {
-            items.push({ id: `appt-${apptId}-cancel-rejected`, createdAt: created, icon: 'fa-exclamation-circle', color: '#ca8a04', text: `Your cancellation request was rejected for ${appt.date} ${appt.time}.` });
+            items.push({ id: `appt-${apptId}-cancel-rejected`, createdAt: created, icon: 'fa-exclamation-circle', color: '#ca8a04', text: `Your cancellation request was declined for ${appt.date} ${appt.time}.` });
         }
         if (status === 'Completed') {
             items.push({ id: `appt-${apptId}-completed`, createdAt: created, icon: 'fa-check-double', color: '#2563eb', text: `Appointment on ${appt.date} at ${appt.time} is completed.` });

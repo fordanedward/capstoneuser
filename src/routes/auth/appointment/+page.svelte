@@ -448,6 +448,11 @@
     return reasons;
   }
 
+  // Helper to normalize cancel/decline reason field names coming from different admin apps
+  function getCancelReason(appointment: any) {
+    return appointment?.cancelReason || appointment?.reason || appointment?.declineReason || appointment?.adminReason || '';
+  }
+
   function switchTab(tab: 'upcoming' | 'past') {
     activeTab = tab;
   }
@@ -486,7 +491,7 @@
                 querySnapshot.forEach((doc) => {
                     const data = doc.data() as Omit<Appointment, 'id'>;
                     const appointmentDate = data.date;
-                    const appointmentWithId: Appointment = { ...data, id: doc.id };
+                  const appointmentWithId: Appointment = { ...data, id: doc.id };
 
                     if (appointmentDate >= todayISOString) {
                         if(appointmentWithId.cancellationStatus !== 'Approved' && appointmentWithId.cancellationStatus !== 'decline') {
@@ -595,6 +600,7 @@
     } else {
       requestRefund = false;
     }
+
     refundReason = '';
     popupModal = true;
   }
@@ -1024,36 +1030,26 @@
                                             {/if}
                                         </div>
                                     {/if}
-                                    <div class="action-buttons">
-                                        {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
-                                           <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
-                                                <i class="fas fa-edit"></i> <span class="hidden sm:inline ml-1">Reschedule</span>
-                                           </button>
-                                           <button title="Cancel Appointment" class="btn-action btn-cancel" on:click={() => openCancelModal(appointment.id)}>
-                                                <i class="fas fa-times"></i> <span class="hidden sm:inline ml-1">Cancel</span>
-                                           </button>
-                   <!-- Pay Now button removed as requested -->
-                                        {:else if appointment.status === 'Reschedule Requested'}
-                                             <span class="text-xs italic text-purple-600 px-2">Pending...</span>
-                                         {:else if appointment.cancellationStatus === 'requested'}
-                                             <span class="text-xs italic text-yellow-700 px-2">Pending...</span>
-                                         {/if}
-                                         {#if appointment.cancellationStatus === 'Approved'}
-                                            <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
-                                                Reason: {appointment.cancelReason || 'N/A'}
-                                            </span>
-                                         {/if}
-                                         {#if appointment.cancellationStatus === 'decline'}
-                                            <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
-                                                Reason: {appointment.cancelReason || 'N/A'}
-                                            </span>
-                                         {/if}
-                                         {#if appointment.status === 'Decline'}
-                                            <span class="text-xs italic text-red-600 px-2 truncate" title={appointment.cancelReason}>
-                                                Reason: {appointment.cancelReason || 'N/A'}
-                                            </span>
-                                         {/if}
-                                    </div>
+                                     <div class="action-buttons">
+                                      {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
+                                         <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
+                                           <i class="fas fa-edit"></i> <span class="hidden sm:inline ml-1">Reschedule</span>
+                                         </button>
+                                         <button title="Cancel Appointment" class="btn-action btn-cancel" on:click={() => openCancelModal(appointment.id)}>
+                                           <i class="fas fa-times"></i> <span class="hidden sm:inline ml-1">Cancel</span>
+                                         </button>
+                                <!-- Pay Now button removed as requested -->
+                                      {:else if appointment.status === 'Reschedule Requested'}
+                                        <span class="text-xs italic text-purple-600 px-2">Pending...</span>
+                                       {:else if appointment.cancellationStatus === 'requested'}
+                                        <span class="text-xs italic text-yellow-700 px-2">Pending...</span>
+                                       {/if}
+                                     </div>
+                                     {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                       <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
+                                      Reason: {getCancelReason(appointment) || 'N/A'}
+                                       </p>
+                                     {/if}
                                </div>
                             </div>
                         {/each}
@@ -1100,23 +1096,13 @@
                                            {appointment.status || 'Unknown'}
                                        {/if}
                                     </div>
-                                     {#if appointment.cancellationStatus === 'Approved'}
-                                        <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
-                                            ({appointment.cancelReason || 'No reason'})
-                                        </span>
-                                     {/if}
-                                     {#if appointment.cancellationStatus === 'decline'}
-                                        <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
-                                            ({appointment.cancelReason || 'No reason'})
-                                        </span>
-                                     {/if}
-                                     {#if appointment.status === 'Decline'}
-                                        <span class="text-xs italic text-gray-500 ml-2 truncate" title={appointment.cancelReason}>
-                                            ({appointment.cancelReason || 'No reason'})
-                                        </span>
-                                     {/if}
-                                </div>
-                            </div>
+                                  </div>
+                                {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                  <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'} ml-2" title={getCancelReason(appointment)}>
+                                    ({getCancelReason(appointment) || 'No reason'})
+                                  </p>
+                                {/if}
+                              </div>
                         {/each}
                     {:else}
                          <div class="text-center p-6 text-gray-500 bg-gray-50 rounded-md">
@@ -1453,7 +1439,16 @@
   .action-buttons {
       display: flex; gap: 0.5rem; justify-content: flex-end;
       align-items: center; min-height: 32px; flex-shrink: 0;
+      flex-wrap: wrap;
   }
+    .action-buttons .reason-text {
+      flex-basis: 100%;
+      text-align: right;
+      white-space: normal; /* allow multi-line reason */
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-top: 0.25rem;
+    }
   .btn-action {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 0.375rem;
@@ -1520,9 +1515,8 @@
  :global(.dark) .tab-button.active-tab { color: #60a5fa; border-bottom-color: #60a5fa; }
  :global(.dark) .no-appointments { background-color: #374151; border-color: #4b5563; color: #9ca3af; }
  :global(.dark) .modal-content { background-color: #1f2937; }
- :global(.dark) .modal h2, :global(.dark) .modal h3 { color: #f3f4f6; }
+ :global(.dark) .modal h2 { color: #f3f4f6; }
  :global(.dark) .modal p, :global(.dark) .modal label { color: #d1d5db; }
- :global(.dark) .cancel-modal .text-gray-600 { color: #d1d5db; }
 
  .btn-payment { 
     background-color: #10b981; 
@@ -1536,42 +1530,7 @@
     max-width: 400px;
   }
 
-  .payment-modal .payment-status {
-    text-align: center;
-    padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 0.5rem;
-  }
-
-  .payment-modal .payment-status.pending {
-    background-color: #fef3c7;
-    color: #92400e;
-  }
-
-  .payment-modal .payment-status.success {
-    background-color: #d1fae5;
-    color: #065f46;
-  }
-
-  .payment-modal .payment-status.failed {
-    background-color: #fee2e2;
-    color: #991b1b;
-  }
-
-  :global(.dark) .payment-modal .payment-status.pending {
-    background-color: #78350f;
-    color: #fcd34d;
-  }
-
-  :global(.dark) .payment-modal .payment-status.success {
-    background-color: #064e3b;
-    color: #6ee7b7;
-  }
-
-  :global(.dark) .payment-modal .payment-status.failed {
-    background-color: #7f1d1d;
-    color: #fca5a5;
-  }
+  /* payment-status styles removed (unused in this component) */
 
   .paid-payment-status {
     background-color: #dcfce7;
@@ -1620,4 +1579,15 @@
     color: #6ee7b7;
     border-color: #059669;
 }
+
+/* Reason paragraph styling (smaller, wrapped, subtle color) */
+.reason-paragraph {
+  font-size: 0.75rem; /* smaller than surrounding text */
+  margin-top: 0.25rem;
+  font-style: italic;
+  line-height: 1.2;
+  white-space: normal;
+  color: #6b7280; /* gray-500 */
+}
+.reason-paragraph.text-red-600 { color: #dc2626; }
 </style>
