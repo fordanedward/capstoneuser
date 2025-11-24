@@ -61,6 +61,20 @@
             password = localStorage.getItem('password') || '';
             rememberMe = true;
         }
+        // If redirected here because the admin deactivated the account, show a modal
+        try {
+            if (typeof localStorage !== 'undefined' && localStorage.getItem('accountDeactivated') === 'true') {
+                localStorage.removeItem('accountDeactivated');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Account Deactivated',
+                    text: 'Your account was deactivated by the administrator. Contact support for assistance.',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (e) {
+            console.error('Error checking accountDeactivated flag:', e);
+        }
         
         // Trigger page load animation
         setTimeout(() => {
@@ -74,6 +88,20 @@
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
+
+            // Prevent login if admin marked the account as inactive/archived
+            const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
+            const statusField = (userData.status || '').toString().toLowerCase();
+            if (isArchivedFlag || statusField === 'inactive') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Account Inactive',
+                    text: 'Your account has been deactivated by the administrator. Contact support for help.',
+                    showConfirmButton: true
+                });
+                await auth.signOut();
+                return false;
+            }
 
             if (userData.role !== 'userPatient') {
                 
