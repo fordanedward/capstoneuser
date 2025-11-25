@@ -7,6 +7,7 @@
     import Swal from 'sweetalert2';
     import '@fortawesome/fontawesome-free/css/all.css';
     import { firebaseConfig } from '$lib/firebaseConfig';
+    import { formatRelativeTime } from '$lib/utils/timeFormat';
 
     type NotificationItem = {
         id: string;
@@ -24,6 +25,20 @@
     let unsubAppointments: Unsubscribe | null = null;
     let unsubUserDoc: Unsubscribe | null = null;
     let isLoading = true;
+    let currentTime = new Date();
+
+    // Update current time every minute to refresh relative timestamps
+    let timeInterval: ReturnType<typeof setInterval>;
+
+    onMount(() => {
+        timeInterval = setInterval(() => {
+            currentTime = new Date();
+        }, 60000); // Update every minute
+
+        return () => {
+            if (timeInterval) clearInterval(timeInterval);
+        };
+    });
 
     function pushOrReplace(notif: NotificationItem) {
         const idx = notifications.findIndex(n => n.id === notif.id);
@@ -136,19 +151,37 @@
 </script>
 
 <div class="notif-container">
-    <h2 class="title"><i class="fas fa-bell mr-2"></i> Notifications</h2>
+    <div class="header">
+        <h2 class="title"><i class="fas fa-bell"></i> Notifications</h2>
+        {#if notifications.length > 0}
+            <span class="badge">{notifications.length}</span>
+        {/if}
+    </div>
+    
     {#if isLoading}
-        <div class="loading"><i class="fas fa-spinner fa-spin mr-2"></i>Loading notifications...</div>
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Loading notifications...</span>
+        </div>
     {:else if notifications.length === 0}
-        <div class="empty"><i class="far fa-bell"></i> No notifications yet.</div>
+        <div class="empty">
+            <i class="far fa-bell bell-icon"></i>
+            <p class="empty-title">No notifications yet</p>
+            <p class="empty-subtitle">We'll notify you when something arrives</p>
+        </div>
     {:else}
         <ul class="notif-list">
             {#each notifications as n (n.id)}
                 <li class="notif-item">
-                    <span class="icon" style={`color:${n.color}`}><i class={`fas ${n.icon}`}></i></span>
+                    <div class="icon-wrapper" style={`background: ${n.color}15; color: ${n.color}`}>
+                        <i class={`fas ${n.icon}`}></i>
+                    </div>
                     <div class="content">
                         <div class="text">{n.text}</div>
-                        <div class="date">{n.createdAt.toLocaleString()}</div>
+                        <div class="timestamp">
+                            <i class="far fa-clock"></i>
+                            {formatRelativeTime(n.createdAt)}
+                        </div>
                     </div>
                 </li>
             {/each}
@@ -157,18 +190,199 @@
 </div>
 
 <style>
-    .notif-container { padding: 1rem; }
-    .title { font-size: 1.25rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem; }
-    .loading, .empty { padding: 0.75rem; border: 1px solid #e5e7eb; background: #f9fafb; color: #6b7280; border-radius: 0.5rem; }
-    .notif-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-    .notif-item { display: flex; gap: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: #fff; padding: 0.75rem; align-items: flex-start; }
-    .icon { width: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; }
-    .content { display: flex; flex-direction: column; gap: 0.2rem; }
-    .text { color: #374151; font-size: 0.95rem; }
-    .date { color: #9ca3af; font-size: 0.8rem; }
-    :global(.dark) .title { color: #f3f4f6; }
-    :global(.dark) .loading, :global(.dark) .empty { background: #1f2937; color: #9ca3af; border-color: #374151; }
-    :global(.dark) .notif-item { background: #1f2937; border-color: #374151; }
-    :global(.dark) .text { color: #e5e7eb; }
-    :global(.dark) .date { color: #9ca3af; }
+    .notif-container { 
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+    
+    .header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .title { 
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .badge {
+        background: #3b82f6;
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        min-width: 1.5rem;
+        text-align: center;
+    }
+    
+    .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 3rem 1.5rem;
+        color: #6b7280;
+        font-size: 1rem;
+    }
+    
+    .loading i {
+        font-size: 1.5rem;
+    }
+    
+    .empty { 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 1.5rem;
+        text-align: center;
+    }
+    
+    .bell-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .empty-subtitle {
+        font-size: 0.95rem;
+        color: #9ca3af;
+        margin: 0;
+    }
+    
+    .notif-list { 
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .notif-item { 
+        display: flex;
+        gap: 1rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        background: #fff;
+        padding: 1rem;
+        align-items: flex-start;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .notif-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .icon-wrapper { 
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        border-radius: 0.75rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .notif-item:hover .icon-wrapper {
+        transform: scale(1.1);
+    }
+    
+    .content { 
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 1;
+    }
+    
+    .text { 
+        color: #1f2937;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        font-weight: 500;
+    }
+    
+    .timestamp { 
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    .timestamp i {
+        font-size: 0.8rem;
+    }
+    
+    /* Dark mode styles */
+    :global(.dark) .title { color: #f9fafb; }
+    
+    :global(.dark) .loading { color: #9ca3af; }
+    
+    :global(.dark) .bell-icon { color: #4b5563; }
+    
+    :global(.dark) .empty-title { color: #e5e7eb; }
+    
+    :global(.dark) .empty-subtitle { color: #6b7280; }
+    
+    :global(.dark) .notif-item { 
+        background: #1f2937;
+        border-color: #374151;
+    }
+    
+    :global(.dark) .notif-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+    
+    :global(.dark) .text { color: #f3f4f6; }
+    
+    :global(.dark) .timestamp { color: #9ca3af; }
+    
+    /* Responsive */
+    @media (max-width: 640px) {
+        .notif-container {
+            padding: 1rem;
+        }
+        
+        .title {
+            font-size: 1.5rem;
+        }
+        
+        .icon-wrapper {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            font-size: 1rem;
+        }
+        
+        .notif-item {
+            padding: 0.875rem;
+        }
+        
+        .text {
+            font-size: 0.9rem;
+        }
+    }
 </style>
