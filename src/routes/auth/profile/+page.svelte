@@ -14,7 +14,9 @@
 
     // State for form inputs and data display
     let formPatientName = "";
+    let formMiddleName = "";
     let formLastName = "";
+    let formSuffix = "";
     let formAge = "";
     let formGender = "";
     let formEmail = "";
@@ -28,7 +30,9 @@
 
     type PatientProfile = {
         name: string;
+        middleName?: string;
         lastName: string;
+        suffix?: string;
         id: string;
         age: string;
         gender: string;
@@ -41,7 +45,9 @@
 
     let patientProfile: PatientProfile = {
         name: '',
+        middleName: '',
         lastName: '',
+        suffix: '',
         id: '',
         age: '',
         gender: '',
@@ -97,7 +103,9 @@ onMount(() => {
                     
                     patientProfile = {
                         name: '',
+                        middleName: '',
                         lastName: '',
+                        suffix: '',
                         id: customUserId,
                         age: '',
                         gender: '',
@@ -119,11 +127,32 @@ onMount(() => {
                 doneAppointments = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
                     console.log("Appointment data:", data); // Debug log
+                    console.log("Checking remarks fields:", {
+                        remarks: data.remarks,
+                        remark: data.remark,
+                        adminRemarks: data.adminRemarks,
+                        notes: data.notes,
+                        comment: data.comment,
+                        comments: data.comments,
+                        description: data.description
+                    });
+                    
+                    // Try all possible field names for remarks
+                    const remarksValue = data.remarks || 
+                                       data.remark || 
+                                       data.adminRemarks || 
+                                       data.notes || 
+                                       data.comment || 
+                                       data.comments || 
+                                       data.description || 
+                                       '';
+                    
+                    console.log("Final remarks value for appointment", doc.id, ":", remarksValue);
+                    
                     return {
                         ...data,
                         id: doc.id,
-                        // Ensure remarks field is included (check for different possible field names)
-                        remarks: data.remarks || data.remark || data.adminRemarks || data.notes || ''
+                        remarks: remarksValue
                     };
                 });
                 console.log("Loaded done appointments: ", doneAppointments);
@@ -135,7 +164,9 @@ onMount(() => {
             currentUser = null;
             patientProfile = {
                 name: '',
+                middleName: '',
                 lastName: '',
+                suffix: '',
                 id: '',
                 age: '',
                 gender: '',
@@ -257,7 +288,9 @@ async function savePatientProfile() {
 
         const profileData = {
             name: formPatientName,
+            middleName: formMiddleName,
             lastName: formLastName,
+            suffix: formSuffix,
             age: formAge,
             birthday: formBirthday, 
             gender: formGender,
@@ -294,9 +327,13 @@ function toggleEditProfile() {
     isEditingProfile = !isEditingProfile; 
 
     if (isEditingProfile) {
+        // Disable body scroll when modal opens
+        document.body.style.overflow = 'hidden';
         
         formPatientName = patientProfile.name;
+        formMiddleName = patientProfile.middleName || '';
         formLastName = patientProfile.lastName;
+        formSuffix = patientProfile.suffix || '';
         formAge = patientProfile.age;
         formBirthday = patientProfile.birthday; 
         formGender = patientProfile.gender;
@@ -304,8 +341,13 @@ function toggleEditProfile() {
         formPhone = patientProfile.phone;
         formHomeAddress = patientProfile.address;
     } else {
+        // Re-enable body scroll when modal closes
+        document.body.style.overflow = '';
+        
         formPatientName = "";
+        formMiddleName = "";
         formLastName = "";
+        formSuffix = "";
         formAge = "";
         formBirthday = ""; 
         formGender = "";
@@ -392,7 +434,7 @@ function toggleEditProfile() {
             </button>
         </div>
         <div class="patient-info">
-            <h1>{`${patientProfile.name} ${patientProfile.lastName}` || "<Patient Name>"}</h1>
+            <h1>{[patientProfile.name, patientProfile.middleName, patientProfile.lastName, patientProfile.suffix].filter(Boolean).join(' ') || "<Patient Name>"}</h1>
             <div class="status-row">
                 <span class={`status-badge ${accountStatus === 'Active' ? 'active' : 'inactive'}`}>Status: {accountStatus}</span>
             </div>
@@ -460,7 +502,8 @@ function toggleEditProfile() {
 </div>
 
 {#if isEditingProfile}
-    <div class="profile-form-container slide-down">
+    <div class="modal-overlay" on:click={toggleEditProfile}>
+    <div class="profile-form-container slide-down" on:click|stopPropagation>
         <h3 class="form-title">Edit Patient Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
             <div class="form-image-upload">
@@ -484,60 +527,85 @@ function toggleEditProfile() {
                     />
                 </div>
             </div>
-            <div class="input-grid">
-                <div class="form-group">
-                    <label for="first-name">First Name</label>
-                    <input id="first-name" type="text" bind:value={formPatientName} required />
+            <div class="form-section">
+                <h4 class="section-subtitle">Personal Information</h4>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="first-name">First Name <span class="required">*</span></label>
+                        <input id="first-name" type="text" bind:value={formPatientName} placeholder="Enter first name" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="middle-name">Middle Name</label>
+                        <input id="middle-name" type="text" bind:value={formMiddleName} placeholder="Enter middle name (optional)" />
+                    </div>
+                    <div class="form-group">
+                        <label for="last-name">Last Name <span class="required">*</span></label>
+                        <input id="last-name" type="text" bind:value={formLastName} placeholder="Enter last name" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="suffix">Suffix</label>
+                        <select id="suffix" bind:value={formSuffix}>
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="birthday">Birth Date <span class="required">*</span></label>
+                        <input id="birthday" type="date" bind:value={formBirthday} on:input={updateAge} required />
+                    </div>
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input id="age" type="number" bind:value={formAge} placeholder="Auto-calculated" disabled />
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender <span class="required">*</span></label>
+                        <select id="gender" bind:value={formGender} required>
+                            <option value="" disabled>Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                            <option value="prefer_not_to_say">Prefer not to say</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="last-name">Last Name</label>
-                    <input id="last-name" type="text" bind:value={formLastName} required />
-                </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input 
-                        id="phone" 
-                        type="tel" 
-                        placeholder="e.g., 09123456789" 
-                        bind:value={formPhone}
-                        on:input={(e) => {
-                            const input = e.currentTarget as HTMLInputElement;
-                            formPhone = input.value.replace(/\D/g, '');
-                            if (formPhone.length > 11) {
-                                formPhone = formPhone.slice(0, 11);
-                            }
-                        }}
-                        maxlength="11"
-                    />
-                    {#if formPhone && formPhone.length !== 11}
-                        <span class="error-message">Phone number must be exactly 11 digits</span>
-                    {/if}
-                </div>
-                <div class="form-group">
-                    <label for="email">E-Mail Address</label>
-                    <input id="email" type="email" bind:value={formEmail} />
-                </div>
-                <div class="form-group full-width"> 
-                    <label for="home-address">Home Address</label>
-                    <input id="home-address" type="text" bind:value={formHomeAddress} />
-                </div>
-                <div class="form-group">
-                    <label for="birthday">Birth Date</label>
-                    <input id="birthday" type="date" bind:value={formBirthday} on:input={updateAge} />
-                </div>
-                <div class="form-group">
-                    <label for="age">Age</label>
-                    <input id="age" type="number" bind:value={formAge} disabled />
-                </div>
-                <div class="form-group">
-                    <label for="gender">Gender</label>
-                    <select id="gender" bind:value={formGender}>
-                        <option value="" disabled>Select Gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                        <option value="prefer_not_to_say">Prefer not to say</option>
-                    </select>
+            </div>
+
+            <div class="form-section">
+                <h4 class="section-subtitle">Contact Information</h4>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="phone">Phone Number <span class="required">*</span></label>
+                        <input 
+                            id="phone" 
+                            type="tel" 
+                            placeholder="09123456789" 
+                            bind:value={formPhone}
+                            on:input={(e) => {
+                                const input = e.currentTarget as HTMLInputElement;
+                                formPhone = input.value.replace(/\D/g, '');
+                                if (formPhone.length > 11) {
+                                    formPhone = formPhone.slice(0, 11);
+                                }
+                            }}
+                            maxlength="11"
+                            required
+                        />
+                        {#if formPhone && formPhone.length !== 11}
+                            <span class="error-message">Phone number must be exactly 11 digits</span>
+                        {/if}
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-Mail Address</label>
+                        <input id="email" type="email" bind:value={formEmail} placeholder="your.email@example.com" />
+                    </div>
+                    <div class="form-group full-width"> 
+                        <label for="home-address">Home Address</label>
+                        <input id="home-address" type="text" bind:value={formHomeAddress} placeholder="Street, Barangay, City, Province" />
+                    </div>
                 </div>
             </div>
             <div class="save-button-container">
@@ -545,6 +613,7 @@ function toggleEditProfile() {
                 <button type="button" on:click={toggleEditProfile} class="cancel-button">Cancel</button>
             </div>
         </form>
+    </div>
     </div>
 {/if}
 
@@ -560,33 +629,54 @@ function toggleEditProfile() {
         --white: #ffffff;
         --danger-color: #dc3545;
         --success-color: #28a745;
-        --border-radius: 8px;
+        --info-color: #17a2b8;
+        --border-radius: 12px;
         --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         --input-border-color: #ced4da;
+        --transition-speed: 0.3s;
     }
 
    
 
    .main-container {
         max-width: 1200px;
-        margin: 20px auto;  
-        padding: 20px;
-         background-color: var(--white);
-         border-radius: var(--border-radius);
-         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        
+        margin: 30px auto;  
+        padding: 30px;
+        background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+        border-radius: var(--border-radius);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        min-height: 80vh;
     }
 
     .patient-card {
-        background: linear-gradient(120deg, var(--primary-color), var(--secondary-color));
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: var(--white);
         border-radius: var(--border-radius);
-        padding: 24px;
+        padding: 32px;
         display: flex;
         align-items: flex-start;
-        box-shadow: var(--card-shadow);
-        margin-bottom: 24px;
-        gap: 24px;
+        box-shadow: 0 8px 32px rgba(30, 58, 102, 0.3);
+        margin-bottom: 32px;
+        gap: 32px;
+        position: relative;
+        overflow: hidden;
+        transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    }
+
+    .patient-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .patient-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(30, 58, 102, 0.4);
     }
 
     .patient-card .logo {
@@ -604,12 +694,14 @@ function toggleEditProfile() {
     }
 
     .patient-info h1 {
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin-bottom: 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-        padding-bottom: 8px;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+        padding-bottom: 12px;
         word-break: break-word;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .status-row {
@@ -636,10 +728,11 @@ function toggleEditProfile() {
 
     .patient-info .info-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 8px 16px;
-        font-size: 0.95rem;
-        line-height: 1.5;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px 24px;
+        font-size: 1rem;
+        line-height: 1.7;
+        margin-top: 8px;
     }
 
     .patient-info p {
@@ -716,28 +809,118 @@ function toggleEditProfile() {
         transform: translateY(-2px);
     }
 
-    .profile-form-container {
-        background-color: var(--white);
-        border: 1px solid var(--medium-gray);
-        border-radius: var(--border-radius);
-        padding: 24px;
-        margin-top: 16px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(9, 19, 36, 0.384) 0%, rgba(0, 0, 0, 0.385) 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-out;
+        overflow-y: auto;
     }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .profile-form-container {
+        background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+        border: 2px solid var(--medium-gray);
+        border-radius: var(--border-radius);
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        position: relative;
+        max-width: 850px;
+        width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        margin: auto;
+    }
+
+    .profile-form-container::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .profile-form-container {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .profile-form-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
+
      .form-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 24px;
+        margin-top: 8px;
+        padding-bottom: 12px;
+        border-bottom: 3px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .form-title::before {
+        content: '✏️';
         font-size: 1.3rem;
-        font-weight: 600;
-        color: var(--secondary-color);
-        margin-bottom: 20px;
-        padding-bottom: 10px;
+    }
+
+    .form-section {
+        margin-bottom: 28px;
+    }
+
+    .form-section:last-of-type {
+        margin-bottom: 0;
+    }
+
+    .form-image-upload {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
         border-bottom: 1px solid var(--medium-gray);
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--medium-gray);
     }
 
     .profile-form .input-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 18px;
-        margin-bottom: 24px;
+    }
+
+    .required {
+        color: var(--danger-color);
+        font-weight: bold;
     }
 
     .profile-form .form-group {
@@ -750,10 +933,13 @@ function toggleEditProfile() {
 
 
     .profile-form label {
-        margin-bottom: 6px;
-        font-weight: 500;
-        font-size: 0.9rem;
-        color: var(--dark-gray);
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 4px;
     }
 
     .profile-form input[type="text"],
@@ -763,18 +949,24 @@ function toggleEditProfile() {
     .profile-form input[type="number"],
     .profile-form select {
         width: 100%;
-        padding: 10px 12px;
-        border: 1px solid var(--input-border-color);
-        border-radius: 6px;
-        font-size: 0.95rem;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        padding: 12px 16px;
+        border: 2px solid var(--input-border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all var(--transition-speed) ease;
         background-color: var(--white);
+        font-family: inherit;
     }
     .profile-form input:focus,
     .profile-form select:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(8, 184, 243, 0.2);
+        box-shadow: 0 0 0 4px rgba(30, 58, 102, 0.15);
         outline: none;
+        transform: translateY(-1px);
+    }
+    .profile-form input:hover:not(:disabled),
+    .profile-form select:hover:not(:disabled) {
+        border-color: var(--secondary-color);
     }
      .profile-form input[disabled] {
          background-color: var(--medium-gray);
@@ -794,59 +986,75 @@ function toggleEditProfile() {
         display: flex;
         justify-content: flex-end;
         gap: 12px;
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid var(--medium-gray);
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 2px solid var(--medium-gray);
     }
 
     .save-button, .cancel-button {
-        padding: 10px 20px;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.95rem;
+        padding: 12px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
         cursor: pointer;
-        transition: background-color 0.3s ease, transform 0.2s ease;
+        transition: all var(--transition-speed) ease;
         border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .save-button {
-        background-color: var(--success-color);
+        background: var(--success-color);
         color: white;
     }
     .save-button:hover {
-        background-color: #218838;
-        transform: translateY(-1px);
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(40, 167, 69, 0.3);
     }
 
     .cancel-button {
-        background-color: var(--light-gray);
-        color: var(--dark-gray);
-        border: 1px solid var(--input-border-color);
+        background-color: var(--white);
+        color: var(--text-color);
+        border: 2px solid var(--input-border-color);
     }
      .cancel-button:hover {
          background-color: var(--medium-gray);
-         transform: translateY(-1px);
+         transform: translateY(-2px);
+         border-color: var(--dark-gray);
+         box-shadow: 0 4px 16px rgba(0,0,0,0.15);
      }
 
     .slide-down {
         animation: slideDown 0.4s ease-out forwards;
-        overflow: hidden;
     }
 
     @keyframes slideDown {
         from {
             opacity: 0;
-            transform: translateY(-15px);
-            max-height: 0;
+            transform: translateY(-30px) scale(0.95);
         }
         to {
             opacity: 1;
-            transform: translateY(0);
-            max-height: 1000px;
+            transform: translateY(0) scale(1);
         }
     }
 
     @media (max-width: 640px) {
+        .modal-overlay {
+            padding: 10px;
+            align-items: flex-start;
+        }
+        .profile-form-container {
+            padding: 24px 20px;
+            max-height: 95vh;
+            margin-top: 10px;
+        }
+        .form-title {
+            font-size: 1.3rem;
+        }
         .profile-form .input-grid {
             grid-template-columns: 1fr;
             gap: 15px;
@@ -857,14 +1065,14 @@ function toggleEditProfile() {
         .save-button-container {
             flex-direction: row;
             gap: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
         }
         .save-button, .cancel-button {
-            width: 100%;
+            flex: 1;
             min-width: 0;
-            box-sizing: border-box;
-        }
-        .profile-form-container {
-            padding: 16px;
+            justify-content: center;
+            padding: 10px 16px;
         }
         .form-image-upload {
             display: flex;
@@ -897,12 +1105,20 @@ function toggleEditProfile() {
     }
 
     .section-title {
-        font-size: 1.6rem;
-        font-weight: 600;
-        color: var(--secondary-color);
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--primary-color);
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 3px solid var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .section-title::before {
+        content: '📋';
+        font-size: 1.5rem;
     }
 
      .no-data-message {
@@ -922,10 +1138,10 @@ function toggleEditProfile() {
 
     .history-card {
         background-color: var(--white);
-        border: 1px solid var(--medium-gray);
+        border: 2px solid var(--medium-gray);
         border-radius: var(--border-radius);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all var(--transition-speed) ease;
         position: relative;
         overflow: hidden;
         display: flex;
@@ -937,40 +1153,53 @@ function toggleEditProfile() {
         top: 0;
         left: 0;
         width: 100%;
-        height: 5px;
-        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        height: 6px;
+        background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     }
 
     .history-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-8px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        border-color: var(--primary-color);
     }
 
     .card-header {
-        background-color: var(--light-gray);
-        padding: 10px 16px;
-        font-weight: 600;
-        color: var(--secondary-color);
-        border-bottom: 1px solid var(--medium-gray);
-        font-size: 1.1rem;
+        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
+        padding: 14px 20px;
+        font-weight: 700;
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--medium-gray);
+        font-size: 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .card-header::before {
+        content: '📅';
+        font-size: 1rem;
     }
 
     .card-content {
-        padding: 16px;
-        font-size: 0.95rem;
+        padding: 20px;
+        font-size: 1rem;
         color: var(--text-color);
-        line-height: 1.6;
+        line-height: 1.8;
         flex-grow: 1;
     }
 
     .card-content p {
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
     }
 
     .card-content strong {
-        font-weight: 500;
-        color: var(--secondary-color);
-        margin-right: 4px;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-right: 6px;
+        min-width: fit-content;
     }
 
      .card-content .status {
@@ -979,11 +1208,22 @@ function toggleEditProfile() {
          font-size: 0.9em;
      }
      .card-content .remarks {
-         background-color: #eef8ff;
-         padding: 8px 12px;
-         border-radius: 4px;
-         border-left: 3px solid var(--primary-color);
-         margin-top: 10px;
+         background: linear-gradient(to right, #eef8ff 0%, #f0f9ff 100%);
+         padding: 12px 16px;
+         border-radius: 8px;
+         border-left: 4px solid var(--info-color);
+         margin-top: 12px;
+         box-shadow: 0 2px 8px rgba(23, 162, 184, 0.1);
+         position: relative;
+     }
+
+     .card-content .remarks::before {
+         content: '💬';
+         position: absolute;
+         top: 12px;
+         right: 16px;
+         font-size: 1.2rem;
+         opacity: 0.5;
      }
 
      .card-content .no-info {
@@ -1010,14 +1250,20 @@ function toggleEditProfile() {
 
     .profile-image-container {
         position: relative;
-        width: 120px;
-        height: 120px;
+        width: 140px;
+        height: 140px;
         border-radius: 50%;
         overflow: visible;
-        border: 3px solid var(--white);
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 4px solid var(--white);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         background-color: var(--light-gray);
         flex-shrink: 0;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .profile-image-container:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.3);
     }
 
     .profile-image {
@@ -1045,8 +1291,8 @@ function toggleEditProfile() {
         right: 0;
         background-color: var(--primary-color);
         color: white;
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -1054,32 +1300,40 @@ function toggleEditProfile() {
         cursor: pointer;
         transition: background-color 0.3s ease;
         z-index: 3;
+        font-size: 1rem;
     }
 
     .upload-button:hover {
         background-color: var(--secondary-color);
     }
 
+    .upload-button i {
+        color: white;
+    }
+
     .edit-pen-btn {
         position: absolute;
         bottom: 8px;
         right: 8px;
-        background: var(--primary-color);
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: #fff;
-        border: none;
+        border: 2px solid var(--white);
         border-radius: 50%;
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         cursor: pointer;
         z-index: 3;
-        transition: background 0.2s;
+        transition: all var(--transition-speed) ease;
+        font-size: 1.1rem;
     }
     .edit-pen-btn:hover {
-        background: var(--secondary-color);
+        background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+        transform: scale(1.1) rotate(15deg);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.35);
     }
     @media (max-width: 768px) {
         .profile-image-container {
@@ -1097,21 +1351,27 @@ function toggleEditProfile() {
 
     .toggle-details-btn {
         display: none;
-        margin: 12px auto 0 auto;
-        background: var(--primary-color);
+        margin: 16px auto 0 auto;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         color: #fff;
         border: none;
-        border-radius: 20px;
-        padding: 6px 18px;
+        border-radius: 24px;
+        padding: 10px 24px;
         font-size: 1rem;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all var(--transition-speed) ease;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(30, 58, 102, 0.3);
+    }
+    .toggle-details-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(30, 58, 102, 0.4);
     }
     .toggle-details-btn i {
         margin-left: 8px;
+        transition: transform var(--transition-speed) ease;
     }
     .details-section {
         display: block;
