@@ -21,8 +21,6 @@
     let formPhone = "";
     let formHomeAddress = "";
     let formBirthday="";
-    let isPrescriptionDropdownOpen = true;
-    let prescriptions: any[] = [];
 
     // Add new state for profile image
     let profileImage: string = '';
@@ -118,27 +116,17 @@ onMount(() => {
                     where("status", "==", "Completed")
                 );
                 const querySnapshot = await getDocs(qAppointments);
-                doneAppointments = querySnapshot.docs.map((doc) => ({
-                    ...doc.data(),
-                    id: doc.id 
-                }));
-                console.log("Loaded done appointments: ", doneAppointments); 
-                const appointmentIds = doneAppointments
-                    .filter(appointment => appointment.id)
-                    .map(appointment => appointment.id);
-
-                if (appointmentIds.length > 0) {
-                    const prescriptionsRef = collection(db, "prescriptions");
-                    const qPrescriptions = query(
-                        prescriptionsRef,
-                        where("appointmentId", "in", appointmentIds)
-                    );
-                    const prescriptionsSnapshot = await getDocs(qPrescriptions);
-                    prescriptions = prescriptionsSnapshot.docs.map(doc => doc.data());
-                    console.log("Loaded prescriptions: ", prescriptions);
-                } else {
-                    console.log("No valid appointment IDs found.");
-                }
+                doneAppointments = querySnapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    console.log("Appointment data:", data); // Debug log
+                    return {
+                        ...data,
+                        id: doc.id,
+                        // Ensure remarks field is included (check for different possible field names)
+                        remarks: data.remarks || data.remark || data.adminRemarks || data.notes || ''
+                    };
+                });
+                console.log("Loaded done appointments: ", doneAppointments);
 
             } catch (error) {
                 console.error("Error loading data: ", error);
@@ -158,7 +146,6 @@ onMount(() => {
                 profileImage: ''
             };
             doneAppointments = [];
-            prescriptions = [];
             isArchived = false;
             console.log("User is not logged in.");
         }
@@ -328,11 +315,6 @@ function toggleEditProfile() {
     }
 }
 
-    function togglePrescriptionDropdown() {
-        isPrescriptionDropdownOpen = !isPrescriptionDropdownOpen;
-    }
-
-
     function toggleDropdown(event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement; }) {
         isDropdownOpen = !isDropdownOpen; 
     }
@@ -398,7 +380,7 @@ function toggleEditProfile() {
     <div class="patient-card">
         <div class="profile-image-container">
             {#if patientProfile.profileImage}
-                <img src={patientProfile.profileImage} alt="Profile Picture" class="profile-image" />
+                <img src={patientProfile.profileImage} alt="User avatar" class="profile-image" />
             {:else}
                 <div class="profile-image-placeholder">
                     <i class="fas fa-user"></i>
@@ -426,7 +408,7 @@ function toggleEditProfile() {
                         <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
                         <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
                         <p><strong>Email:</strong> {patientProfile.email || "N/A"}</p>
-                        <p class="address"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
+                        <p class="address-info"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
                     </div>
                 {/if}
             {:else}
@@ -436,7 +418,7 @@ function toggleEditProfile() {
                     <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
                     <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
                     <p><strong>Email:</strong> {patientProfile.email || "N/A"}</p>
-                    <p class="address"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
+                    <p class="address-info"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
                 </div>
             {/if}
         </div>
@@ -445,7 +427,7 @@ function toggleEditProfile() {
     <!-- ========== History Section ========== -->
     <div class="history-section">
         <h2 class="section-title">
-            Appointment & Prescription History
+            Appointment History
         </h2>
         {#if doneAppointments.length === 0}
             <p class="no-data-message">No past visits recorded.</p>
@@ -459,31 +441,15 @@ function toggleEditProfile() {
                     <div class="card-content">
                          <p><strong>Date & Time:</strong> {appointment.date} at {appointment.time}</p>
                          <p><strong>Service:</strong> {appointment.service} <span class="status">({appointment.status})</span></p>
+                         
+                         {#if appointment.subServices && appointment.subServices.length > 0}
+                            <p><strong>Selected Services:</strong> {appointment.subServices.join(', ')}</p>
+                         {/if}
 
                          {#if appointment.remarks}
                             <p class="remarks"><strong>Remarks:</strong> {appointment.remarks}</p>
                          {:else}
                             <p class="no-info"><em>No remarks for this visit.</em></p>
-                         {/if}
-
-                         <hr class="divider" />
-
-                         <p class="sub-header"><strong>Prescription:</strong></p>
-                         {#if prescriptions && prescriptions.filter(p => p.appointmentId === appointment.id).length > 0}
-                            {#each prescriptions.filter(p => p.appointmentId === appointment.id) as prescription}
-                                <div class="prescription-details">
-                                     {#each prescription.medicines as med (med.medicine)}
-                                        <div class="medicine-item">
-                                            <p><strong>Med:</strong> {med.medicine}</p>
-                                            <p><strong>Instructions:</strong> {med.instructions}</p>
-                                            <p><strong>Qty/Refills:</strong> {med.dosage}</p>
-                                        </div>
-                                     {/each}
-                                    <p class="prescriber"><strong>Prescriber:</strong> {prescription.prescriber || "N/A"}</p>
-                                </div>
-                            {/each}
-                         {:else}
-                            <p class="no-info"><em>No prescription issued for this visit.</em></p>
                          {/if}
                     </div>
                 </div>
@@ -500,7 +466,7 @@ function toggleEditProfile() {
             <div class="form-image-upload">
                 <div class="profile-image-container">
                     {#if profileImage || patientProfile.profileImage}
-                        <img src={profileImage || patientProfile.profileImage} alt="Profile Picture" class="profile-image" />
+                        <img src={profileImage || patientProfile.profileImage} alt="User avatar" class="profile-image" />
                     {:else}
                         <div class="profile-image-placeholder">
                             <i class="fas fa-user"></i>
@@ -686,7 +652,7 @@ function toggleEditProfile() {
         color: var(--white);
         margin-right: 5px;
     }
-     .patient-info .address {
+     .patient-info .address-info {
         grid-column: 1 / -1;
     }
 
@@ -711,7 +677,7 @@ function toggleEditProfile() {
              text-align: left;
              gap: 5px;
         }
-         .patient-info .address {
+         .patient-info .address-info {
              grid-column: auto;
          }
 
@@ -748,16 +714,6 @@ function toggleEditProfile() {
         background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
         transform: translateY(-2px);
-    }
-
-    .edit-button .icon-edit {
-        width: 18px;
-        height: 18px;
-        flex-shrink: 0;
-    }
-
-    .edit-button span {
-        white-space: nowrap;
     }
 
     .profile-form-container {
@@ -927,7 +883,7 @@ function toggleEditProfile() {
             color: #222 !important;
             font-weight: 500;
         }
-        .details-section p, .details-section strong, .details-section .address {
+        .details-section p, .details-section strong, .details-section .address-info {
             color: #222 !important;
         }
         .info-grid {
@@ -1037,39 +993,7 @@ function toggleEditProfile() {
          margin-top: 5px;
      }
 
-    .divider {
-        border: none;
-        border-top: 1px dashed var(--medium-gray);
-        margin: 16px 0;
-    }
-     .sub-header {
-        font-weight: 600 !important;
-        color: var(--text-color) !important;
-        margin-bottom: 8px !important;
-     }
-     .prescription-details {
-        margin-top: 5px;
-        padding-left: 10px;
-        border-left: 2px solid var(--medium-gray);
-     }
-     .medicine-item {
-         margin-bottom: 12px;
-         padding-bottom: 8px;
-         border-bottom: 1px dotted #eee;
-     }
-     .medicine-item:last-child {
-         margin-bottom: 5px;
-         border-bottom: none;
-     }
-     .medicine-item p {
-         margin-bottom: 4px;
-         font-size: 0.9rem;
-     }
-     .prescriber {
-         font-size: 0.9rem;
-         color: var(--dark-gray);
-         margin-top: 10px;
-     }
+
 
     @media (max-width: 768px) {
         .card-container {
@@ -1230,7 +1154,7 @@ function toggleEditProfile() {
             color: #222 !important;
             font-weight: 500;
         }
-        .details-section p, .details-section strong, .details-section .address {
+        .details-section p, .details-section strong, .details-section .address-info {
             color: #222 !important;
         }
         .info-grid {

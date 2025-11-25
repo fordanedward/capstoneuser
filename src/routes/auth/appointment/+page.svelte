@@ -8,33 +8,35 @@
   } from "firebase/firestore";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { env } from '$lib/env';
-  import { getAuth, onAuthStateChanged, type Unsubscribe } from "firebase/auth"; // Import Unsubscribe type
-  import '@fortawesome/fontawesome-free/css/all.css'; // Keep for icons
-  import { Button, Modal, Dropdown, DropdownItem } from 'flowbite-svelte';
-  import { ExclamationCircleOutline, CloseOutline, CloseCircleOutline } from 'flowbite-svelte-icons';
-  import { Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from 'flowbite-svelte'; // Keep if used elsewhere, otherwise remove
+  import { getAuth, onAuthStateChanged, type Unsubscribe } from "firebase/auth";
+  import '@fortawesome/fontawesome-free/css/all.css';
+  import { Button, Modal } from 'flowbite-svelte';
+  import { ExclamationCircleOutline } from 'flowbite-svelte-icons';
   import Swal from 'sweetalert2';
   import { loadStripe } from '@stripe/stripe-js';
   import { browser } from '$app/environment';
+  import { debounce } from '$lib/utils/debounce';
+  import {
+    ALL_POSSIBLE_MORNING_SLOTS,
+    ALL_POSSIBLE_AFTERNOON_SLOTS,
+    ALL_POSSIBLE_SLOTS,
+    SERVICES as services,
+    SUB_SERVICES as subServices,
+    FIRESTORE_APPOINTMENTS_COLLECTION,
+    FIRESTORE_PATIENT_PROFILES_COLLECTION,
+    FIRESTORE_SETTINGS_COLLECTION,
+    FIRESTORE_SCHEDULE_DEFAULTS_DOC,
+    FIRESTORE_DAILY_SCHEDULES_COLLECTION,
+    type ServiceType,
+    type SubServiceType,
+    type ServiceWithSubServices
+  } from '$lib/data/appointmentConfig';
 
   // --- Constants ---
-  const FIRESTORE_APPOINTMENTS_COLLECTION = 'appointments';
-  const FIRESTORE_PATIENT_PROFILES_COLLECTION = 'patientProfiles';
-  const FIRESTORE_SETTINGS_COLLECTION = 'settings';
-  const FIRESTORE_SCHEDULE_DEFAULTS_DOC = 'scheduleDefaults';
-  const FIRESTORE_DAILY_SCHEDULES_COLLECTION = 'dailySchedules';
   if (!env.stripe.publicKey) {
     throw new Error('Stripe public key is not configured');
   }
   const stripePromise = loadStripe(env.stripe.publicKey);
-
-  const ALL_POSSIBLE_MORNING_SLOTS = [
-      "8:00 AM", "8:30 AM", "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:30 AM", "12:00 PM", "12:30 PM",
-  ];
-  const ALL_POSSIBLE_AFTERNOON_SLOTS = [
-      "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM",
-  ];
-  const ALL_POSSIBLE_SLOTS = [...ALL_POSSIBLE_MORNING_SLOTS, ...ALL_POSSIBLE_AFTERNOON_SLOTS];
 
   // --- Firebase Initialization ---
   let db: ReturnType<typeof getFirestore>;
@@ -46,12 +48,10 @@
         const app = initializeApp(env.firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        console.log("Firebase Initialized (Client Booking)");
       } else {
         const app = getApp();
         db = getFirestore(app);
         auth = getAuth(app);
-        console.log("Using existing Firebase instance (Client Booking)");
       }
     } catch (e) {
       console.error("Error initializing Firebase:", e);
@@ -60,10 +60,6 @@
   }
 
   // --- Type Definitions ---
-  type ServiceType = typeof services[number];
-  type SubServiceType = typeof subServices[keyof typeof subServices][number];
-  type ServiceWithSubServices = keyof typeof subServices;
-
   type Appointment = {
     id: string;
     date: string;
@@ -126,33 +122,6 @@
   let reasonOther = false;
   let requestRefund = false;
   let refundReason = '';
-
-  // --- Static Data ---
-  const services = [
-    "Imaging", "Laboratory", "Doctor's Consultation",
-  ] as const;
-
-  const subServices = {
-    "Imaging": ["X-ray", "ECG", "Ultrasound"],
-    "Laboratory": ["FBS", "CBC", "SGPT", "SGOT", "HBSAG", "Cholesterol", "Lipid Profile", "Fecalysis", "Creatinine"],
-    "Doctor's Consultation": [
-      "Adult Non-Urgent Cases",
-      "Travel Clearance", 
-      "New Prescription",
-      "Fit to Work Certification",
-      "Medical Certification",
-      "Prescription Refills",
-      "Routine Wellness Check Up",
-      "Laboratory Request",
-      "Tumor Marker (CEA/PSA)",
-      "Imaging Request",
-      "Thyroid Function (FT3, FT4, TSH)",
-      "ECG/EKG/X-Ray/Ultrasound",
-      "Troponin I",
-      "Lab Result Interpretation",
-      "HbA1c"
-    ]
-  } as const;
 
   // --- Helper Functions ---
   function sortTimeSlots(slots: string[]): string[] {
@@ -217,9 +186,7 @@
         const docSnap = await getDoc(defaultsRef);
         if (docSnap.exists() && Array.isArray(docSnap.data().defaultWorkingDays)) {
             defaultWorkingDays = docSnap.data().defaultWorkingDays;
-            console.log("Loaded default working days:", defaultWorkingDays);
         } else {
-            console.warn("Default working days not found or invalid in Firestore. Using code default [0,1,2,3,4,5,6] (Sun-Sat). ");
             // Use 0-6 (Sun-Sat) so weekends are included by default
             defaultWorkingDays = [0, 1, 2, 3, 4, 5, 6];
         }
@@ -228,8 +195,29 @@
     }
   }
 
+  // Consolidated slot fetching with caching
+  const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
+  const CACHE_DURATION = 30000; // 30 seconds
+
   async function fetchAvailabilityForDate(date: string, target: 'booking' | 'reschedule') {
     if (!db || !date) return;
+
+    // Check cache first
+    const cached = slotCache.get(date);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      if (target === 'booking') {
+        isLoadingBookingSlots = false;
+        fetchedBookingSlots = cached.slots;
+        isBookingDateWorking = cached.isWorking;
+        bookingSlotsError = null;
+      } else {
+        isLoadingRescheduleSlots = false;
+        fetchedRescheduleSlots = cached.slots;
+        isRescheduleDateWorking = cached.isWorking;
+        rescheduleSlotsError = null;
+      }
+      return;
+    }
 
     if (target === 'booking') {
         isLoadingBookingSlots = true;
@@ -281,8 +269,10 @@
             const querySnapshot = await getDocs(q);
             const unavailableSlots = querySnapshot.docs.map((d) => d.data().time);
             finalAvailableSlots = sortedSlots.filter(slot => !unavailableSlots.includes(slot));
-            console.log(`Availability Check for ${date} (${target}): Filtered unavailable slots: ${unavailableSlots.join(', ')}. Final slots: ${finalAvailableSlots.length}`);
         }
+
+        // Cache the results
+        slotCache.set(date, { slots: finalAvailableSlots, isWorking, timestamp: Date.now() });
 
         if (target === 'booking') {
             isBookingDateWorking = isWorking;
@@ -367,8 +357,13 @@
       }
       if (!isBookingDateWorking || !fetchedBookingSlots.includes(selectedTime)) {
            Swal.fire('Invalid Time', 'The selected time slot is not available. Please refresh or choose another.', 'error');
-           fetchAvailabilityForDate(selectedDate, 'booking');
+           await fetchAvailabilityForDate(selectedDate, 'booking');
            return;
+      }
+
+      if (!db) {
+          Swal.fire('Error', 'Database connection unavailable. Please refresh the page.', 'error');
+          return;
       }
 
       try {
@@ -422,7 +417,7 @@
           });
 
           selectedTime = null;
-          fetchAvailabilityForDate(selectedDate, 'booking');
+          await fetchAvailabilityForDate(selectedDate, 'booking');
 
       } catch (error: any) {
           console.error("Error during booking transaction:", error);
@@ -431,7 +426,7 @@
           if (error.message === 'Time Slot Unavailable') {
               title = 'Time Slot Unavailable';
               text = 'Sorry, this time slot was just booked. Please choose a different time.';
-              fetchAvailabilityForDate(selectedDate, 'booking');
+              await fetchAvailabilityForDate(selectedDate, 'booking');
           } else if (error.message === 'Already Booked') {
                title = 'Already Booked';
                text = 'You already have an appointment scheduled for this date. Please choose another date.';
@@ -531,7 +526,8 @@
             return unsubscribe;
 
       } catch (e) {
-          console.error("Error setting up real-time listener for appointments:", e);
+          console.error("Error setting up real-time listener:", e);
+          Swal.fire('Error', 'Unable to load appointments. Please refresh.', 'error');
           return undefined;
       }
   }
@@ -614,15 +610,15 @@
           fetchAvailabilityForDate(newDate, 'reschedule');
           rescheduleModal = true;
       } else {
-          console.error("Could not find appointment to reschedule:", appointmentId);
-          Swal.fire('Error', 'Could not load appointment details for rescheduling.', 'error');
+          console.error("Could not find appointment with ID:", appointmentId);
+          Swal.fire('Error', 'Unable to load appointment details. Please try again or contact support.', 'error');
       }
   }
 
   async function rescheduleAppointment(): Promise<void> {
       if (!selectedAppointmentId || !currentAppointment) {
-          console.error("Missing data for reschedule:", selectedAppointmentId, currentAppointment);
-          Swal.fire('Error', 'Cannot proceed with reschedule. Please close and reopen.', 'error'); return;
+          console.error("Missing reschedule data - appointmentId:", selectedAppointmentId, "hasAppointment:", !!currentAppointment);
+          Swal.fire('Error', 'Session expired. Please close this window and try again.', 'error'); return;
       }
       if (!newDate || !newTime) {
           Swal.fire("Incomplete Details", "Please select a new date and time.", "warning"); return;
@@ -676,15 +672,15 @@
            fetchAvailabilityForDate(selectedDate, 'booking'); // Refresh main list
 
       } catch (error: any) {
-          console.error("Error submitting reschedule request:", error);
+          console.error("Reschedule transaction error:", error?.message || error);
           let title = 'Reschedule Error';
-          let text = 'Failed to submit reschedule request. Please try again.';
+          let text = 'Unable to submit your reschedule request. Please try again.';
           if (error.message === 'Reschedule Slot Unavailable') {
               title = 'Time Slot Unavailable';
-              text = 'Sorry, the new time slot became unavailable. Please choose another.';
-               fetchAvailabilityForDate(newDate, 'reschedule');
+              text = 'This time slot is no longer available. Please select another.';
+              await fetchAvailabilityForDate(newDate, 'reschedule');
           }
-           Swal.fire({ icon: "error", title: title, text: text });
+          Swal.fire({ icon: "error", title: title, text: text });
       }
   }
 
@@ -762,10 +758,22 @@
 
     const setup = async () => {
       if (!db || !auth) {
-        console.error("Firebase not initialized onMount"); return;
+        console.error("Firebase not initialized");
+        Swal.fire({
+          icon: 'error',
+          title: 'Connection Error',
+          text: 'Unable to connect to the booking system. Please refresh the page.',
+          confirmButtonText: 'Refresh'
+        }).then(() => window.location.reload());
+        return;
       }
-      await loadDefaultWorkingDays();
-      fetchAvailabilityForDate(selectedDate, 'booking');
+      
+      try {
+        await loadDefaultWorkingDays();
+        await fetchAvailabilityForDate(selectedDate, 'booking');
+      } catch (error) {
+        console.error("Error during initial setup:", error);
+      }
 
       authUnsubscribe = onAuthStateChanged(auth, async (user) => {
         if (localAppointmentsUnsubscribe) {
@@ -799,12 +807,25 @@
   });
 
   // --- Reactivity ---
+  // Debounced fetch to reduce unnecessary queries
+  const debouncedFetchBooking = debounce((date: string) => {
+    if (db && date) {
+      fetchAvailabilityForDate(date, 'booking');
+    }
+  }, 300);
+
+  const debouncedFetchReschedule = debounce((date: string) => {
+    if (db && date) {
+      fetchAvailabilityForDate(date, 'reschedule');
+    }
+  }, 300);
+
   $: if (selectedDate && db) {
-    fetchAvailabilityForDate(selectedDate, 'booking');
+    debouncedFetchBooking(selectedDate);
   }
 
   $: if (rescheduleModal && newDate && db) {
-     fetchAvailabilityForDate(newDate, 'reschedule');
+    debouncedFetchReschedule(newDate);
   }
 
   $: displayMorningSlots = fetchedBookingSlots.filter(slot => ALL_POSSIBLE_MORNING_SLOTS.includes(slot));
@@ -812,51 +833,72 @@
 
 </script>
 
-<div style="max-height: 100vh; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
-  <div class="responsive-container">
+<div class="page-wrapper">
+  <div class="page-header">
+    <h1 class="page-title">Appointments</h1>
+    <p class="page-subtitle">Schedule and manage your medical appointments</p>
+  </div>
 
+  <div class="responsive-container">
     <!-- Booking Card (Left) -->
-    <div class="responsive-card">
-      <h3 class="text-lg font-semibold mb-4 text-gray-800">Schedule Appointment</h3>
-      <div class="space-y-4"> 
+    <div class="responsive-card booking-card">
+      <div class="card-header">
+        <i class="fas fa-calendar-plus card-header-icon"></i>
+        <h3 class="card-title">Schedule Appointment</h3>
+      </div>
+      <div class="card-content"> 
         {#if !patientId}
-          <div class="text-center p-6 text-gray-500 bg-gray-50 rounded-md">
-              <i class="fas fa-sign-in-alt mr-2"></i>Please log in to schedule your appointment.
+          <div class="alert-box alert-info">
+              <i class="fas fa-sign-in-alt alert-icon"></i>
+              <div>
+                <p class="alert-title">Login Required</p>
+                <p class="alert-text">Please log in to schedule your appointment.</p>
+              </div>
           </div>
         {:else if !hasCompleteProfile}
-          <div class="text-center p-6 text-orange-600 bg-orange-50 rounded-md">
-              <i class="fas fa-user-edit mr-2"></i>Please complete your profile information before booking an appointment.
-              <div class="mt-4">
+          <div class="alert-box alert-warning">
+              <i class="fas fa-user-edit alert-icon"></i>
+              <div class="flex-1">
+                <p class="alert-title">Complete Your Profile</p>
+                <p class="alert-text">Please complete your profile information before booking an appointment.</p>
+                <div class="mt-3">
                   <Button color="blue" on:click={() => window.location.href = '/auth/profile'}>
                       <i class="fas fa-user-edit mr-2"></i>Complete Profile
                   </Button>
+                </div>
               </div>
           </div>
         {:else}
-          <div>
-            <label for="datepicker" class="block text-sm font-medium text-gray-700 mb-1">Select Date</label>
+          <div class="form-group">
+            <label for="datepicker" class="form-label">
+              <i class="far fa-calendar text-blue-500 mr-1"></i>Select Date
+            </label>
             <input
               type="date"
               id="datepicker"
               bind:value={selectedDate}
-              class="block w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-70"
+              class="form-input"
               min={getMinDate()}
               disabled={isLoadingBookingSlots}
             />
           </div>
 
-          <div>
-              <label for="service-select" class="block text-sm font-medium text-gray-700 mb-1">Select Service</label>
-              <select id="service-select" bind:value={selectedService} class="block w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-70" disabled={isLoadingBookingSlots}>
+          <div class="form-group">
+              <label for="service-select" class="form-label">
+                <i class="fas fa-stethoscope text-blue-500 mr-1"></i>Select Service
+              </label>
+              <select id="service-select" bind:value={selectedService} class="form-input" disabled={isLoadingBookingSlots}>
                   <option value={null} disabled selected>Select a service</option>
                   {#each services as service} <option value={service}>{service}</option> {/each}
               </select>
           </div>
 
           {#if selectedService && selectedService in subServices}
-          <div class="pt-2">
-              <label for="subservices-group" class="block text-sm font-medium text-gray-700 mb-1"> </label>
-                               <div id="subservices-group" class="grid grid-cols-2 gap-2">
+          <div class="form-group">
+              <label for="subservices-group" class="form-label">
+                <i class="fas fa-list-check text-blue-500 mr-1"></i>Select Sub-Services (Optional)
+              </label>
+              <div id="subservices-group" class="sub-services-grid">
                     {#each subServices[selectedService as ServiceWithSubServices] as subService}
                     <label for={`sub-${subService}`} class="flex items-center">
                         <Checkbox id={`sub-${subService}`} value={subService} on:change={() => toggleSubService(subService)} disabled={isLoadingBookingSlots} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"/>
@@ -867,28 +909,37 @@
           </div>
           {/if}
 
-          <div class="pt-2 space-y-4">
+          <div class="form-group time-slots-section">
             {#if isLoadingBookingSlots}
-              <div class="text-center p-4 text-blue-600 bg-blue-50 rounded-md">
-                  <i class="fas fa-spinner fa-spin mr-2"></i>Loading available times...
+              <div class="space-y-4">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-grid">
+                  {#each Array(6) as _, i}
+                    <div class="skeleton-slot"></div>
+                  {/each}
+                </div>
               </div>
             {:else if bookingSlotsError}
-               <div class="text-center p-4 text-red-700 bg-red-100 rounded-md border border-red-200">
-                  <i class="fas fa-exclamation-triangle mr-2"></i>{bookingSlotsError}
+               <div class="alert-box alert-error">
+                  <i class="fas fa-exclamation-triangle alert-icon"></i>
+                  <p>{bookingSlotsError}</p>
               </div>
             {:else if !isBookingDateWorking}
-              <div class="text-center p-4 text-orange-700 bg-orange-100 rounded-md border border-orange-200">
-                   <i class="fas fa-calendar-times mr-2"></i>Sorry, this is not a working day.
+              <div class="alert-box alert-warning">
+                   <i class="fas fa-calendar-times alert-icon"></i>
+                   <p>Sorry, this is not a working day.</p>
               </div>
             {:else if fetchedBookingSlots.length === 0}
-              <div class="text-center p-4 text-gray-600 bg-gray-100 rounded-md border border-gray-200">
-                  <i class="fas fa-info-circle mr-2"></i>No available time slots for this date.
+              <div class="alert-box alert-info">
+                  <i class="fas fa-info-circle alert-icon"></i>
+                  <p>No available time slots for this date.</p>
                </div>
             {:else}
               {#if displayMorningSlots.length > 0}
-              <div>
-                 <div class="flex items-center mb-2 text-sm font-medium text-gray-600">
-                      <i class="far fa-sun mr-2 w-4 text-center"></i>Morning
+              <div class="time-slot-group">
+                 <div class="time-slot-header">
+                      <i class="far fa-sun text-amber-500"></i>
+                      <span>Morning</span>
                   </div>
                   <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {#each ALL_POSSIBLE_MORNING_SLOTS as slot (slot)}
@@ -909,9 +960,10 @@
               {/if}
 
               {#if displayAfternoonSlots.length > 0}
-              <div>
-                   <div class="flex items-center mb-2 text-sm font-medium text-gray-600">
-                       <i class="far fa-moon mr-2 w-4 text-center"></i>Afternoon
+              <div class="time-slot-group">
+                   <div class="time-slot-header">
+                       <i class="far fa-moon text-indigo-500"></i>
+                       <span>Afternoon</span>
                    </div>
                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {#each ALL_POSSIBLE_AFTERNOON_SLOTS as slot (slot)}
@@ -932,13 +984,20 @@
                {/if}
 
                {#if selectedTime}
-                <div class="mt-4 pt-4 border-t border-gray-200 text-center">
-                    <p class="text-gray-700 mb-3 text-sm">
-                        Selected: <span class="font-semibold">{formatDate(selectedDate)}</span> at <span class="font-semibold">{selectedTime}</span>
-                    </p>
+                <div class="booking-summary">
+                    <div class="summary-content">
+                      <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                      <div>
+                        <p class="summary-label">Selected Appointment</p>
+                        <p class="summary-value">
+                          {formatDate(selectedDate)} at {selectedTime}
+                        </p>
+                      </div>
+                    </div>
                     <Button
-                        size="md"
+                        size="lg"
                         color="green"
+                        class="w-full submit-btn"
                         on:click={bookAppointment}
                         disabled={!selectedTime || !selectedService || isLoadingBookingSlots}
                     >
@@ -953,20 +1012,29 @@
     </div>
 
     <!-- Appointments Card (Right) -->
-    <div class="responsive-card appointments-section animate-in page-loaded">
-      <h3 class="text-lg font-semibold mb-4 text-gray-800">Your Appointments</h3>
-       <div class="flex border-b border-gray-200 mb-4">
+    <div class="responsive-card appointments-card">
+      <div class="card-header">
+        <i class="fas fa-clipboard-list card-header-icon"></i>
+        <h3 class="card-title">Your Appointments</h3>
+      </div>
+      <div class="card-content">
+       <div class="tabs-container">
             <button on:click={() => switchTab('upcoming')} class="tab-button {activeTab === 'upcoming' ? 'active-tab' : ''}"> Upcoming </button>
             <button on:click={() => switchTab('past')} class="tab-button {activeTab === 'past' ? 'active-tab' : ''}"> Past </button>
         </div>
 
         {#if !patientId}
-          <div class="text-center p-6 text-gray-500 bg-gray-50 rounded-md">
-              <i class="fas fa-sign-in-alt mr-2"></i>Please log in to see your appointments.
+          <div class="alert-box alert-info">
+              <i class="fas fa-sign-in-alt alert-icon"></i>
+              <p>Please log in to see your appointments.</p>
           </div>
         {:else}
           <div class="appointment-list space-y-3">
-                {#if activeTab === 'upcoming'}
+                {#if activeTab === 'upcoming' && upcomingAppointments.length === 0 && isLoadingBookingSlots}
+                    {#each Array(3) as _, i}
+                      <div class="skeleton-appointment-card"></div>
+                    {/each}
+                {:else if activeTab === 'upcoming'}
                     {#if upcomingAppointments.length > 0}
                         {#each upcomingAppointments as appointment (appointment.id)}
                            <div class="appointment-card flex flex-col">
@@ -1054,8 +1122,10 @@
                             </div>
                         {/each}
                     {:else}
-                        <div class="text-center p-6 text-gray-500 bg-gray-50 rounded-md">
-                           <i class="fas fa-calendar-day mr-2"></i> No upcoming appointments.
+                        <div class="empty-state">
+                           <i class="fas fa-calendar-day empty-icon"></i>
+                           <p class="empty-title">No Upcoming Appointments</p>
+                           <p class="empty-text">Schedule your first appointment using the form.</p>
                         </div>
                     {/if}
                 {:else if activeTab === 'past'}
@@ -1105,16 +1175,19 @@
                               </div>
                         {/each}
                     {:else}
-                         <div class="text-center p-6 text-gray-500 bg-gray-50 rounded-md">
-                           <i class="fas fa-history mr-2"></i>No past appointments.
+                         <div class="empty-state">
+                           <i class="fas fa-history empty-icon"></i>
+                           <p class="empty-title">No Past Appointments</p>
+                           <p class="empty-text">Your appointment history will appear here.</p>
                         </div>
                     {/if}
                 {/if}
           </div>
         {/if}
+      </div>
     </div>
-
   </div>
+</div>
 
   <!-- Reschedule Modal -->
   {#if rescheduleModal && currentAppointment}
@@ -1258,51 +1331,305 @@
   </div>
   {/if}
 
-</div>
 <style>
+  /* Page Layout */
+  .page-wrapper {
+    min-height: 100vh;
+    background: #ffffff;
+    padding: 2rem 1rem;
+  }
+
+  .page-header {
+    text-align: left;
+    margin-bottom: 2rem;
+    animation: fadeIn 0.6s ease-out;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 1rem;
+  }
+
+  .page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 1.125rem;
+    color: #6b7280;
+  }
+
   .responsive-container {
     display: flex;
-    justify-content: space-between;
-    gap: 1.5rem; 
-    padding: 1rem; 
-    width: 100%;
-    margin-top: 2rem; 
-    margin-bottom: 2rem;
-    /* max-height: 90vh; */ /* Removing this might help stretching on desktop if needed */
+    justify-content: center;
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
     flex-wrap: wrap;
-    align-items: stretch; /* Explicitly set default, ensures cards stretch vertically on desktop */
+    align-items: flex-start;
   }
+
   .responsive-card {
     flex: 1 1 45%;
     min-width: 320px;
-    border: 1px solid #e5e7eb; /* border-gray-200 */
-    border-radius: 0.75rem; /* rounded-xl */
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
-    background-color: #fff;
-    padding: 1.5rem; /* p-6 */
-    display: flex;           /* Needed for internal flex layout */
-    flex-direction: column; /* Needed for internal flex layout */
-    /* REMOVED fixed height from here */
+    max-width: 650px;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
 
-   @media (max-width: 768px) {
-        .responsive-container {
-            flex-direction: column;
-            /* max-height: none; */ /* Allow container to grow */
-            align-items: center; /* Center cards when stacked */
-            margin-top: 1rem;
-            gap: 1rem; /* gap-4 */
-        }
-        .responsive-card {
-            flex-basis: auto; /* Allow natural height */
-            width: 95%;      /* Control width when stacked */
-            /* Ensure min-width doesn't conflict */
-             min-width: 0;
-            margin-left: auto;
-            margin-right: auto;
-            padding: 1rem; /* p-4 */
-        }
+  .responsive-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #1e3a66 0%, #1e3a66 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-header-icon {
+    font-size: 1.5rem;
+    color: white;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+  }
+
+  .card-content {
+    padding: 1.5rem;
+  }
+
+  /* Form Elements */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background: white;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .form-input:disabled {
+    background: #f9fafb;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .sub-services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  /* Alert Boxes */
+  .alert-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .alert-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .alert-text {
+    font-size: 0.875rem;
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+  }
+
+  .alert-info .alert-icon {
+    color: #3b82f6;
+  }
+
+  .alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+  }
+
+  .alert-warning .alert-icon {
+    color: #f59e0b;
+  }
+
+  .alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+
+  .alert-error .alert-icon {
+    color: #ef4444;
+  }
+
+  @media (max-width: 768px) {
+    .page-wrapper {
+      padding: 0.75rem;
     }
+
+    .page-header {
+      padding: 1rem 0;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+    }
+
+    .page-subtitle {
+      font-size: 0.875rem;
+    }
+
+    .responsive-container {
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .responsive-card {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .card-header {
+      padding: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+    }
+
+    .card-content {
+      padding: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-input {
+      padding: 0.875rem;
+      font-size: 1rem;
+    }
+
+    .sub-services-grid {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .time-slot-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .slot-button {
+      padding: 0.75rem 0.5rem !important;
+      font-size: 0.9rem !important;
+      min-height: 44px;
+    }
+
+    .skeleton-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .booking-summary {
+      padding: 1rem;
+    }
+
+    .summary-value {
+      font-size: 1rem;
+    }
+
+    .appointment-card {
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .action-buttons {
+      margin-top: 0.75rem;
+      justify-content: flex-start;
+    }
+
+    .btn-action {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      min-height: 36px;
+      flex: 1;
+    }
+
+    .tabs-container {
+      margin-bottom: 1rem;
+    }
+
+    .tab-button {
+      padding: 0.875rem 0.75rem;
+      font-size: 0.95rem;
+    }
+
+    .modal {
+      padding: 0.5rem;
+    }
+
+    .modal-content {
+      max-width: 100%;
+      padding: 1.25rem;
+    }
+
+    .alert-box {
+      padding: 0.875rem;
+      gap: 0.75rem;
+    }
+
+    .alert-icon {
+      font-size: 1.25rem;
+    }
+  }
 
   /* Modal Base Styles */
   .modal {
@@ -1323,23 +1650,92 @@
    }
   .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
 
-  /* Booking Form Time Slots */
-  .slot-button {
-      font-weight: 500; text-align: center;
-   }
-  .slot-button.selected {
-       background-color: #2563eb; color: white; border-color: #1d4ed8;
-       font-weight: 600; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  /* Time Slots */
+  .time-slots-section {
+    margin-top: 1.5rem;
   }
-   .slot-button.available {
-       border-color: #d1d5db; color: #374151; background-color: white;
-   }
-    .slot-button.available:hover {
-       background-color: #f9fafb; border-color: #9ca3af;
-    }
+
+  .time-slot-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .time-slot-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.75rem;
+  }
+
+  .slot-button {
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.2s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slot-button.selected {
+    background: linear-gradient(135deg, #1e3a66 0%, #1e3a66 100%);
+    color: white;
+    border-color: #667eea;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: scale(1.05);
+  }
+
+  .slot-button.available {
+    border: 2px solid #e5e7eb;
+    color: #374151;
+    background-color: white;
+  }
+
+  .slot-button.available:hover {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e9efff 100%);
+    border-color: #1e3a66;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
   .slot-button.unavailable {
-      background-color: #f3f4f6; color: #9ca3af; border-color: #e5e7eb;
-      cursor: not-allowed; opacity: 0.7;
+    background-color: #f9fafb;
+    color: #9ca3af;
+    border: 2px solid #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Booking Summary */
+  .booking-summary {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e9efff 100%);
+    border-radius: 0.75rem;
+    border: 2px solid #1e3a66;
+  }
+
+  .summary-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .summary-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .summary-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
   }
 
   .appointment-list {
@@ -1355,34 +1751,63 @@
   .appointment-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
   .appointment-list::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-  /* Inner appointment items */
+  /* Appointment Cards */
   .appointment-card {
-      background-color: #ffffff;
-      border: 1px solid #e5e7eb;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      height: 170px;             
-      overflow: hidden;         
-      transition: box-shadow 0.2s ease-in-out;
-      margin-bottom: 0.75rem;  
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    min-height: 170px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+    position: relative;
+    word-wrap: break-word;
   }
+
+  .appointment-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #1e3a66 0%, #ffbc22 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .appointment-card:hover::before {
+    opacity: 1;
+  }
+
   .appointment-card:last-child {
-      margin-bottom: 0;
+    margin-bottom: 0;
   }
+
   .appointment-card:hover {
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    border-color: #667eea;
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+    transform: translateX(4px);
   }
+
   .appointment-card.past {
-      background-color: #f9fafb; opacity: 0.9; border-color: #f3f4f6;
+    background-color: #f9fafb;
+    opacity: 0.85;
+    border-color: #f3f4f6;
   }
+
   .appointment-card > div.flex-grow {
-      flex-grow: 1; min-height: 0;
+    flex-grow: 1;
+    min-height: 0;
   }
-   .appointment-card > div.mt-auto {
-     margin-top: auto; flex-shrink: 0;
+
+  .appointment-card > div.mt-auto {
+    margin-top: auto;
+    flex-shrink: 0;
   }
 
   .status-badge {
@@ -1441,14 +1866,19 @@
       align-items: center; min-height: 32px; flex-shrink: 0;
       flex-wrap: wrap;
   }
-    .action-buttons .reason-text {
-      flex-basis: 100%;
-      text-align: right;
-      white-space: normal; /* allow multi-line reason */
-      overflow: hidden;
-      text-overflow: ellipsis;
-      padding-top: 0.25rem;
+  
+  @media (max-width: 480px) {
+    .action-buttons {
+      flex-direction: column;
+      gap: 0.5rem;
+      width: 100%;
     }
+    
+    .btn-action {
+      width: 100%;
+      justify-content: center;
+    }
+  }
   .btn-action {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 0.375rem;
@@ -1466,33 +1896,124 @@
   .btn-cancel { background-color: #ef4444; border-color: #dc2626; }
   .btn-cancel:hover { background-color: #dc2626; }
 
- .tab-button {
-    flex: 1; padding: 0.75rem 1rem; font-weight: 500; text-align: center;
-    border: none; background: none; cursor: pointer;
+  /* Tabs */
+  .tabs-container {
+    display: flex;
+    border-bottom: 2px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+  }
+
+  .tab-button {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    text-align: center;
+    border: none;
+    background: none;
+    cursor: pointer;
     border-bottom: 3px solid transparent;
-    transition: border-color 0.3s ease, color 0.3s ease;
-    color: #6b7280; font-size: 0.875rem;
- }
- .tab-button.active-tab {
-    border-bottom-color: #3b82f6; color: #3b82f6; font-weight: 600;
- }
- .tab-button:hover:not(.active-tab) {
-    color: #374151; border-bottom-color: #d1d5db;
- }
+    transition: all 0.3s ease;
+    color: #6b7280;
+    font-size: 0.875rem;
+    position: relative;
+  }
 
- /* Utility */
- .truncate {
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
- }
- .no-appointments {
-    text-align: center; padding: 1.5rem;
-    color: #6b7280; background-color: #f9fafb;
-    border-radius: 0.5rem; border: 1px dashed #e5e7eb;
- }
+  .tab-button.active-tab {
+    color: #667eea;
+    font-weight: 600;
+    border-bottom-color: #667eea;
+  }
 
- :global(.dark) .responsive-card { background-color: #1f2937; border-color: #374151; }
- :global(.dark) h3 { color: #f3f4f6; }
- :global(.dark) label { color: #d1d5db; }
+  .tab-button:hover:not(.active-tab) {
+    color: #374151;
+    background: #f9fafb;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    animation: fadeIn 0.6s ease;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    color: #d1d5db;
+    margin-bottom: 1rem;
+  }
+
+  .empty-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  /* Utility */
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Dark Mode */
+  :global(.dark) .page-wrapper {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  }
+
+  :global(.dark) .page-title,
+  :global(.dark) .page-subtitle {
+    color: #f1f5f9;
+  }
+
+  :global(.dark) .responsive-card {
+    background-color: #1e293b;
+    border-color: #334155;
+  }
+
+  :global(.dark) .card-title {
+    color: #f1f5f9;
+  }
+
+  :global(.dark) .form-label {
+    color: #cbd5e1;
+  }
+
+  :global(.dark) .form-input {
+    background-color: #334155;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+
+  :global(.dark) .form-input:focus {
+    border-color: #667eea;
+  }
  :global(.dark) select, :global(.dark) input[type="date"] { background-color: #374151; border-color: #4b5563; color: #f9fafb; }
  :global(.dark) .slot-button.available { background-color: #374151; border-color: #4b5563; color: #d1d5db; }
  :global(.dark) .slot-button.available:hover { background-color: #4b5563; }
@@ -1590,4 +2111,67 @@
   color: #6b7280; /* gray-500 */
 }
 .reason-paragraph.text-red-600 { color: #dc2626; }
+
+/* Skeleton loaders */
+.skeleton-header {
+  height: 20px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  width: 30%;
+}
+
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    .skeleton-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .page-title {
+      font-size: 1.5rem;
+    }
+    
+    .card-header-icon {
+      font-size: 1.25rem;
+    }
+    
+    .summary-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }.skeleton-slot {
+  height: 36px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.375rem;
+}
+
+.skeleton-appointment-card {
+  height: 170px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+:global(.dark) .skeleton-header,
+:global(.dark) .skeleton-slot,
+:global(.dark) .skeleton-appointment-card {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+}
 </style>
