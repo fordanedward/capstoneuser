@@ -849,13 +849,38 @@ function toggleEditProfile() {
     }
 
     .profile-form-container::-webkit-scrollbar {
-        width: 0;
-        height: 0;
+        width: 8px;
+    }
+
+    .profile-form-container::-webkit-scrollbar-track {
+        background: rgba(248, 249, 250, 0.5);
+        border-radius: 10px;
+        margin: 4px 0;
+    }
+
+    .profile-form-container::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        border-radius: 10px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .profile-form-container::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.15), 0 0 8px rgba(30, 58, 102, 0.3);
+        transform: scaleX(1.2);
+    }
+
+    .profile-form-container::-webkit-scrollbar-thumb:active {
+        background: linear-gradient(180deg, #152a5f 0%, #0f1f5a 100%);
     }
 
     .profile-form-container {
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        scrollbar-width: thin;
+        scrollbar-color: var(--primary-color) rgba(248, 249, 250, 0.5);
+        -ms-overflow-style: auto;
     }
 
     .profile-form-container::before {
