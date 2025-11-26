@@ -29,6 +29,7 @@ const db = getFirestore(app);
 
 let firstName: string = '';
 let lastName: string = '';
+let suffix: string = '';
 let phone: string = '';
 let email: string = '';
 let password: string = '';
@@ -139,6 +140,7 @@ async function handleRegistration() {
         const profileData = {
             name: firstName.trim(),
             lastName: lastName.trim(),
+            suffix: suffix || '',
             id: customPatientId,
             age: '',
             gender: '',
@@ -276,11 +278,12 @@ onMount(() => {
 .register-field:nth-child(4) { transition-delay: 0.7s; }
 .register-field:nth-child(5) { transition-delay: 0.8s; }
 .register-field:nth-child(6) { transition-delay: 0.9s; }
+.register-field:nth-child(7) { transition-delay: 1.0s; }
 
 .register-button {
     opacity: 0;
     transform: translateY(20px) scale(0.95);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1s;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1.1s;
 }
 
 .register-button.loaded {
@@ -291,7 +294,7 @@ onMount(() => {
 .login-link {
     opacity: 0;
     transform: translateY(15px);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) 1.2s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) 1.3s;
 }
 
 .login-link.loaded {
@@ -327,6 +330,17 @@ onMount(() => {
                     <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
                         <Label for="lastName" class="block mb-2">Last Name</Label>
                         <Input type="text" id="lastName" placeholder="Enter your last name" class="border p-2 w-full" bind:value={lastName} required />
+                    </div>
+                    <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                        <Label for="suffix" class="block mb-2">Suffix (optional)</Label>
+                        <select id="suffix" bind:value={suffix} class="border p-2 w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                        </select>
                     </div>
                     <div class="register-field {isPageLoaded ? 'loaded' : ''} mb-6">
                         <Label for="phone" class="block mb-2">Phone Number</Label>

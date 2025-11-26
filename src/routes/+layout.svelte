@@ -4,7 +4,7 @@
 </script>
   
   <svelte:head>
-    <title>PHP Digital Member User</title>
+    <title>PHPGMP Member</title>
   </svelte:head>
   
   <main>
