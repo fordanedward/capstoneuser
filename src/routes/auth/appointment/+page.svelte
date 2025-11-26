@@ -199,6 +199,94 @@
   const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
   const CACHE_DURATION = 30000; // 30 seconds
 
+  // Helper function to check if a date has available slots (considering time passed for today)
+  async function hasAvailableSlots(date: string): Promise<boolean> {
+    if (!db || !date) return false;
+    
+    // Check cache first
+    const cached = slotCache.get(date);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const slots = cached.slots;
+      const isWorking = cached.isWorking;
+      
+      // If it's today, filter out slots where time has passed
+      const today = new Date().toISOString().split('T')[0];
+      if (date === today) {
+        const availableNow = slots.filter(slot => !isTimePassed(slot));
+        return availableNow.length > 0 && isWorking;
+      }
+      
+      return slots.length > 0 && isWorking;
+    }
+
+    try {
+      const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+      const scheduleSnap = await getDoc(scheduleRef);
+
+      let slots: string[] = [];
+      let isWorking = false;
+
+      if (scheduleSnap.exists()) {
+        const data = scheduleSnap.data();
+        isWorking = data.isWorkingDay ?? false;
+        if (isWorking && Array.isArray(data.availableSlots)) {
+          slots = data.availableSlots;
+        }
+      } else {
+        const dateObj = new Date(date + 'T00:00:00Z');
+        const dayOfWeek = dateObj.getUTCDay();
+        isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        if (isWorking) {
+          slots = ALL_POSSIBLE_SLOTS;
+        }
+      }
+
+      if (isWorking && slots.length > 0) {
+        // Filter out booked slots
+        const q = query(
+          collection(db, FIRESTORE_APPOINTMENTS_COLLECTION),
+          where("date", "==", date),
+          where("status", "in", ["Accepted", "pending", "confirmed", "Rescheduled"]),
+          where("cancellationStatus", "in", ["", null])
+        );
+        const querySnapshot = await getDocs(q);
+        const unavailableSlots = querySnapshot.docs.map((d) => d.data().time);
+        let availableSlots = slots.filter(slot => !unavailableSlots.includes(slot));
+        
+        // If it's today, also filter out slots where time has passed
+        const today = new Date().toISOString().split('T')[0];
+        if (date === today) {
+          availableSlots = availableSlots.filter(slot => !isTimePassed(slot));
+        }
+        
+        return availableSlots.length > 0;
+      }
+
+      return false;
+    } catch (error) {
+      console.error(`Error checking availability for ${date}:`, error);
+      return false;
+    }
+  }
+
+  // Helper function to find the next available date
+  async function findNextAvailableDate(startDate: string, maxDaysToCheck: number = 30): Promise<string | null> {
+    const start = new Date(startDate + 'T00:00:00Z');
+    
+    for (let i = 0; i < maxDaysToCheck; i++) {
+      const checkDate = new Date(start);
+      checkDate.setUTCDate(start.getUTCDate() + i);
+      const dateString = checkDate.toISOString().split('T')[0];
+      
+      const hasSlots = await hasAvailableSlots(dateString);
+      if (hasSlots) {
+        return dateString;
+      }
+    }
+    
+    return null;
+  }
+
   async function fetchAvailabilityForDate(date: string, target: 'booking' | 'reschedule') {
     if (!db || !date) return;
 
@@ -770,6 +858,18 @@
       
       try {
         await loadDefaultWorkingDays();
+        
+        // Check if today has available slots, if not, find next available date
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasTodaySlots = await hasAvailableSlots(todayStr);
+        
+        if (!hasTodaySlots) {
+          const nextDate = await findNextAvailableDate(todayStr);
+          if (nextDate) {
+            selectedDate = nextDate;
+          }
+        }
+        
         await fetchAvailabilityForDate(selectedDate, 'booking');
       } catch (error) {
         console.error("Error during initial setup:", error);
@@ -820,12 +920,124 @@
     }
   }, 300);
 
+  // Validate date selection for booking
+  async function handleBookingDateChange(date: string) {
+    if (!db || !date) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(date + 'T00:00:00Z');
+    
+    // Don't allow past dates
+    if (selectedDateObj < today) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Date',
+        text: 'You cannot select a past date.',
+      });
+      // Find next available date
+      const nextDate = await findNextAvailableDate(new Date().toISOString().split('T')[0]);
+      if (nextDate) {
+        selectedDate = nextDate;
+      } else {
+        selectedDate = new Date().toISOString().split('T')[0];
+      }
+      return;
+    }
+    
+    // Check if date has available slots
+    const hasSlots = await hasAvailableSlots(date);
+    if (!hasSlots) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      // If it's today and all times have passed, automatically move to next available date
+      if (date === todayStr) {
+        const nextDate = await findNextAvailableDate(date);
+        if (nextDate && nextDate !== date) {
+          Swal.fire({
+            icon: 'info',
+            title: 'All Times Have Passed',
+            text: `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`,
+            timer: 3000,
+          });
+          selectedDate = nextDate;
+          return;
+        }
+      }
+      
+      // For other dates without slots, just show message
+      Swal.fire({
+        icon: 'info',
+        title: 'No Available Slots',
+        text: 'This date has no available time slots. Please select another date.',
+      });
+    }
+    
+    debouncedFetchBooking(date);
+  }
+
+  // Validate date selection for rescheduling
+  async function handleRescheduleDateChange(date: string) {
+    if (!db || !date) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(date + 'T00:00:00Z');
+    
+    // Don't allow past dates
+    if (selectedDateObj < today) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Date',
+        text: 'You cannot select a past date for rescheduling.',
+      });
+      // Find next available date
+      const nextDate = await findNextAvailableDate(new Date().toISOString().split('T')[0]);
+      if (nextDate) {
+        newDate = nextDate;
+      } else if (currentAppointment) {
+        newDate = currentAppointment.date;
+      }
+      return;
+    }
+    
+    // Check if date has available slots
+    const hasSlots = await hasAvailableSlots(date);
+    if (!hasSlots) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      // If it's today and all times have passed, automatically move to next available date
+      if (date === todayStr) {
+        const nextDate = await findNextAvailableDate(date);
+        if (nextDate && nextDate !== date) {
+          Swal.fire({
+            icon: 'info',
+            title: 'All Times Have Passed',
+            text: `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`,
+            timer: 3000,
+          });
+          newDate = nextDate;
+          return;
+        }
+      }
+      
+      // For other dates without slots, just show message
+      Swal.fire({
+        icon: 'info',
+        title: 'No Available Slots',
+        text: 'This date has no available time slots. Please select another date.',
+      });
+    }
+    
+    debouncedFetchReschedule(date);
+  }
+
   $: if (selectedDate && db) {
-    debouncedFetchBooking(selectedDate);
+    handleBookingDateChange(selectedDate);
   }
 
   $: if (rescheduleModal && newDate && db) {
-    debouncedFetchReschedule(newDate);
+    handleRescheduleDateChange(newDate);
   }
 
   $: displayMorningSlots = fetchedBookingSlots.filter(slot => ALL_POSSIBLE_MORNING_SLOTS.includes(slot));
