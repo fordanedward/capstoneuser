@@ -297,6 +297,12 @@
 					<span class="text">Notification</span>
 				</a>
 			</li>
+			<li>
+				<a href="./chat">
+					<i class="fas fa-comments icon-fa"></i>
+					<span class="text">Chat</span>
+				</a>
+			</li>
 			
 		</ul>
  
@@ -544,6 +550,18 @@
 		margin-right: 15px; /* Space between icon and text */
 		transition: margin-right var(--sidebar-transition);
 	}
+
+	.sidebar-menu a .icon-fa {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
+		margin-right: 15px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.1rem;
+		transition: margin-right var(--sidebar-transition);
+	}
  
 	.sidebar-menu a .text {
 		font-size: 0.95rem; /* Match template */
@@ -748,6 +766,10 @@
 		}
  
 		.sidebar.collapsed .sidebar-menu a .icon {
+			margin-right: 0; /* No margin when text hidden */
+		}
+
+		.sidebar.collapsed .sidebar-menu a .icon-fa {
 			margin-right: 0; /* No margin when text hidden */
 		}
  

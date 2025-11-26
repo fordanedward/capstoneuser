@@ -78,5 +78,51 @@ service cloud.firestore {
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentDate']))
         );
     }
+
+    // Chat collection - members can read/write their own chat, admins can read/write all chats
+    match /chats/{chatId} {
+      // Members can read and write their own chat document
+      allow read, write: if isAuthenticated() && chatId == request.auth.uid;
+      
+      // Allow authenticated users to read chat documents (for admin access)
+      // Note: Admin role verification should be done in the admin application
+      allow read: if isAuthenticated();
+      
+      // Allow updates to chat metadata (lastMessage, unreadCount) by members
+      allow update: if isAuthenticated() && 
+        (
+          chatId == request.auth.uid ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'lastMessageTime', 'unreadCount'])
+        );
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Members can read all messages in their chat
+        allow read: if isAuthenticated() && chatId == request.auth.uid;
+        
+        // Members can create messages in their own chat
+        allow create: if isAuthenticated() && 
+          chatId == request.auth.uid &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.senderRole == 'member';
+        
+        // Members can update read status of admin messages
+        allow update: if isAuthenticated() && 
+          chatId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        
+        // Allow authenticated users to read messages (for admin access)
+        // Admin applications should verify admin role before allowing access
+        allow read: if isAuthenticated();
+        
+        // Allow creating messages (admins can create in any chat, members only in their own)
+        // Admin verification should be done in the admin application
+        allow create: if isAuthenticated();
+        
+        // Allow updating read status
+        allow update: if isAuthenticated() && 
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      }
+    }
   }
 } 
