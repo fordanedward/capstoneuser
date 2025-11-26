@@ -28,6 +28,72 @@
     let profileImage: string = '';
     let isUploading = false;
 
+    // Medical Information state variables
+    let formBloodType = "";
+    let formAllergies = "";
+    let formCurrentMedications = "";
+    
+    // Medical Conditions
+    let medicalConditions = {
+        anemia: false,
+        anxiety: false,
+        arthritis: false,
+        asthma: false,
+        bloodTransfusion: false,
+        cancer: false,
+        clottingDisorder: false,
+        congestiveHeartFailure: false,
+        depression: false,
+        diabetesMellitus: false,
+        emphysema: false,
+        gastroEsophagealReflux: false,
+        glaucoma: false,
+        heartMurmur: false,
+        hivAids: false,
+        highCholesterol: false,
+        hypertension: false
+    };
+    
+    // Surgical History
+    let surgicalHistory = {
+        appendectomy: false,
+        brainSurgery: false,
+        breastSurgery: false,
+        cabg: false,
+        cholecystectomy: false,
+        colonSurgery: false,
+        tonsillectomy: false,
+        thyroidSurgery: false,
+        lungSurgery: false,
+        csection: false,
+        eyeSurgery: false,
+        fracturesSurgery: false,
+        herniaRepair: false,
+        hysterectomy: false,
+        jointSurgery: false,
+        pancreatomy: false,
+        varicoseVeinSurgery: false,
+        prostateSurgery: false,
+        weightReductionSurgery: false
+    };
+    
+    // Family History
+    let familyHistory = {
+        mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+        otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+    };
+    
+    // Other Medical Information
+    let formOtherMedicalConditions = "";
+    let formOtherFamilyHistory = "";
+    let formBloodTransfusionHistory = "";
+    let formBloodTransfusionDate = "";
+
     type PatientProfile = {
         name: string;
         middleName?: string;
@@ -40,7 +106,17 @@
         phone: string;
         address: string;
         birthday: string;
-        profileImage?: string; // Add profile image to type
+        profileImage?: string;
+        bloodType?: string;
+        allergies?: string;
+        currentMedications?: string;
+        medicalConditions?: any;
+        surgicalHistory?: any;
+        familyHistory?: any;
+        otherMedicalConditions?: string;
+        otherFamilyHistory?: string;
+        bloodTransfusionHistory?: string;
+        bloodTransfusionDate?: string;
     };
 
     let patientProfile: PatientProfile = {
@@ -55,7 +131,17 @@
         phone: '',
         address: '',
         birthday: '',
-        profileImage: ''
+        profileImage: '',
+        bloodType: '',
+        allergies: '',
+        currentMedications: '',
+        medicalConditions: {},
+        surgicalHistory: {},
+        familyHistory: {},
+        otherMedicalConditions: '',
+        otherFamilyHistory: '',
+        bloodTransfusionHistory: '',
+        bloodTransfusionDate: ''
     };
 
     let currentUser: User | null = null;
@@ -298,7 +384,17 @@ async function savePatientProfile() {
             phone: cleanedPhone,
             address: formHomeAddress,
             id: customUserId,
-            profileImage: profileImage
+            profileImage: profileImage,
+            bloodType: formBloodType,
+            allergies: formAllergies,
+            currentMedications: formCurrentMedications,
+            medicalConditions: medicalConditions,
+            surgicalHistory: surgicalHistory,
+            familyHistory: familyHistory,
+            otherMedicalConditions: formOtherMedicalConditions,
+            otherFamilyHistory: formOtherFamilyHistory,
+            bloodTransfusionHistory: formBloodTransfusionHistory,
+            bloodTransfusionDate: formBloodTransfusionDate
         };
 
         console.log("Saving profile data:", profileData);
@@ -340,6 +436,39 @@ function toggleEditProfile() {
         formEmail = patientProfile.email;
         formPhone = patientProfile.phone;
         formHomeAddress = patientProfile.address;
+        
+        // Load medical information
+        formBloodType = patientProfile.bloodType || '';
+        formAllergies = patientProfile.allergies || '';
+        formCurrentMedications = patientProfile.currentMedications || '';
+        medicalConditions = patientProfile.medicalConditions || {
+            anemia: false, anxiety: false, arthritis: false, asthma: false,
+            bloodTransfusion: false, cancer: false, clottingDisorder: false,
+            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+        };
+        surgicalHistory = patientProfile.surgicalHistory || {
+            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+            prostateSurgery: false, weightReductionSurgery: false
+        };
+        familyHistory = patientProfile.familyHistory || {
+            mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+        };
+        formOtherMedicalConditions = patientProfile.otherMedicalConditions || '';
+        formOtherFamilyHistory = patientProfile.otherFamilyHistory || '';
+        formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
+        formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
     } else {
         // Re-enable body scroll when modal closes
         document.body.style.overflow = '';
@@ -354,6 +483,15 @@ function toggleEditProfile() {
         formEmail = "";
         formPhone = "";
         formHomeAddress = "";
+        
+        // Reset medical information
+        formBloodType = "";
+        formAllergies = "";
+        formCurrentMedications = "";
+        formOtherMedicalConditions = "";
+        formOtherFamilyHistory = "";
+        formBloodTransfusionHistory = "";
+        formBloodTransfusionDate = "";
     }
 }
 
@@ -504,7 +642,7 @@ function toggleEditProfile() {
 {#if isEditingProfile}
     <div class="modal-overlay" on:click={toggleEditProfile}>
     <div class="profile-form-container slide-down" on:click|stopPropagation>
-        <h3 class="form-title">Edit Patient Information</h3>
+        <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
             <div class="form-image-upload">
                 <div class="profile-image-container">
@@ -608,6 +746,330 @@ function toggleEditProfile() {
                     </div>
                 </div>
             </div>
+            
+            <!-- Medical Information Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Medical Information</h4>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="bloodType">Blood Type</label>
+                        <input type="text" id="bloodType" bind:value={formBloodType} placeholder="e.g., O+, A-, B+"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="allergies">Allergies</label>
+                        <input type="text" id="allergies" bind:value={formAllergies} placeholder="Indicate if any"/>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label for="currentMedications">Current Medication(s)</label>
+                    <textarea id="currentMedications" bind:value={formCurrentMedications} placeholder="List with doses; include contraceptives, vitamins, supplements, etc." rows="3"></textarea>
+                </div>
+            </div>
+            
+            <!-- Medical Conditions Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Your Medical Conditions (check all that apply)</h4>
+                <div class="checkbox-grid">
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.anemia}/>
+                        <span>Anemia</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.anxiety}/>
+                        <span>Anxiety</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.arthritis}/>
+                        <span>Arthritis</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.asthma}/>
+                        <span>Asthma</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.bloodTransfusion}/>
+                        <span>Blood transfusion</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.cancer}/>
+                        <span>Cancer</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.clottingDisorder}/>
+                        <span>Clotting disorder</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.congestiveHeartFailure}/>
+                        <span>Congestive Heart Failure</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.depression}/>
+                        <span>Depression</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.diabetesMellitus}/>
+                        <span>Diabetes Mellitus</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.emphysema}/>
+                        <span>Emphysema/COPD</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.gastroEsophagealReflux}/>
+                        <span>Gastro esophageal reflux (GERD)</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.glaucoma}/>
+                        <span>Glaucoma</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.heartMurmur}/>
+                        <span>Heart murmur</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.hivAids}/>
+                        <span>HIV/AIDS</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.highCholesterol}/>
+                        <span>High Cholesterol</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={medicalConditions.hypertension}/>
+                        <span>Hypertension/high blood pressure</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Surgical History Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Surgical History (check all that apply)</h4>
+                <div class="checkbox-grid">
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.appendectomy}/>
+                        <span>Appendectomy</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.brainSurgery}/>
+                        <span>Brain surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.breastSurgery}/>
+                        <span>Breast surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.cabg}/>
+                        <span>CABG</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.cholecystectomy}/>
+                        <span>Cholecystectomy</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.colonSurgery}/>
+                        <span>Colon surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.tonsillectomy}/>
+                        <span>Tonsillectomy</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.thyroidSurgery}/>
+                        <span>Thyroid surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.lungSurgery}/>
+                        <span>Lung surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.csection}/>
+                        <span>C-section</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.eyeSurgery}/>
+                        <span>Eye surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.fracturesSurgery}/>
+                        <span>Fracture surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.herniaRepair}/>
+                        <span>Hernia repair</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.hysterectomy}/>
+                        <span>Hysterectomy</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.jointSurgery}/>
+                        <span>Joint surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.pancreatomy}/>
+                        <span>Pancreatomy</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.varicoseVeinSurgery}/>
+                        <span>Varicose vein surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.prostateSurgery}/>
+                        <span>Prostate surgery</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" bind:checked={surgicalHistory.weightReductionSurgery}/>
+                        <span>Weight reduction surgery</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Family History Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Family History (check all that apply)</h4>
+                <div class="family-history-table-container">
+                    <table class="family-history-table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Alcohol<br/>abuse</th>
+                                <th>Breast<br/>cancer</th>
+                                <th>Ovarian<br/>cancer</th>
+                                <th>Prostate<br/>cancer</th>
+                                <th>Other<br/>cancer</th>
+                                <th>Diabetes</th>
+                                <th>Heart<br/>Disease</th>
+                                <th>High<br/>cholesterol</th>
+                                <th>Hypertension</th>
+                                <th>Mental<br/>illness</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="family-member-label">Mother</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.mother.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Father</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.father.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Sister</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.sister.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Brother</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.brother.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Daughter</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.daughter.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Son</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.son.mentalIllness}/></td>
+                            </tr>
+                            <tr>
+                                <td class="family-member-label">Other relative<br/>(specify)</td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.alcoholAbuse}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.breastCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.ovarianCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.prostateCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.otherCancer}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.diabetes}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.heartDisease}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.highCholesterol}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.hypertension}/></td>
+                                <td><input type="checkbox" bind:checked={familyHistory.otherRelative.mentalIllness}/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Other Medical Information Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Other Medical Information</h4>
+                <div class="form-group full-width">
+                    <label for="otherMedicalConditions">Other Medical Conditions (specify)</label>
+                    <textarea id="otherMedicalConditions" bind:value={formOtherMedicalConditions} placeholder="Specify any other medical conditions" rows="3"></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label for="otherFamilyHistory">Other family history</label>
+                    <textarea id="otherFamilyHistory" bind:value={formOtherFamilyHistory} placeholder="Specify other family history" rows="3"></textarea>
+                </div>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="bloodTransfusionHistory">Have you ever had blood transfusion?</label>
+                        <select id="bloodTransfusionHistory" bind:value={formBloodTransfusionHistory}>
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    {#if formBloodTransfusionHistory === 'Yes'}
+                    <div class="form-group">
+                        <label for="bloodTransfusionDate">Approximate date</label>
+                        <input type="text" id="bloodTransfusionDate" bind:value={formBloodTransfusionDate} placeholder="e.g., January 2020"/>
+                    </div>
+                    {/if}
+                </div>
+            </div>
+            
             <div class="save-button-container">
                 <button type="submit" class="save-button">Save Changes</button>
                 <button type="button" on:click={toggleEditProfile} class="cancel-button">Cancel</button>
@@ -841,7 +1303,7 @@ function toggleEditProfile() {
         padding: 40px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         position: relative;
-        max-width: 850px;
+        max-width: 1100px;
         width: 100%;
         max-height: 85vh;
         overflow-y: auto;
@@ -849,38 +1311,13 @@ function toggleEditProfile() {
     }
 
     .profile-form-container::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .profile-form-container::-webkit-scrollbar-track {
-        background: rgba(248, 249, 250, 0.5);
-        border-radius: 10px;
-        margin: 4px 0;
-    }
-
-    .profile-form-container::-webkit-scrollbar-thumb {
-        background: linear-gradient(180deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        border-radius: 10px;
-        border: 2px solid transparent;
-        background-clip: padding-box;
-        box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-
-    .profile-form-container::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, var(--secondary-color) 0%, var(--primary-color) 100%);
-        box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.15), 0 0 8px rgba(30, 58, 102, 0.3);
-        transform: scaleX(1.2);
-    }
-
-    .profile-form-container::-webkit-scrollbar-thumb:active {
-        background: linear-gradient(180deg, #152a5f 0%, #0f1f5a 100%);
+        width: 0;
+        height: 0;
     }
 
     .profile-form-container {
-        scrollbar-width: thin;
-        scrollbar-color: var(--primary-color) rgba(248, 249, 250, 0.5);
-        -ms-overflow-style: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
     .profile-form-container::before {
@@ -1445,6 +1882,135 @@ function toggleEditProfile() {
         .info-grid {
             grid-template-columns: 1fr;
             gap: 6px;
+        }
+    }
+
+    /* Medical Information Styles */
+    .profile-form textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid var(--input-border-color);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all var(--transition-speed) ease;
+        background-color: var(--white);
+        font-family: inherit;
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .profile-form textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(30, 58, 102, 0.15);
+        outline: none;
+    }
+
+    .checkbox-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 12px 16px;
+        margin-top: 8px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background-color var(--transition-speed) ease;
+        user-select: none;
+    }
+
+    .checkbox-label:hover {
+        background-color: var(--light-gray);
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--primary-color);
+        flex-shrink: 0;
+    }
+
+    .checkbox-label span {
+        font-size: 0.95rem;
+        color: var(--text-color);
+        line-height: 1.4;
+    }
+
+    .family-history-table-container {
+        overflow-x: auto;
+        margin-top: 16px;
+        border-radius: 8px;
+        border: 2px solid var(--medium-gray);
+    }
+
+    .family-history-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+        background-color: var(--white);
+    }
+
+    .family-history-table thead {
+        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
+    }
+
+    .family-history-table th {
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--primary-color);
+        border: 1px solid var(--medium-gray);
+        line-height: 1.3;
+    }
+
+    .family-history-table td {
+        padding: 10px 8px;
+        text-align: center;
+        border: 1px solid var(--medium-gray);
+    }
+
+    .family-history-table tbody tr:hover {
+        background-color: var(--light-gray);
+    }
+
+    .family-member-label {
+        font-weight: 600;
+        color: var(--primary-color);
+        text-align: left !important;
+        padding-left: 16px !important;
+        min-width: 120px;
+    }
+
+    .family-history-table input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--primary-color);
+    }
+
+    @media (max-width: 768px) {
+        .checkbox-grid {
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        .family-history-table {
+            font-size: 0.85rem;
+        }
+
+        .family-history-table th,
+        .family-history-table td {
+            padding: 8px 4px;
+        }
+
+        .family-member-label {
+            font-size: 0.85rem;
         }
     }
 

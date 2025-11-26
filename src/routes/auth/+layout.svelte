@@ -10,7 +10,8 @@
 	import { initializeApp, getApps, getApp } from "firebase/app";
 	import '@fortawesome/fontawesome-free/css/all.css'; 
 	import Swal from 'sweetalert2';
-	import '../../app.css'; 
+	import '../../app.css';
+	import PopupNotification from '$lib/components/PopupNotification.svelte'; 
 
  
 	let isMobile = false;
@@ -285,18 +286,6 @@
 					<span class="text">Appointment</span>
 				</a>
 			</li>
-			<!-- <li>
-				<a href="./prescription">
-					<img class="icon" src="/images/history.png" alt="History Icon" />
-					<span class="text">History</span>
-				</a>
-			</li> -->
-			<li>
-				<a href="./notifications">
-					<img class="icon" src="/images/notification.png" alt="Notification Icon" />
-					<span class="text">Notification</span>
-				</a>
-			</li>
 			<li>
 				<a href="./chat">
 					<i class="fas fa-comments icon-fa"></i>
@@ -340,6 +329,9 @@
 	<main class="content {isMobile ? 'mobile' : (isCollapsed ? 'collapsed' : 'desktop')}">
 		<slot /> <!-- Page content goes here -->
 	</main>
+ 
+	<!-- PopupNotification Component -->
+	<PopupNotification />
  
 	<!-- Loading Spinner Overlay (from OriginalComponent) -->
 	{#if $loading}

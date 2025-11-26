@@ -1059,37 +1059,55 @@
                                    {/if}
                                </div>
                             
-                               <div class="mt-auto pt-2 border-t border-gray-100 flex justify-between items-center min-h-[50px]">
-                                    <div class="status-badge {appointment.status.toLowerCase().replace(/\s+/g, '-')}-status {appointment.cancellationStatus ? appointment.cancellationStatus.toLowerCase() + '-status' : ''}">
-                                        {#if appointment.status === 'Reschedule Requested'}
-                                            <i class="fas fa-exchange-alt mr-1"></i> Reschedule Req.
-                                        {:else if appointment.cancellationStatus === 'requested'}
-                                            <i class="fas fa-ban mr-1"></i> Cancel Req.
-                                        {:else if appointment.cancellationStatus === 'Approved'}
-                                            <i class="fas fa-times-circle mr-1"></i> Cancelled
-                                        {:else if appointment.cancellationStatus === 'decline'}
-                                            <i class="fas fa-exclamation-circle mr-1"></i> Cancel Declined
-                                        {:else if appointment.status === 'Accepted' || appointment.status === 'confirmed'}
-                                            <i class="fas fa-check-circle mr-1"></i> {appointment.status}
-                                         {:else if appointment.status === 'pending'}
-                                            <i class="fas fa-hourglass-half mr-1"></i> Pending
-                                        {:else}
-                                           {appointment.status || 'Unknown'}
-                                        {/if}
+                               <div class="mt-auto pt-2 border-t border-gray-100">
+                                    <div class="flex justify-between items-center min-h-[50px] mb-2">
+                                        <div class="status-badge {appointment.status.toLowerCase().replace(/\s+/g, '-')}-status {appointment.cancellationStatus ? appointment.cancellationStatus.toLowerCase() + '-status' : ''}">
+                                            {#if appointment.status === 'Reschedule Requested'}
+                                                <i class="fas fa-exchange-alt mr-1"></i> Reschedule Req.
+                                            {:else if appointment.cancellationStatus === 'requested'}
+                                                <i class="fas fa-ban mr-1"></i> Cancel Req.
+                                            {:else if appointment.cancellationStatus === 'Approved'}
+                                                <i class="fas fa-times-circle mr-1"></i> Cancelled
+                                            {:else if appointment.cancellationStatus === 'decline'}
+                                                <i class="fas fa-exclamation-circle mr-1"></i> Cancel Declined
+                                            {:else if appointment.status === 'Accepted' || appointment.status === 'confirmed'}
+                                                <i class="fas fa-check-circle mr-1"></i> {appointment.status}
+                                             {:else if appointment.status === 'pending'}
+                                                <i class="fas fa-hourglass-half mr-1"></i> Pending
+                                            {:else}
+                                               {appointment.status || 'Unknown'}
+                                            {/if}
+                                        </div>
+                                        <div class="action-buttons">
+                                          {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
+                                             <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
+                                               <i class="fas fa-edit"></i> <span class="ml-1">Reschedule</span>
+                                             </button>
+                                             <button title="Cancel Appointment" class="btn-action btn-cancel" on:click={() => openCancelModal(appointment.id)}>
+                                               <i class="fas fa-times"></i> <span class="ml-1">Cancel</span>
+                                             </button>
+                                    <!-- Pay Now button removed as requested -->
+                                          {:else if appointment.status === 'Reschedule Requested'}
+                                            <span class="text-xs italic text-purple-600 px-2">Pending...</span>
+                                           {:else if appointment.cancellationStatus === 'requested'}
+                                            <span class="text-xs italic text-yellow-700 px-2">Pending...</span>
+                                           {/if}
+                                         </div>
                                     </div>
+                                    
                                     {#if appointment.paymentStatus === 'refund_pending' || appointment.paymentStatus === 'refunded'}
-                                        <div class="status-badge {appointment.paymentStatus}-payment-status ml-2">
-                                            <i class="fas {appointment.paymentStatus === 'refund_pending' ? 'fa-clock' : 'fa-money-bill-wave'} mr-1"></i>
-                                            {appointment.paymentStatus === 'refund_pending' ? 'Refund Pending' : 'Refunded'}
+                                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                                            <div class="status-badge {appointment.paymentStatus}-payment-status">
+                                                <i class="fas {appointment.paymentStatus === 'refund_pending' ? 'fa-clock' : 'fa-money-bill-wave'} mr-1"></i>
+                                                {appointment.paymentStatus === 'refund_pending' ? 'Refund Pending' : 'Refunded'}
+                                            </div>
+                                            {#if appointment.paymentStatus === 'refunded' && appointment.refundAmount}
+                                                <span class="text-xs text-gray-500">
+                                                    (₱{appointment.refundAmount.toFixed(2)})
+                                                </span>
+                                            {/if}
                                         </div>
-                                    {/if}
-                                    {#if appointment.paymentStatus === 'refunded' && appointment.refundAmount}
-                                        <div class="text-xs text-gray-500 ml-2">
-                                            (₱{appointment.refundAmount.toFixed(2)})
-                                        </div>
-                                    {/if}
-                                    {#if appointment.paymentStatus === 'refund_pending' || appointment.paymentStatus === 'refunded'}
-                                        <div class="text-xs text-gray-500 ml-2">
+                                        <div class="text-xs text-gray-500 mb-2">
                                             {#if appointment.refundRequestDate}
                                                 Requested: {appointment.refundRequestDate instanceof Timestamp ? appointment.refundRequestDate.toDate().toLocaleDateString() : new Date(appointment.refundRequestDate).toLocaleDateString()}
                                             {/if}
@@ -1098,26 +1116,12 @@
                                             {/if}
                                         </div>
                                     {/if}
-                                     <div class="action-buttons">
-                                      {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
-                                         <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
-                                           <i class="fas fa-edit"></i> <span class="hidden sm:inline ml-1">Reschedule</span>
-                                         </button>
-                                         <button title="Cancel Appointment" class="btn-action btn-cancel" on:click={() => openCancelModal(appointment.id)}>
-                                           <i class="fas fa-times"></i> <span class="hidden sm:inline ml-1">Cancel</span>
-                                         </button>
-                                <!-- Pay Now button removed as requested -->
-                                      {:else if appointment.status === 'Reschedule Requested'}
-                                        <span class="text-xs italic text-purple-600 px-2">Pending...</span>
-                                       {:else if appointment.cancellationStatus === 'requested'}
-                                        <span class="text-xs italic text-yellow-700 px-2">Pending...</span>
-                                       {/if}
-                                     </div>
-                                     {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                    
+                                    {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
                                        <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
-                                      Reason: {getCancelReason(appointment) || 'N/A'}
+                                          <strong>Reason:</strong> {getCancelReason(appointment) || 'N/A'}
                                        </p>
-                                     {/if}
+                                    {/if}
                                </div>
                             </div>
                         {/each}
@@ -1150,29 +1154,31 @@
                                         </p>
                                      {/if}
                                 </div>
-                                <div class="mt-auto pt-2 border-t border-gray-100 flex items-center min-h-[50px]">
-                                    <div class="status-badge {appointment.status?.toLowerCase().replace(/\s|:/g, '-')}-status {appointment.cancellationStatus ? appointment.cancellationStatus.toLowerCase() + '-status' : ''}">
-                                       {#if appointment.cancellationStatus === 'Approved'}
-                                            <i class="fas fa-times-circle mr-1"></i> Cancelled
-                                       {:else if appointment.cancellationStatus === 'decline'}
-                                            <i class="fas fa-exclamation-circle mr-1"></i> Cancel Declined
-                                       {:else if appointment.status === 'Completed'}
-                                            <i class="fas fa-check-double mr-1"></i> Completed
-                                        {:else if appointment.status === 'Completed: Need Follow-up'}
-                                            <i class="fas fa-notes-medical mr-1"></i> Completed (Follow-up)
-                                        {:else if appointment.status === 'Missed'}
-                                            <i class="fas fa-calendar-times mr-1"></i> Missed
-                                        {:else}
-                                           {appointment.status || 'Unknown'}
-                                       {/if}
+                                <div class="mt-auto pt-2 border-t border-gray-100">
+                                    <div class="flex items-center min-h-[50px] mb-2">
+                                        <div class="status-badge {appointment.status?.toLowerCase().replace(/\s|:/g, '-')}-status {appointment.cancellationStatus ? appointment.cancellationStatus.toLowerCase() + '-status' : ''}">
+                                           {#if appointment.cancellationStatus === 'Approved'}
+                                                <i class="fas fa-times-circle mr-1"></i> Cancelled
+                                           {:else if appointment.cancellationStatus === 'decline'}
+                                                <i class="fas fa-exclamation-circle mr-1"></i> Cancel Declined
+                                           {:else if appointment.status === 'Completed'}
+                                                <i class="fas fa-check-double mr-1"></i> Completed
+                                            {:else if appointment.status === 'Completed: Need Follow-up'}
+                                                <i class="fas fa-notes-medical mr-1"></i> Completed (Follow-up)
+                                            {:else if appointment.status === 'Missed'}
+                                                <i class="fas fa-calendar-times mr-1"></i> Missed
+                                            {:else}
+                                               {appointment.status || 'Unknown'}
+                                           {/if}
+                                        </div>
                                     </div>
-                                  </div>
-                                {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
-                                  <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'} ml-2" title={getCancelReason(appointment)}>
-                                    ({getCancelReason(appointment) || 'No reason'})
-                                  </p>
-                                {/if}
-                              </div>
+                                    {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                      <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
+                                        <strong>Reason:</strong> {getCancelReason(appointment) || 'No reason'}
+                                      </p>
+                                    {/if}
+                                </div>
+                            </div>
                         {/each}
                     {:else}
                          <div class="empty-state">
