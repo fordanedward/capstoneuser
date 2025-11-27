@@ -1,6 +1,8 @@
 <script lang="ts">
   import { Checkbox } from 'flowbite-svelte';
   import { onMount } from "svelte";
+  import { scale, fade } from 'svelte/transition';
+  import { elasticOut } from 'svelte/easing';
   import {
     getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, where,
     updateDoc, getDoc, onSnapshot, runTransaction, initializeFirestore, CACHE_SIZE_UNLIMITED,
@@ -110,6 +112,8 @@
   let popupModal = false;
   let rescheduleModal = false;
   let paymentModal = false;
+  let timesPassedModal = false;
+  let timesPassedMessage = '';
   let selectedAppointmentId: string | null = null;
   let currentAppointment: Appointment | null = null;
   let newDate: string = "";
@@ -901,6 +905,11 @@
 
     return () => {
       console.log("Cleaning up appointment component listeners");
+      // Close all modals when component unmounts (navigating away)
+      timesPassedModal = false;
+      popupModal = false;
+      rescheduleModal = false;
+      paymentModal = false;
       if (authUnsubscribe) authUnsubscribe();
       if (appointmentsUnsubscribe) appointmentsUnsubscribe();
     };
@@ -954,12 +963,8 @@
       if (date === todayStr) {
         const nextDate = await findNextAvailableDate(date);
         if (nextDate && nextDate !== date) {
-          Swal.fire({
-            icon: 'info',
-            title: 'All Times Have Passed',
-            text: `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`,
-            timer: 3000,
-          });
+          timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+          timesPassedModal = true;
           selectedDate = nextDate;
           return;
         }
@@ -1010,12 +1015,8 @@
       if (date === todayStr) {
         const nextDate = await findNextAvailableDate(date);
         if (nextDate && nextDate !== date) {
-          Swal.fire({
-            icon: 'info',
-            title: 'All Times Have Passed',
-            text: `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`,
-            timer: 3000,
-          });
+          timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+          timesPassedModal = true;
           newDate = nextDate;
           return;
         }
@@ -1549,6 +1550,26 @@
   </div>
   {/if}
 
+  <!-- All Times Have Passed Modal -->
+  {#if timesPassedModal}
+  <div class="modal" transition:fade={{ duration: 200 }}>
+    <div class="modal-content times-passed-modal" transition:scale={{ duration: 500, easing: elasticOut, start: 0.5 }}>
+      <div class="text-center">
+        <div class="times-passed-icon">
+          <i class="fas fa-info-circle"></i>
+        </div>
+        <h3 class="times-passed-title">All Times Have Passed</h3>
+        <p class="times-passed-message">{timesPassedMessage}</p>
+      </div>
+      <div class="modal-actions">
+        <Button color="blue" on:click={() => { timesPassedModal = false; }} class="w-full times-passed-btn">
+          OK
+        </Button>
+      </div>
+    </div>
+  </div>
+  {/if}
+
 <style>
   /* Page Layout */
   .page-wrapper {
@@ -1867,6 +1888,95 @@
        .modal-content { padding: 1rem; }
    }
   .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+  /* Times Passed Modal Styles */
+  .times-passed-modal {
+    max-width: 550px;
+    padding: 3rem 2.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 2px solid #e0f2fe;
+    box-shadow: 0 20px 60px rgba(14, 165, 233, 0.25);
+  }
+
+  .times-passed-icon {
+    font-size: 5rem;
+    color: #0ea5e9;
+    margin-bottom: 1.5rem;
+    display: inline-block;
+    animation: pulse-bounce 1.5s ease-in-out infinite;
+  }
+
+  .times-passed-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+  }
+
+  .times-passed-message {
+    font-size: 1.0625rem;
+    color: #475569;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    font-weight: 500;
+  }
+
+  .times-passed-btn {
+    padding: 0.875rem 1.5rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    border: none;
+  }
+
+  .times-passed-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+  }
+
+  .times-passed-btn:active {
+    transform: translateY(0);
+  }
+
+  @keyframes pulse-bounce {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.8;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .times-passed-modal {
+      max-width: 90vw;
+      padding: 2rem 1.5rem;
+    }
+
+    .times-passed-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .times-passed-title {
+      font-size: 1.5rem;
+    }
+
+    .times-passed-message {
+      font-size: 0.9375rem;
+    }
+
+    .times-passed-btn {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+    }
+  }
+
 
   /* Time Slots */
   .time-slots-section {

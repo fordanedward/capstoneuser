@@ -441,22 +441,23 @@ function toggleEditProfile() {
         formBloodType = patientProfile.bloodType || '';
         formAllergies = patientProfile.allergies || '';
         formCurrentMedications = patientProfile.currentMedications || '';
-        medicalConditions = patientProfile.medicalConditions || {
+        // Deep clone to avoid modifying original data
+        medicalConditions = JSON.parse(JSON.stringify(patientProfile.medicalConditions || {
             anemia: false, anxiety: false, arthritis: false, asthma: false,
             bloodTransfusion: false, cancer: false, clottingDisorder: false,
             congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
             emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
             heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-        };
-        surgicalHistory = patientProfile.surgicalHistory || {
+        }));
+        surgicalHistory = JSON.parse(JSON.stringify(patientProfile.surgicalHistory || {
             appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
             cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
             thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
             fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
             jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
             prostateSurgery: false, weightReductionSurgery: false
-        };
-        familyHistory = patientProfile.familyHistory || {
+        }));
+        familyHistory = JSON.parse(JSON.stringify(patientProfile.familyHistory || {
             mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
             father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
             sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
@@ -464,11 +465,12 @@ function toggleEditProfile() {
             daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
             son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
             otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
-        };
+        }));
         formOtherMedicalConditions = patientProfile.otherMedicalConditions || '';
         formOtherFamilyHistory = patientProfile.otherFamilyHistory || '';
         formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
         formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
+        profileImage = patientProfile.profileImage || '';
     } else {
         // Re-enable body scroll when modal closes
         document.body.style.overflow = '';
@@ -492,6 +494,33 @@ function toggleEditProfile() {
         formOtherFamilyHistory = "";
         formBloodTransfusionHistory = "";
         formBloodTransfusionDate = "";
+        profileImage = "";
+        
+        // Reset medical condition objects to defaults
+        medicalConditions = {
+            anemia: false, anxiety: false, arthritis: false, asthma: false,
+            bloodTransfusion: false, cancer: false, clottingDisorder: false,
+            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+        };
+        surgicalHistory = {
+            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+            prostateSurgery: false, weightReductionSurgery: false
+        };
+        familyHistory = {
+            mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+        };
     }
 }
 

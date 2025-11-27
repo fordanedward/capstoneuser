@@ -253,6 +253,21 @@
         removeNotification(notification.id);
     }
     
+    function autoHideToastNotification(notification: PopupNotification) {
+        // Auto-hide after 5 seconds if notification is not manually dismissed
+        setTimeout(() => {
+            popupNotifications.update(notifs => {
+                const idx = notifs.findIndex(n => n.id === notification.id);
+                if (idx >= 0 && !notifs[idx].read) {
+                    // Mark as read to hide from toast, but keep in list
+                    notifs[idx].read = true;
+                    saveToLocalStorage(notifs);
+                }
+                return notifs;
+            });
+        }, 5000);
+    }
+    
     onMount(() => {
         if (!browser) return;
         
@@ -289,7 +304,11 @@
                 snap.forEach((d) => {
                     const appt = d.data();
                     const notifs = buildAppointmentNotifs(appt, d.id);
-                    notifs.forEach(pushOrReplace);
+                    notifs.forEach(notif => {
+                        pushOrReplace(notif);
+                        // Auto-hide after 5 seconds if not interacted
+                        autoHideToastNotification(notif);
+                    });
                 });
                 isLoading = false;
             }, (error) => {
@@ -329,6 +348,8 @@
                                     };
                                     
                                     pushOrReplace(chatNotif);
+                                    // Auto-hide after 5 seconds if not interacted
+                                    autoHideToastNotification(chatNotif);
                                 }
                             }
                         }
