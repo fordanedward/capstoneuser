@@ -752,7 +752,7 @@ function toggleEditProfile() {
                 <h4 class="section-subtitle">Medical Information</h4>
                 <div class="input-grid">
                     <div class="form-group">
-                        <label for="bloodType">Blood Type</label>
+                        <label for="bloodType">Blood Type (Optional)</label>
                         <input type="text" id="bloodType" bind:value={formBloodType} placeholder="e.g., O+, A-, B+"/>
                     </div>
                     <div class="form-group">
