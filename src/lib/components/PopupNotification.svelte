@@ -54,7 +54,7 @@
     import { browser } from '$app/environment';
     import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
     import { initializeApp, getApps, getApp } from 'firebase/app';
-    import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, type Unsubscribe } from 'firebase/firestore';
+    import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, orderBy, type Unsubscribe } from 'firebase/firestore';
     import { firebaseConfig } from '$lib/firebaseConfig';
     import { formatRelativeTime } from '$lib/utils/timeFormat';
     
@@ -67,7 +67,9 @@
     let db: ReturnType<typeof getFirestore> | null = null;
     let unsubAppointments: Unsubscribe | null = null;
     let unsubUserDoc: Unsubscribe | null = null;
+    let unsubChat: Unsubscribe | null = null;
     let unsubAuth: Unsubscribe | null = null;
+    let lastProcessedMessageId: string | null = null;
     
     popupNotifications.subscribe(value => {
         notifications = value;
@@ -274,6 +276,7 @@
             // Clean up previous listeners
             if (unsubAppointments) { unsubAppointments(); unsubAppointments = null; }
             if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
+            if (unsubChat) { unsubChat(); unsubChat = null; }
 
             if (!user || !db) { 
                 isLoading = false; 
@@ -292,6 +295,47 @@
             }, (error) => {
                 console.error('Notifications appointments listener error:', error);
                 isLoading = false;
+            });
+
+            // Chat messages listener - only show notifications for admin messages
+            const chatMessagesRef = collection(db, 'chats', user.uid, 'messages');
+            const chatQuery = query(chatMessagesRef, orderBy('timestamp', 'desc'));
+            unsubChat = onSnapshot(chatQuery, (snap) => {
+                // Only process new messages after initial load
+                if (!snap.metadata.hasPendingWrites) {
+                    snap.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            const msg = change.doc.data();
+                            const msgId = change.doc.id;
+                            
+                            // Only show notification for admin messages
+                            if (msg.senderRole === 'admin' && msgId !== lastProcessedMessageId) {
+                                // Check if user is not currently on the chat page
+                                const isOnChatPage = window.location.pathname.includes('/auth/chat');
+                                
+                                if (!isOnChatPage) {
+                                    lastProcessedMessageId = msgId;
+                                    
+                                    const chatNotif: PopupNotification = {
+                                        id: `chat-${msgId}`,
+                                        type: 'chat',
+                                        title: `New message from ${msg.senderName || 'Admin'}`,
+                                        message: msg.message.length > 100 ? msg.message.substring(0, 100) + '...' : msg.message,
+                                        timestamp: msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date(),
+                                        link: '/auth/chat',
+                                        icon: 'fa-comment-dots',
+                                        color: '#1e3a66',
+                                        read: false
+                                    };
+                                    
+                                    pushOrReplace(chatNotif);
+                                }
+                            }
+                        }
+                    });
+                }
+            }, (error) => {
+                console.error('Notifications chat listener error:', error);
             });
 
             // Account archival listener
@@ -328,6 +372,7 @@
             if (unsubAuth) unsubAuth();
             if (unsubAppointments) unsubAppointments();
             if (unsubUserDoc) unsubUserDoc();
+            if (unsubChat) unsubChat();
         };
     });
 </script>
@@ -452,8 +497,10 @@
     
     @media (max-width: 767px) {
         .notification-container {
-            top: 70px; /* Below mobile header */
-            right: 15px;
+            top: 4px; /* Upper position for mobile */
+            left: 50%; /* Center horizontally */
+            right: auto;
+            transform: translateX(-50%);
         }
     }
     
@@ -794,8 +841,10 @@
     /* Mobile Responsive */
     @media (max-width: 640px) {
         .notification-container {
-            top: 10px;
-            right: 10px;
+            top: 6px; /* Upper position for mobile */
+            left: 50%; /* Center horizontally */
+            right: auto;
+            transform: translateX(-50%);
         }
         
         .notification-bell {
@@ -804,8 +853,10 @@
         }
         
         .toast-container {
-            top: 70px;
-            right: 10px;
+            top: 60px;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
             max-width: calc(100vw - 20px);
         }
         
@@ -817,7 +868,9 @@
         .notification-dropdown {
             width: calc(100vw - 20px);
             max-width: 400px;
-            right: -10px;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
         }
     }
 </style>

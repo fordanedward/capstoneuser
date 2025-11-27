@@ -47,6 +47,9 @@
     let chatDocUnsub: Unsubscribe | null = null;
     let currentTime = new Date();
     let chatContainer: HTMLDivElement;
+    let textareaElement: HTMLTextAreaElement;
+    let isTyping = false;
+    let typingTimeout: ReturnType<typeof setTimeout>;
 
     // Update current time every minute to refresh relative timestamps
     let timeInterval: ReturnType<typeof setInterval>;
@@ -60,6 +63,60 @@
             if (timeInterval) clearInterval(timeInterval);
         };
     });
+
+    // Auto-resize textarea
+    function autoResizeTextarea() {
+        if (textareaElement && typeof textareaElement !== 'undefined') {
+            textareaElement.style.height = 'auto';
+            textareaElement.style.height = Math.min(textareaElement.scrollHeight, 120) + 'px';
+        }
+    }
+
+    // Handle input changes
+    function handleInput() {
+        autoResizeTextarea();
+        handleTypingIndicator();
+    }
+
+    // Typing indicator
+    async function handleTypingIndicator() {
+        if (!user || !db) return;
+
+        try {
+            const chatRef = doc(db, 'chats', user.uid);
+            
+            if (!isTyping) {
+                isTyping = true;
+                await updateDoc(chatRef, {
+                    memberTyping: true,
+                    memberTypingAt: serverTimestamp()
+                });
+            }
+
+            // Clear previous timeout
+            if (typingTimeout) clearTimeout(typingTimeout);
+
+            // Set new timeout to clear typing status
+            typingTimeout = setTimeout(async () => {
+                isTyping = false;
+                await updateDoc(chatRef, {
+                    memberTyping: false
+                });
+            }, 3000);
+        } catch (error) {
+            console.error('Error updating typing status:', error);
+        }
+    }
+
+    // Scroll to bottom smoothly
+    function scrollToBottom(smooth = true) {
+        if (chatContainer) {
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: smooth ? 'smooth' : 'auto'
+            });
+        }
+    }
 
     async function initializeChat() {
         if (!user || !db) return;
@@ -124,9 +181,7 @@
                 
                 // Scroll to bottom after messages load
                 setTimeout(() => {
-                    if (chatContainer) {
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
+                    scrollToBottom(false);
                 }, 100);
             }, (error) => {
                 console.error('Error listening to messages:', error);
@@ -168,6 +223,19 @@
         messageInput = '';
         isSending = true;
 
+        // Clear typing indicator
+        if (typingTimeout) clearTimeout(typingTimeout);
+        if (isTyping && db && user) {
+            isTyping = false;
+            const chatRef = doc(db, 'chats', user.uid);
+            await updateDoc(chatRef, { memberTyping: false }).catch(console.error);
+        }
+
+        // Reset textarea height
+        if (textareaElement && typeof textareaElement !== 'undefined') {
+            textareaElement.style.height = 'auto';
+        }
+
         try {
             const chatRef = doc(db, 'chats', user.uid);
             const messagesRef = collection(db, 'chats', user.uid, 'messages');
@@ -197,9 +265,7 @@
 
             // Scroll to bottom
             setTimeout(() => {
-                if (chatContainer) {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
-                }
+                scrollToBottom();
             }, 100);
 
         } catch (error) {
@@ -264,6 +330,13 @@
         if (messagesUnsub) messagesUnsub();
         if (chatDocUnsub) chatDocUnsub();
         if (timeInterval) clearInterval(timeInterval);
+        if (typingTimeout) clearTimeout(typingTimeout);
+        
+        // Clear typing indicator on component destroy
+        if (isTyping && db && user) {
+            const chatRef = doc(db, 'chats', user.uid);
+            updateDoc(chatRef, { memberTyping: false }).catch(console.error);
+        }
     });
 </script>
 
@@ -293,11 +366,25 @@
                 <div class="message-wrapper {message.senderRole === 'member' ? 'sent' : 'received'}">
                     <div class="message-bubble">
                         {#if message.senderRole === 'admin'}
-                            <div class="sender-name">{message.senderName}</div>
+                            <div class="sender-info">
+                                <i class="fas fa-user-shield admin-icon"></i>
+                                <span class="sender-name">{message.senderName}</span>
+                            </div>
                         {/if}
                         <div class="message-text">{message.message}</div>
-                        <div class="message-time">
-                            {formatRelativeTime(message.timestamp)}
+                        <div class="message-footer">
+                            <span class="message-time">
+                                {formatRelativeTime(message.timestamp)}
+                            </span>
+                            {#if message.senderRole === 'member'}
+                                <span class="message-status">
+                                    {#if message.read}
+                                        <i class="fas fa-check-double read-icon" title="Read"></i>
+                                    {:else}
+                                        <i class="fas fa-check sent-icon" title="Sent"></i>
+                                    {/if}
+                                </span>
+                            {/if}
                         </div>
                     </div>
                 </div>
@@ -308,9 +395,11 @@
     <div class="chat-input-container">
         <div class="input-wrapper">
             <textarea
+                bind:this={textareaElement}
                 bind:value={messageInput}
+                on:input={handleInput}
                 on:keydown={handleKeyPress}
-                placeholder="Type your message... (Press Enter to send)"
+                placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
                 class="message-input"
                 rows="1"
                 disabled={isSending || isLoading}
@@ -320,6 +409,7 @@
                 class="send-button"
                 disabled={!messageInput.trim() || isSending || isLoading}
                 aria-label="Send message"
+                title="Send message"
             >
                 {#if isSending}
                     <i class="fas fa-spinner fa-spin"></i>
@@ -328,26 +418,33 @@
                 {/if}
             </button>
         </div>
+        <div class="input-hints">
+            <span class="hint"><i class="fas fa-info-circle"></i> Enter to send • Shift+Enter for new line</span>
+        </div>
     </div>
 </div>
 
 <style>
     .chat-container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 1.5rem;
-        height: calc(100vh - 120px);
+        max-width: 100%;
+        margin: 0;
+        padding: 0.75rem 1rem 0.5rem;
+        height: calc(100vh - 80px);
         display: flex;
         flex-direction: column;
-        background: #fff;
-        border-radius: 0.75rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.1);
     }
     
     .chat-header {
-        padding-bottom: 1rem;
+        padding-bottom: 0.75rem;
         border-bottom: 2px solid #e5e7eb;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
+        background: white;
+        padding: 0.875rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .header-content {
@@ -360,6 +457,12 @@
     .header-content i {
         font-size: 1.5rem;
         color: #1e3a66;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .title {
@@ -379,29 +482,33 @@
     .chat-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 1rem 0;
+        padding: 0.75rem 0.5rem;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.875rem;
         min-height: 0;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     
     .chat-messages::-webkit-scrollbar {
-        width: 8px;
+        width: 10px;
     }
     
     .chat-messages::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
+        background: #f1f5f9;
+        border-radius: 5px;
     }
     
     .chat-messages::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 4px;
+        background: linear-gradient(180deg, #1e3a66 0%, #15304d 100%);
+        border-radius: 5px;
+        border: 2px solid #f1f5f9;
     }
     
     .chat-messages::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        background: linear-gradient(180deg, #15304d 0%, #0d1f33 100%);
     }
     
     .loading {
@@ -416,6 +523,7 @@
     
     .loading i {
         font-size: 1.5rem;
+        color: #1e3a66;
     }
     
     .empty {
@@ -432,6 +540,12 @@
         font-size: 4rem;
         color: #d1d5db;
         margin-bottom: 1rem;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
     }
     
     .empty-title {
@@ -450,6 +564,18 @@
     .message-wrapper {
         display: flex;
         width: 100%;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     
     .message-wrapper.sent {
@@ -461,113 +587,189 @@
     }
     
     .message-bubble {
-        max-width: 70%;
+        max-width: 75%;
         padding: 0.75rem 1rem;
         border-radius: 1rem;
         word-wrap: break-word;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .message-bubble:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
     
     .message-wrapper.sent .message-bubble {
-        background: #1e3a66;
+        background: linear-gradient(135deg, #1e3a66 0%, #15304d 100%);
         color: white;
-        border-bottom-right-radius: 0.25rem;
+        border-bottom-right-radius: 0.375rem;
     }
     
     .message-wrapper.received .message-bubble {
-        background: #f3f4f6;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         color: #1f2937;
-        border-bottom-left-radius: 0.25rem;
+        border-bottom-left-radius: 0.375rem;
     }
     
-    .sender-name {
-        font-size: 0.75rem;
+    .sender-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.375rem;
+        color: #1e3a66;
+    }
+
+    .admin-icon {
+        font-size: 0.875rem;
         color: #1e3a66;
     }
     
-    .message-text {
-        font-size: 0.95rem;
-        line-height: 1.5;
-        margin-bottom: 0.25rem;
+    .sender-name {
+        font-size: 0.8rem;
     }
     
+    .message-text {
+        font-size: 0.975rem;
+        line-height: 1.5;
+        margin-bottom: 0.375rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    
+    .message-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.375rem;
+    }
+
     .message-time {
         font-size: 0.75rem;
+        opacity: 0.75;
+    }
+
+    .message-status {
+        display: flex;
+        align-items: center;
+    }
+
+    .message-status i {
+        font-size: 0.75rem;
+    }
+
+    .read-icon {
+        color: #60a5fa;
+    }
+
+    .sent-icon {
         opacity: 0.7;
-        margin-top: 0.25rem;
     }
     
     .chat-input-container {
-        padding-top: 1rem;
-        border-top: 2px solid #e5e7eb;
+        padding-top: 0.5rem;
+        background: white;
+        border-radius: 0.5rem;
+        padding: 0.75rem 0.5rem 0.5rem;
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
     }
     
     .input-wrapper {
         display: flex;
         gap: 0.75rem;
         align-items: flex-end;
+        margin-bottom: 0.5rem;
     }
     
     .message-input {
         flex: 1;
-        padding: 0.75rem 1rem;
+        padding: 0.875rem 1.125rem;
         border: 2px solid #e5e7eb;
-        border-radius: 0.75rem;
-        font-size: 0.95rem;
+        border-radius: 1rem;
+        font-size: 0.975rem;
         font-family: inherit;
         resize: none;
-        min-height: 44px;
+        min-height: 48px;
         max-height: 120px;
-        transition: border-color 0.2s;
+        transition: all 0.2s;
+        line-height: 1.5;
     }
     
     .message-input:focus {
         outline: none;
         border-color: #1e3a66;
+        box-shadow: 0 0 0 3px rgba(30, 58, 102, 0.1);
     }
     
     .message-input:disabled {
         background: #f3f4f6;
         cursor: not-allowed;
+        opacity: 0.6;
     }
     
     .send-button {
-        padding: 0.75rem 1.25rem;
-        background: #1e3a66;
+        padding: 0.875rem 1.375rem;
+        background: linear-gradient(135deg, #1e3a66 0%, #15304d 100%);
         color: white;
         border: none;
-        border-radius: 0.75rem;
+        border-radius: 1rem;
         cursor: pointer;
         font-size: 1rem;
-        transition: background-color 0.2s, transform 0.1s;
-        min-width: 48px;
-        height: 44px;
+        transition: all 0.2s;
+        min-width: 52px;
+        height: 48px;
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 2px 4px rgba(30, 58, 102, 0.3);
     }
     
     .send-button:hover:not(:disabled) {
-        background: #15304d;
-        transform: scale(1.05);
+        background: linear-gradient(135deg, #15304d 0%, #0d1f33 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(30, 58, 102, 0.4);
     }
     
     .send-button:active:not(:disabled) {
-        transform: scale(0.95);
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(30, 58, 102, 0.3);
     }
     
     .send-button:disabled {
         background: #9ca3af;
         cursor: not-allowed;
         transform: none;
+        box-shadow: none;
+        opacity: 0.6;
+    }
+
+    .input-hints {
+        display: flex;
+        align-items: center;
+        padding: 0.25rem 0.25rem 0;
+    }
+
+    .hint {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .hint i {
+        font-size: 0.7rem;
     }
     
     /* Responsive */
     @media (max-width: 640px) {
         .chat-container {
-            padding: 1rem;
-            height: calc(100vh - 100px);
+            padding: 0.625rem 0.75rem 0.375rem;
+            height: calc(100vh - 70px);
+            border-radius: 0.25rem;
         }
         
         .title {
@@ -580,11 +782,36 @@
         }
         
         .message-bubble {
-            max-width: 85%;
+            max-width: 90%;
+            padding: 0.65rem 0.875rem;
         }
         
         .message-input {
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            padding: 0.75rem 1rem;
+            min-height: 44px;
+        }
+
+        .send-button {
+            min-width: 48px;
+            height: 44px;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .chat-header {
+            padding: 0.75rem;
+        }
+
+        .chat-messages {
+            padding: 0.625rem 0.375rem;
+        }
+
+        .chat-input-container {
+            padding: 0.625rem 0.375rem 0.375rem;
+        }
+
+        .hint {
+            font-size: 0.7rem;
         }
     }
 </style>
