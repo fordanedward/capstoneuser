@@ -72,6 +72,7 @@
     let lastProcessedMessageId: string | null = null;
     let isFirstAppointmentLoad = true;
     let seenAppointmentStatuses = new Set<string>();
+    let currentUserId: string | null = null;
     
     popupNotifications.subscribe(value => {
         notifications = value;
@@ -274,6 +275,21 @@
         // Listen for auth changes
         unsubAuth = onAuthStateChanged(auth!, async (user: User | null) => {
             isLoading = true;
+            
+            // If user changed (new login), clear old notifications
+            if (user && currentUserId && currentUserId !== user.uid) {
+                popupNotifications.set([]);
+                localStorage.removeItem('popupNotifications');
+            }
+            
+            // Update current user ID
+            if (user) {
+                currentUserId = user.uid;
+            } else {
+                currentUserId = null;
+                popupNotifications.set([]);
+                localStorage.removeItem('popupNotifications');
+            }
             
             // Reset tracking for new login
             isFirstAppointmentLoad = true;
