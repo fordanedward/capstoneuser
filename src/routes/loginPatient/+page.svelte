@@ -29,7 +29,7 @@
     let showPassword = false;
     let rememberMe = false;
 
-    // single identifier (email or patient ID)
+    // identifier (Patient ID) npte: instead of a member's email, we allow login via Patient ID
 
     type ToastTypeFB = 'info' | 'success' | 'warning' | 'error'; 
     let toastVisibleFB: boolean = false;
@@ -486,7 +486,7 @@
         <div class="login-form {isPageLoaded ? 'loaded' : ''}">
             <form on:submit|preventDefault={handleLogin}>
             <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                <Label for="identifier" class="block mb-2">Email or Patient ID</Label>
+                <Label for="identifier" class="block mb-2">Patient ID</Label>
                 <Input
                     type="text"
                     id="identifier"
