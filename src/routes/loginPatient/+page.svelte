@@ -490,12 +490,12 @@
                 <Input
                     type="text"
                     id="identifier"
-                    placeholder="Enter your Email or Patient ID"
+                    placeholder="Enter your Patient ID"
                     class="border p-2 w-full"
                     bind:value={identifier}
                     required
                 />
-                <p class="text-xs text-gray-500 mt-1">You can type either your email address or your 5-digit Patient ID.</p>
+                <p class="text-xs text-gray-500 mt-1">Type in your 5-digit Patient ID.</p>
             </div>
 
             <!-- Password field -->
