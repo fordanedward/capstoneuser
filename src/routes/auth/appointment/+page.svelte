@@ -580,12 +580,12 @@
                     const appointmentDate = data.date;
                   const appointmentWithId: Appointment = { ...data, id: doc.id };
 
-                    if (appointmentDate >= todayISOString) {
-                        if(appointmentWithId.cancellationStatus !== 'Approved' && appointmentWithId.cancellationStatus !== 'decline') {
-                           upcomingAppointments.push(appointmentWithId);
-                        } else {
-                           pastAppointments.push(appointmentWithId);
-                        }
+                    // Check if appointment should be in past based on status
+                    const isCompletedStatus = ['Completed', 'Completed: Need Follow-up', 'Missed'].includes(appointmentWithId.status);
+                    const isCancelledStatus = appointmentWithId.cancellationStatus === 'Approved' || appointmentWithId.cancellationStatus === 'decline';
+                    
+                    if (appointmentDate >= todayISOString && !isCompletedStatus && !isCancelledStatus) {
+                        upcomingAppointments.push(appointmentWithId);
                     } else {
                         pastAppointments.push(appointmentWithId);
                     }

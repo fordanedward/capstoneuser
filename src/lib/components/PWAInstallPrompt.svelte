@@ -6,8 +6,8 @@
 	<div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:bottom-4 md:w-96 rounded-lg bg-blue-600 text-white shadow-lg p-4 z-50">
 		<div class="flex flex-col gap-3">
 			<div>
-				<h3 class="font-bold text-lg">Install Healthcare App</h3>
-				<p class="text-sm text-blue-100">Install our app for faster access and offline support.</p>
+				<h3 class="font-bold text-lg">Install PHPDGMP Member App</h3>
+				<p class="text-sm text-blue-100">We provide health solutions so we can achieve healthy, happy and productive lives.</p>
 			</div>
 			<div class="flex gap-2">
 				<button

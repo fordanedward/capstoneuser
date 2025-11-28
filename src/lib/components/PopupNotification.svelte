@@ -70,6 +70,8 @@
     let unsubChat: Unsubscribe | null = null;
     let unsubAuth: Unsubscribe | null = null;
     let lastProcessedMessageId: string | null = null;
+    let isFirstAppointmentLoad = true;
+    let seenAppointmentStatuses = new Set<string>();
     
     popupNotifications.subscribe(value => {
         notifications = value;
@@ -273,6 +275,10 @@
         unsubAuth = onAuthStateChanged(auth!, async (user: User | null) => {
             isLoading = true;
             
+            // Reset tracking for new login
+            isFirstAppointmentLoad = true;
+            seenAppointmentStatuses.clear();
+            
             // Clean up previous listeners
             if (unsubAppointments) { unsubAppointments(); unsubAppointments = null; }
             if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
@@ -286,12 +292,32 @@
             // Appointments listener
             const apptQuery = query(collection(db, 'appointments'), where('patientId', '==', user.uid));
             unsubAppointments = onSnapshot(apptQuery, (snap) => {
-                snap.forEach((d) => {
-                    const appt = d.data();
-                    const notifs = buildAppointmentNotifs(appt, d.id);
-                    notifs.forEach(pushOrReplace);
+                // On first load, only track existing appointments without showing notifications
+                if (isFirstAppointmentLoad) {
+                    snap.forEach((d) => {
+                        const appt = d.data();
+                        const statusKey = `${d.id}_${appt.status}_${appt.cancellationStatus}`;
+                        seenAppointmentStatuses.add(statusKey);
+                    });
+                    isFirstAppointmentLoad = false;
+                    isLoading = false;
+                    return;
+                }
+
+                // On subsequent updates, only process changed documents
+                snap.docChanges().forEach((change) => {
+                    if (change.type === 'modified') {
+                        const appt = change.doc.data();
+                        const statusKey = `${change.doc.id}_${appt.status}_${appt.cancellationStatus}`;
+                        
+                        // Only show notification if this status combination is new
+                        if (!seenAppointmentStatuses.has(statusKey)) {
+                            seenAppointmentStatuses.add(statusKey);
+                            const notifs = buildAppointmentNotifs(appt, change.doc.id);
+                            notifs.forEach(pushOrReplace);
+                        }
+                    }
                 });
-                isLoading = false;
             }, (error) => {
                 console.error('Notifications appointments listener error:', error);
                 isLoading = false;
@@ -397,16 +423,22 @@
         {#each notifications.filter(n => !n.read).slice(0, 3) as notification (notification.id)}
             <div 
                 class="toast"
+                role="button"
+                tabindex="0"
                 style="border-left-color: {notification.color || '#3b82f6'}"
                 in:fly={{ x: 300, duration: 300 }}
                 out:fly={{ x: 300, duration: 200 }}
                 on:click={() => handleNotificationClick(notification)}
+                on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
             >
                 <div class="toast-icon" style="background: {notification.color}15; color: {notification.color}">
                     <i class={getIcon(notification.type, notification.icon)}></i>
                 </div>
                 <div class="toast-content">
-                    <div class="toast-title">{notification.title}</div>
+                    <div class="toast-header">
+                        <div class="toast-title">{notification.title}</div>
+                        <div class="toast-time">{getTimeAgo(notification.timestamp)}</div>
+                    </div>
                     <div class="toast-message">{notification.message}</div>
                 </div>
                 <button 
@@ -451,7 +483,10 @@
                     {#each notifications as notification (notification.id)}
                         <div 
                             class="notification-item {notification.read ? 'read' : 'unread'}"
+                            role="button"
+                            tabindex="0"
                             on:click={() => handleNotificationClick(notification)}
+                            on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
                         >
                             <div class="item-icon" style="background: {notification.color}15; color: {notification.color}">
                                 <i class={getIcon(notification.type, notification.icon)}></i>
@@ -595,13 +630,28 @@
         min-width: 0;
     }
     
+    .toast-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+    
     .toast-title {
         font-weight: 600;
         font-size: 14px;
         color: #1f2937;
-        margin-bottom: 4px;
+        flex: 1;
+        min-width: 0;
     }
     
+    .toast-time {
+        font-size: 11px;
+        color: #9ca3af;
+        white-space: nowrap;
+    }
+
     .toast-message {
         font-size: 13px;
         color: #6b7280;
@@ -610,6 +660,7 @@
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
     }
     
@@ -788,7 +839,6 @@
         color: #1f2937;
         margin-bottom: 4px;
     }
-    
     .item-message {
         font-size: 13px;
         color: #6b7280;
@@ -798,6 +848,7 @@
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
     }
     
