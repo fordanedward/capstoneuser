@@ -237,30 +237,32 @@
 
       if (scheduleSnap.exists()) {
         const data = scheduleSnap.data();
-        // Check if explicitly marked as non-working day (takes priority)
+        // Priority 1: Check if explicitly marked as non-working day - this is ABSOLUTE
         if (data.isNonWorkingDay === true) {
+          // Non-working day - NO appointments allowed
           isWorking = false;
-        } else if (data.isWorkingDay === true) {
+        } else if (data.isWorkingDay === true || data.isNonWorkingDay === false) {
           // Explicitly marked as working day
           isWorking = true;
-        } else if (data.isNonWorkingDay === false) {
-          // Explicitly marked as not non-working (i.e., working)
-          isWorking = true;
         } else {
-          // No explicit flag - fall back to default working days
+          // No explicit override flag - fall back to default working days
           const dateObj = new Date(date + 'T00:00:00Z');
           const dayOfWeek = dateObj.getUTCDay();
           isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
         }
+        
+        // Only set slots if it's a working day
         if (isWorking && Array.isArray(data.availableSlots)) {
           slots = data.availableSlots;
         } else if (isWorking && !data.availableSlots) {
           // If working but no custom slots defined, use all slots
           slots = ALL_POSSIBLE_SLOTS;
         }
+        // If not working, slots remain empty array
       } else {
         const dateObj = new Date(date + 'T00:00:00Z');
         const dayOfWeek = dateObj.getUTCDay();
+        // Only a working day if it's in the default working days
         isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
         if (isWorking) {
           slots = ALL_POSSIBLE_SLOTS;
@@ -355,31 +357,32 @@
 
         if (scheduleSnap.exists()) {
             const data = scheduleSnap.data();
-            // Check if explicitly marked as non-working day (takes priority)
+            // Priority 1: Check if explicitly marked as non-working day - this is ABSOLUTE
             if (data.isNonWorkingDay === true) {
+              // Non-working day - NO appointments allowed
               isWorking = false;
-            } else if (data.isWorkingDay === true) {
+            } else if (data.isWorkingDay === true || data.isNonWorkingDay === false) {
               // Explicitly marked as working day
               isWorking = true;
-            } else if (data.isNonWorkingDay === false) {
-              // Explicitly marked as not non-working (i.e., working)
-              isWorking = true;
             } else {
-              // No explicit flag - fall back to default working days
+              // No explicit override flag - fall back to default working days
               const dateObj = new Date(date + 'T00:00:00Z');
               const dayOfWeek = dateObj.getUTCDay();
               isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
             }
+            
+            // Only set slots if it's a working day
             if (isWorking && Array.isArray(data.availableSlots)) {
                 slots = data.availableSlots;
             } else if (isWorking && !data.availableSlots) {
               // If working but no custom slots defined, use all slots
               slots = ALL_POSSIBLE_SLOTS;
             }
+            // If not working, slots remain empty array
         } else {
             const dateObj = new Date(date + 'T00:00:00Z');
             const dayOfWeek = dateObj.getUTCDay();
-            // Treat Saturday(6) and Sunday(0) as working days as well
+            // Only a working day if it's in the default working days
             isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
             if (isWorking) {
                 slots = ALL_POSSIBLE_SLOTS;
@@ -1027,6 +1030,10 @@
       }
       
       if (!isWorkingDay) {
+        // Explicitly set state to non-working
+        isBookingDateWorking = false;
+        fetchedBookingSlots = [];
+        
         Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
@@ -1036,6 +1043,7 @@
       }
     } catch (error) {
       console.error('Error checking if date is working day:', error);
+      isBookingDateWorking = false;
     }
     
     // Check if date has available slots
@@ -1124,6 +1132,10 @@
       }
       
       if (!isWorkingDay) {
+        // Explicitly set state to non-working
+        isRescheduleDateWorking = false;
+        fetchedRescheduleSlots = [];
+        
         Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
@@ -1133,6 +1145,7 @@
       }
     } catch (error) {
       console.error('Error checking if date is working day:', error);
+      isRescheduleDateWorking = false;
     }
     
     // Check if date has available slots
