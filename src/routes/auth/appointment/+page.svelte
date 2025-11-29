@@ -203,6 +203,11 @@
   const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
   const CACHE_DURATION = 30000; // 30 seconds
 
+  // Helper function to clear cache for a date
+  function clearCacheForDate(date: string) {
+    slotCache.delete(date);
+  }
+
   // Helper function to check if a date has available slots (considering time passed for today)
   async function hasAvailableSlots(date: string): Promise<boolean> {
     if (!db || !date) return false;
@@ -232,9 +237,26 @@
 
       if (scheduleSnap.exists()) {
         const data = scheduleSnap.data();
-        isWorking = data.isWorkingDay ?? false;
+        // Check if explicitly marked as non-working day (takes priority)
+        if (data.isNonWorkingDay === true) {
+          isWorking = false;
+        } else if (data.isWorkingDay === true) {
+          // Explicitly marked as working day
+          isWorking = true;
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as not non-working (i.e., working)
+          isWorking = true;
+        } else {
+          // No explicit flag - fall back to default working days
+          const dateObj = new Date(date + 'T00:00:00Z');
+          const dayOfWeek = dateObj.getUTCDay();
+          isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        }
         if (isWorking && Array.isArray(data.availableSlots)) {
           slots = data.availableSlots;
+        } else if (isWorking && !data.availableSlots) {
+          // If working but no custom slots defined, use all slots
+          slots = ALL_POSSIBLE_SLOTS;
         }
       } else {
         const dateObj = new Date(date + 'T00:00:00Z');
@@ -333,9 +355,26 @@
 
         if (scheduleSnap.exists()) {
             const data = scheduleSnap.data();
-            isWorking = data.isWorkingDay ?? false;
+            // Check if explicitly marked as non-working day (takes priority)
+            if (data.isNonWorkingDay === true) {
+              isWorking = false;
+            } else if (data.isWorkingDay === true) {
+              // Explicitly marked as working day
+              isWorking = true;
+            } else if (data.isNonWorkingDay === false) {
+              // Explicitly marked as not non-working (i.e., working)
+              isWorking = true;
+            } else {
+              // No explicit flag - fall back to default working days
+              const dateObj = new Date(date + 'T00:00:00Z');
+              const dayOfWeek = dateObj.getUTCDay();
+              isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+            }
             if (isWorking && Array.isArray(data.availableSlots)) {
                 slots = data.availableSlots;
+            } else if (isWorking && !data.availableSlots) {
+              // If working but no custom slots defined, use all slots
+              slots = ALL_POSSIBLE_SLOTS;
             }
         } else {
             const dateObj = new Date(date + 'T00:00:00Z');
@@ -954,6 +993,51 @@
       return;
     }
     
+    // Check if date is a non-working day
+    try {
+      // Clear cache to ensure fresh data from Firestore
+      clearCacheForDate(date);
+      
+      const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+      const scheduleSnap = await getDoc(scheduleRef);
+      
+      let isWorkingDay = true; // Default to working day
+      if (scheduleSnap.exists()) {
+        const data = scheduleSnap.data();
+        // Check if explicitly marked as non-working day (takes priority)
+        if (data.isNonWorkingDay === true) {
+          isWorkingDay = false;
+        } else if (data.isWorkingDay === true) {
+          // Explicitly marked as working day
+          isWorkingDay = true;
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as not non-working (i.e., working)
+          isWorkingDay = true;
+        } else {
+          // No explicit flag - fall back to default working days
+          const dateObj = new Date(date + 'T00:00:00Z');
+          const dayOfWeek = dateObj.getUTCDay();
+          isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        }
+      } else {
+        // No document exists - use default working days
+        const dateObj = new Date(date + 'T00:00:00Z');
+        const dayOfWeek = dateObj.getUTCDay();
+        isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+      }
+      
+      if (!isWorkingDay) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Non-Working Day',
+          text: 'This is a non-working day. Please pick a different date.',
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking if date is working day:', error);
+    }
+    
     // Check if date has available slots
     const hasSlots = await hasAvailableSlots(date);
     if (!hasSlots) {
@@ -1004,6 +1088,51 @@
         newDate = currentAppointment.date;
       }
       return;
+    }
+    
+    // Check if date is a non-working day
+    try {
+      // Clear cache to ensure fresh data from Firestore
+      clearCacheForDate(date);
+      
+      const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+      const scheduleSnap = await getDoc(scheduleRef);
+      
+      let isWorkingDay = true; // Default to working day
+      if (scheduleSnap.exists()) {
+        const data = scheduleSnap.data();
+        // Check if explicitly marked as non-working day (takes priority)
+        if (data.isNonWorkingDay === true) {
+          isWorkingDay = false;
+        } else if (data.isWorkingDay === true) {
+          // Explicitly marked as working day
+          isWorkingDay = true;
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as not non-working (i.e., working)
+          isWorkingDay = true;
+        } else {
+          // No explicit flag - fall back to default working days
+          const dateObj = new Date(date + 'T00:00:00Z');
+          const dayOfWeek = dateObj.getUTCDay();
+          isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        }
+      } else {
+        // No document exists - use default working days
+        const dateObj = new Date(date + 'T00:00:00Z');
+        const dayOfWeek = dateObj.getUTCDay();
+        isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+      }
+      
+      if (!isWorkingDay) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Non-Working Day',
+          text: 'This is a non-working day. Please pick a different date.',
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking if date is working day:', error);
     }
     
     // Check if date has available slots
@@ -1140,7 +1269,7 @@
             {:else if !isBookingDateWorking}
               <div class="alert-box alert-warning">
                    <i class="fas fa-calendar-times alert-icon"></i>
-                   <p>Sorry, this is not a working day.</p>
+                   <p>This is a non-working day. Please pick a different date.</p>
               </div>
             {:else if fetchedBookingSlots.length === 0}
               <div class="alert-box alert-info">
@@ -1428,7 +1557,7 @@
             {:else if rescheduleSlotsError}
                 <div class="p-2 text-sm text-red-700 bg-red-100 rounded-md border border-red-200">{rescheduleSlotsError}</div>
             {:else if !isRescheduleDateWorking}
-                <div class="p-2 text-sm text-orange-700 bg-orange-100 rounded-md border border-orange-200">This is not a working day.</div>
+                <div class="p-2 text-sm text-orange-700 bg-orange-100 rounded-md border border-orange-200">This is a non-working day. Please pick a different date.</div>
             {:else if fetchedRescheduleSlots.length === 0}
                 <div class="p-2 text-sm text-gray-600 bg-gray-100 rounded-md border border-gray-200">No available slots on this date.</div>
             {:else}
