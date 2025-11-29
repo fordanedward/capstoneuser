@@ -1,6 +1,6 @@
 {
-  "name": "Healthcare Patient Portal",
-  "short_name": "Healthcare",
+  "name": "PHPDGMP Member Portal",
+  "short_name": "PHPDGMP Member",
   "description": "A comprehensive healthcare patient management and communication platform",
   "start_url": "/",
   "scope": "/",

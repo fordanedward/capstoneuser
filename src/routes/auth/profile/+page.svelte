@@ -722,7 +722,30 @@ function toggleEditProfile() {
                     </div>
                     <div class="form-group">
                         <label for="birthday">Birth Date <span class="required">*</span></label>
-                        <input id="birthday" type="date" bind:value={formBirthday} on:input={updateAge} required />
+                        <input 
+                            id="birthday" 
+                            type="date" 
+                            bind:value={formBirthday} 
+                            on:input={(e) => {
+                                const input = e.currentTarget as HTMLInputElement;
+                                let dateValue = input.value;
+                                
+                                // Check if date contains a year with more than 4 digits
+                                if (dateValue) {
+                                    const parts = dateValue.split('-');
+                                    if (parts[0] && parts[0].length > 4) {
+                                        // Truncate year to 4 digits
+                                        parts[0] = parts[0].slice(-4);
+                                        dateValue = parts.join('-');
+                                        input.value = dateValue;
+                                    }
+                                }
+                                
+                                formBirthday = dateValue;
+                                updateAge(e);
+                            }}
+                            required 
+                        />
                     </div>
                     <div class="form-group">
                         <label for="age">Age</label>

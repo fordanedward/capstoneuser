@@ -54,3 +54,11 @@ export async function installPWA() {
 	deferredPrompt.set(null);
 	installPromptVisible.set(false);
 }
+
+export function resetInstallPrompt() {
+	installPromptVisible.set(true);
+}
+
+export function hideInstallPrompt() {
+	installPromptVisible.set(false);
+}

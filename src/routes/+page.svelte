@@ -215,11 +215,27 @@
         background-color: #0b2d56;
         color: white;
         text-decoration: none;
-        transition: transform 0.2s ease, background-color 0.2s ease;
+        transition: transform 0.3s cubic-bezier(.68,-0.55,.27,1.55), background-color 0.2s;
+        box-shadow: 0 2px 8px rgba(11,45,86,0.08);
+        animation: fbPopIn 0.8s cubic-bezier(.68,-0.55,.27,1.55);
     }
     .social-links a:hover {
-        transform: translateY(-2px);
-        background-color: #123a6e;
+        transform: scale(1.15) translateY(-4px) rotate(-6deg);
+        background-color: #0b2d56;
+        box-shadow: 0 4px 16px rgba(11,45,86,0.18);
+        animation: fbBounce 0.4s;
+    }
+
+    @keyframes fbPopIn {
+        0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+        80% { opacity: 1; transform: scale(1.1) translateY(-2px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes fbBounce {
+        0% { transform: scale(1) translateY(0) rotate(0deg); }
+        40% { transform: scale(1.18) translateY(-6px) rotate(-8deg); }
+        60% { transform: scale(0.98) translateY(-2px) rotate(2deg); }
+        100% { transform: scale(1.15) translateY(-4px) rotate(-6deg); }
     }
 
     @keyframes fadeIn {

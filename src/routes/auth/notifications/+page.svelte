@@ -47,7 +47,8 @@
         } else {
             notifications = [notif, ...notifications];
         }
-        notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        // Always keep notifications sorted by most recent first
+        notifications = notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
     function buildAppointmentNotifs(appt: any, apptId: string): NotificationItem[] {
@@ -116,6 +117,8 @@
                     const notifs = buildAppointmentNotifs(appt, d.id);
                     notifs.forEach(pushOrReplace);
                 });
+                // Ensure notifications are sorted by most recent first
+                notifications = notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
                 isLoading = false;
             }, (error) => {
                 console.error('Notifications appointments listener error:', error);
