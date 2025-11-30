@@ -201,7 +201,7 @@
 
   // Consolidated slot fetching with caching
   const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
-  const CACHE_DURATION = 30000; // 30 seconds
+  const CACHE_DURATION = 5000; // 5 seconds - short duration to catch admin changes quickly
 
   // Helper function to clear cache for a date
   function clearCacheForDate(date: string) {
@@ -945,6 +945,12 @@
 
     setup();
 
+    // Clear entire cache every 60 seconds to catch admin schedule changes
+    const cacheRefreshInterval = setInterval(() => {
+      slotCache.clear();
+      console.log("Cache cleared for fresh schedule data");
+    }, 60000);
+
     return () => {
       console.log("Cleaning up appointment component listeners");
       // Close all modals when component unmounts (navigating away)
@@ -952,6 +958,7 @@
       popupModal = false;
       rescheduleModal = false;
       paymentModal = false;
+      clearInterval(cacheRefreshInterval);
       if (authUnsubscribe) authUnsubscribe();
       if (appointmentsUnsubscribe) appointmentsUnsubscribe();
     };
