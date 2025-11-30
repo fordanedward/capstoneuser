@@ -1037,7 +1037,7 @@
         Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
-          text: 'This is a non-working day. Please pick a different date.',
+          text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
         });
         return;
       }
@@ -1066,7 +1066,7 @@
       Swal.fire({
         icon: 'info',
         title: 'No Available Slots',
-        text: 'This date has no available time slots. Please select another date.',
+        text: `${formatDate(date)} has no available time slots. Please select another date.`,
       });
     }
     
@@ -1139,7 +1139,7 @@
         Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
-          text: 'This is a non-working day. Please pick a different date.',
+          text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
         });
         return;
       }
@@ -1168,7 +1168,7 @@
       Swal.fire({
         icon: 'info',
         title: 'No Available Slots',
-        text: 'This date has no available time slots. Please select another date.',
+        text: `${formatDate(date)} has no available time slots. Please select another date.`,
       });
     }
     

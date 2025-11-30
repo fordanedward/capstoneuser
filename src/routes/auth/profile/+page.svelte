@@ -207,7 +207,7 @@ onMount(() => {
                 const qAppointments = query(
                     appointmentsRef,
                     where("patientId", "==", currentUser.uid),
-                    where("status", "==", "Completed")
+                    where("status", "in", ["Completed", "Completed: Need Follow-up", "Missed"])
                 );
                 const querySnapshot = await getDocs(qAppointments);
                 doneAppointments = querySnapshot.docs.map((doc) => {
@@ -220,11 +220,13 @@ onMount(() => {
                         notes: data.notes,
                         comment: data.comment,
                         comments: data.comments,
-                        description: data.description
+                        description: data.description,
+                        completionRemarks: data.completionRemarks
                     });
                     
                     // Try all possible field names for remarks
-                    const remarksValue = data.remarks || 
+                    const remarksValue = data.completionRemarks ||
+                                       data.remarks || 
                                        data.remark || 
                                        data.adminRemarks || 
                                        data.notes || 
