@@ -93,6 +93,10 @@
   let patientId: string | null = null;
   let hasCompleteProfile: boolean = false;
 
+  // Additional variables for simplified slot loading (as per notepad instructions)
+  let availableSlots: string[] = [];
+  let isLoadingSlots: boolean = false;
+
   let defaultWorkingDays: number[] = [1, 2, 3, 4, 5, 6, 7]; // Default fallback
   let fetchedBookingSlots: string[] = [];
   let isBookingDateWorking: boolean = false;
@@ -199,9 +203,55 @@
     }
   }
 
+  // Real-time listener for schedule changes - detects when admin updates any date's working status
+  // This ensures users see immediate updates when the admin reverts a non-working day back to working
+  let scheduleChangeUnsubscribe: (() => void) | null = null;
+
+  function setupScheduleChangeListener() {
+    if (!db) return;
+
+    try {
+      // Listen to all documents in the daily schedules collection
+      const scheduleQuery = query(collection(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION));
+      
+      scheduleChangeUnsubscribe = onSnapshot(scheduleQuery, (querySnapshot) => {
+        querySnapshot.docChanges().forEach((change) => {
+          const dateStr = change.doc.id;
+          const scheduleData = change.doc.data();
+          
+          console.log(`Schedule change detected for ${dateStr}:`, {
+            type: change.type,
+            isNonWorkingDay: scheduleData.isNonWorkingDay,
+            isWorkingDay: scheduleData.isWorkingDay,
+            currentSelectedDate: selectedDate
+          });
+
+          // Clear cache for this date immediately
+          clearCacheForDate(dateStr);
+
+          // If this is the currently selected date for booking, refresh it immediately
+          if (dateStr === selectedDate) {
+            console.log(`Refreshing currently selected booking date ${dateStr}...`);
+            fetchAvailabilityForDate(dateStr, 'booking');
+          }
+
+          // If this is the currently selected date for rescheduling, refresh it
+          if (rescheduleModal && dateStr === newDate) {
+            console.log(`Refreshing currently selected reschedule date ${dateStr}...`);
+            fetchAvailabilityForDate(dateStr, 'reschedule');
+          }
+        });
+      }, (error) => {
+        console.error("Error listening to schedule changes:", error);
+      });
+    } catch (error) {
+      console.error("Error setting up schedule change listener:", error);
+    }
+  }
+
   // Consolidated slot fetching with caching
   const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
-  const CACHE_DURATION = 5000; // 5 seconds - short duration to catch admin changes quickly
+  const CACHE_DURATION = 1000; // 1 second - very short to catch admin changes immediately
 
   // Helper function to clear cache for a date
   function clearCacheForDate(date: string) {
@@ -237,11 +287,14 @@
 
       if (scheduleSnap.exists()) {
         const data = scheduleSnap.data();
-        // Priority 1: Check if explicitly marked as non-working day - this is ABSOLUTE
+        // Priority 1: Check if explicitly marked as non-working day - isNonWorkingDay: true means NOT working
         if (data.isNonWorkingDay === true) {
           // Non-working day - NO appointments allowed
           isWorking = false;
-        } else if (data.isWorkingDay === true || data.isNonWorkingDay === false) {
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as NOT non-working (i.e., working) - this overrides weekday defaults
+          isWorking = true;
+        } else if (data.isWorkingDay === true) {
           // Explicitly marked as working day
           isWorking = true;
         } else {
@@ -318,9 +371,12 @@
   async function fetchAvailabilityForDate(date: string, target: 'booking' | 'reschedule') {
     if (!db || !date) return;
 
+    console.log(`fetchAvailabilityForDate called for ${date} (${target})`);
+
     // Check cache first
     const cached = slotCache.get(date);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log(`Using cached data for ${date}:`, cached);
       if (target === 'booking') {
         isLoadingBookingSlots = false;
         fetchedBookingSlots = cached.slots;
@@ -334,6 +390,8 @@
       }
       return;
     }
+
+    console.log(`Cache miss or expired for ${date}, fetching from Firestore...`);
 
     if (target === 'booking') {
         isLoadingBookingSlots = true;
@@ -352,23 +410,32 @@
         const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
         const scheduleSnap = await getDoc(scheduleRef);
 
+        console.log(`Firestore data for ${date}:`, scheduleSnap.exists() ? scheduleSnap.data() : 'No document');
+
         let slots: string[] = [];
         let isWorking = false;
 
         if (scheduleSnap.exists()) {
             const data = scheduleSnap.data();
-            // Priority 1: Check if explicitly marked as non-working day - this is ABSOLUTE
+            // Priority 1: Check if explicitly marked as non-working day - isNonWorkingDay: true means NOT working
             if (data.isNonWorkingDay === true) {
               // Non-working day - NO appointments allowed
               isWorking = false;
-            } else if (data.isWorkingDay === true || data.isNonWorkingDay === false) {
+              console.log(`${date} marked as NON-WORKING (isNonWorkingDay: true)`);
+            } else if (data.isNonWorkingDay === false) {
+              // Explicitly marked as NOT non-working (i.e., working) - this overrides weekday defaults
+              isWorking = true;
+              console.log(`${date} marked as WORKING (isNonWorkingDay: false)`);
+            } else if (data.isWorkingDay === true) {
               // Explicitly marked as working day
               isWorking = true;
+              console.log(`${date} marked as WORKING (isWorkingDay: true)`);
             } else {
               // No explicit override flag - fall back to default working days
               const dateObj = new Date(date + 'T00:00:00Z');
               const dayOfWeek = dateObj.getUTCDay();
               isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+              console.log(`${date} using defaults: day ${dayOfWeek}, isWorking: ${isWorking}`);
             }
             
             // Only set slots if it's a working day
@@ -454,6 +521,64 @@
     } catch (error) {
       console.error("Error checking patient profile:", error);
       return false;
+    }
+  }
+
+  // Add this function to load available slots when a date is selected (as per notepad instructions)
+  async function loadAvailableSlots(selectedDate: string) {
+    if (!selectedDate || !db) return;
+    
+    availableSlots = [];
+    isLoadingSlots = true;
+    
+    try {
+        const scheduleRef = doc(db, 'dailySchedules', selectedDate);
+        const scheduleSnap = await getDoc(scheduleRef);
+        
+        if (scheduleSnap.exists()) {
+            const scheduleData = scheduleSnap.data();
+            
+            // If marked as non-working day, no slots available
+            if (scheduleData.isWorkingDay === false) {
+                console.log(`${selectedDate} is marked as a non-working day.`);
+                availableSlots = [];
+                isLoadingSlots = false;
+                return;
+            }
+            
+            let scheduledSlotsForDay = scheduleData.availableSlots || [];
+            
+            // Fallback: if marked as working day but no slots defined, use all possible slots
+            if (scheduledSlotsForDay.length === 0) {
+                console.warn(`${selectedDate} is marked as working day but has no slots. Using all possible slots as fallback.`);
+                scheduledSlotsForDay = ALL_POSSIBLE_SLOTS;
+            }
+            
+            // Get booked appointments for this date
+            const appointmentsQuery = query(
+                collection(db, FIRESTORE_APPOINTMENTS_COLLECTION),
+                where('date', '==', selectedDate),
+                where('status', 'in', ['Accepted', 'pending', 'Scheduled', 'Rescheduled', 'Completed: Need Follow-up'])
+            );
+            
+            const querySnapshot = await getDocs(appointmentsQuery);
+            const bookedSlots = querySnapshot.docs.map(doc => doc.data().time);
+            
+            // Filter out booked slots
+            availableSlots = scheduledSlotsForDay.filter(
+                (slot: string) => !bookedSlots.includes(slot)
+            );
+            
+            console.log(`Available slots for ${selectedDate}:`, availableSlots);
+        } else {
+            console.log(`No schedule defined for ${selectedDate}`);
+            availableSlots = [];
+        }
+    } catch (error) {
+        console.error('Error loading available slots:', error);
+        availableSlots = [];
+    } finally {
+        isLoadingSlots = false;
     }
   }
 
@@ -905,6 +1030,9 @@
       try {
         await loadDefaultWorkingDays();
         
+        // Setup real-time listener for schedule changes
+        setupScheduleChangeListener();
+        
         // Check if today has available slots, if not, find next available date
         const todayStr = new Date().toISOString().split('T')[0];
         const hasTodaySlots = await hasAvailableSlots(todayStr);
@@ -961,6 +1089,7 @@
       clearInterval(cacheRefreshInterval);
       if (authUnsubscribe) authUnsubscribe();
       if (appointmentsUnsubscribe) appointmentsUnsubscribe();
+      if (scheduleChangeUnsubscribe) scheduleChangeUnsubscribe();
     };
   });
 
@@ -981,6 +1110,8 @@
   // Validate date selection for booking
   async function handleBookingDateChange(date: string) {
     if (!db || !date) return;
+    
+    console.log(`Booking date changed to: ${date}`);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1005,29 +1136,36 @@
     
     // Check if date is a non-working day
     try {
-      // Clear cache to ensure fresh data from Firestore
+      // FORCE clear cache to ensure fresh data from Firestore
       clearCacheForDate(date);
+      console.log(`Cache cleared for ${date}, fetching fresh data...`);
       
       const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
       const scheduleSnap = await getDoc(scheduleRef);
       
+      console.log(`Schedule data for ${date}:`, scheduleSnap.exists() ? scheduleSnap.data() : 'No document');
+      
       let isWorkingDay = true; // Default to working day
       if (scheduleSnap.exists()) {
         const data = scheduleSnap.data();
-        // Check if explicitly marked as non-working day (takes priority)
+        // Check if explicitly marked as non-working day - isNonWorkingDay: true means NOT working
         if (data.isNonWorkingDay === true) {
           isWorkingDay = false;
+          console.log(`${date} is explicitly marked as NON-WORKING (isNonWorkingDay: true)`);
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as NOT non-working (i.e., working) - this overrides weekday defaults
+          isWorkingDay = true;
+          console.log(`${date} is explicitly marked as WORKING (isNonWorkingDay: false)`);
         } else if (data.isWorkingDay === true) {
           // Explicitly marked as working day
           isWorkingDay = true;
-        } else if (data.isNonWorkingDay === false) {
-          // Explicitly marked as not non-working (i.e., working)
-          isWorkingDay = true;
+          console.log(`${date} is explicitly marked as WORKING (isWorkingDay: true)`);
         } else {
           // No explicit flag - fall back to default working days
           const dateObj = new Date(date + 'T00:00:00Z');
           const dayOfWeek = dateObj.getUTCDay();
           isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+          console.log(`${date} using default logic: day ${dayOfWeek}, isWorking: ${isWorkingDay}`);
         }
       } else {
         // No document exists - use default working days
@@ -1116,14 +1254,14 @@
       let isWorkingDay = true; // Default to working day
       if (scheduleSnap.exists()) {
         const data = scheduleSnap.data();
-        // Check if explicitly marked as non-working day (takes priority)
+        // Check if explicitly marked as non-working day - isNonWorkingDay: true means NOT working
         if (data.isNonWorkingDay === true) {
           isWorkingDay = false;
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as NOT non-working (i.e., working) - this overrides weekday defaults
+          isWorkingDay = true;
         } else if (data.isWorkingDay === true) {
           // Explicitly marked as working day
-          isWorkingDay = true;
-        } else if (data.isNonWorkingDay === false) {
-          // Explicitly marked as not non-working (i.e., working)
           isWorkingDay = true;
         } else {
           // No explicit flag - fall back to default working days
@@ -1192,6 +1330,11 @@
 
   $: displayMorningSlots = fetchedBookingSlots.filter(slot => ALL_POSSIBLE_MORNING_SLOTS.includes(slot));
   $: displayAfternoonSlots = fetchedBookingSlots.filter(slot => ALL_POSSIBLE_AFTERNOON_SLOTS.includes(slot));
+
+  // Reactive statement to call loadAvailableSlots when selectedDate changes
+  $: if (selectedDate && db) {
+    loadAvailableSlots(selectedDate);
+  }
 
 </script>
 
