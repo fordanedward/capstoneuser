@@ -37,14 +37,19 @@
             return updated;
         });
         
-        // Show popup for 6 seconds
+        // Auto-hide popup after 5 seconds if not tapped
         setTimeout(() => {
             popupNotifications.update(notifs => {
-                return notifs.map(n => 
-                    n.id === newNotification.id ? {...n, read: true} : n
-                );
+                const notif = notifs.find(n => n.id === newNotification.id);
+                // Only hide if not read (meaning it wasn't tapped)
+                if (notif && !notif.read) {
+                    return notifs.map(n => 
+                        n.id === newNotification.id ? {...n, read: true} : n
+                    );
+                }
+                return notifs;
             });
-        }, 6000);
+        }, 5000);
     }
 </script>
 
@@ -62,6 +67,9 @@
     let isDropdownOpen = false;
     let unreadCount = 0;
     let isLoading = true;
+    let timeoutMap = new Map<string, NodeJS.Timeout>();
+    let processedNotifications = new Set<string>();
+    let toastNotifications: PopupNotification[] = [];
     
     let auth: ReturnType<typeof getAuth> | null = null;
     let db: ReturnType<typeof getFirestore> | null = null;
@@ -77,6 +85,43 @@
     popupNotifications.subscribe(value => {
         notifications = value;
         unreadCount = value.filter(n => !n.read).length;
+        
+        // Update toast notifications - only unread ones
+        toastNotifications = value.filter(n => !n.read).slice(0, 3);
+        
+        // Set timeout for any unread notifications that haven't been processed yet
+        value.forEach(notif => {
+            if (!notif.read && !processedNotifications.has(notif.id)) {
+                processedNotifications.add(notif.id);
+                
+                // Set the auto-hide timeout
+                const timeout = setTimeout(() => {
+                    popupNotifications.update(notifs => {
+                        const notification = notifs.find(n => n.id === notif.id);
+                        // Only hide if still not read (meaning it wasn't tapped)
+                        if (notification && !notification.read) {
+                            return notifs.map(n => 
+                                n.id === notif.id ? {...n, read: true} : n
+                            );
+                        }
+                        return notifs;
+                    });
+                    timeoutMap.delete(notif.id);
+                }, 5000);
+                
+                timeoutMap.set(notif.id, timeout);
+            }
+            
+            // Clean up tracking if notification was marked as read by user
+            if (notif.read && processedNotifications.has(notif.id)) {
+                const timeout = timeoutMap.get(notif.id);
+                if (timeout) {
+                    clearTimeout(timeout);
+                    timeoutMap.delete(notif.id);
+                }
+                processedNotifications.delete(notif.id);
+            }
+        });
     });
     
     function pushOrReplace(notif: PopupNotification) {
@@ -411,6 +456,9 @@
         
         return () => {
             document.removeEventListener('click', handleClickOutside);
+            // Clear all pending timeouts
+            timeoutMap.forEach(timeout => clearTimeout(timeout));
+            timeoutMap.clear();
             if (unsubAuth) unsubAuth();
             if (unsubAppointments) unsubAppointments();
             if (unsubUserDoc) unsubUserDoc();
@@ -436,7 +484,7 @@
     
     <!-- Popup Toast Notifications (Top Right) -->
     <div class="toast-container">
-        {#each notifications.filter(n => !n.read).slice(0, 3) as notification (notification.id)}
+        {#each toastNotifications as notification (notification.id)}
             <div 
                 class="toast"
                 role="button"
