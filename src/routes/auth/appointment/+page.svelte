@@ -223,21 +223,27 @@
             type: change.type,
             isNonWorkingDay: scheduleData.isNonWorkingDay,
             isWorkingDay: scheduleData.isWorkingDay,
-            currentSelectedDate: selectedDate
+            currentSelectedDate: selectedDate,
+            rescheduleModalOpen: rescheduleModal,
+            newRescheduleDate: newDate
           });
 
           // Clear cache for this date immediately
           clearCacheForDate(dateStr);
 
-          // If this is the currently selected date for booking, refresh it immediately
+          // Force immediate UI update by resetting loading states
           if (dateStr === selectedDate) {
             console.log(`Refreshing currently selected booking date ${dateStr}...`);
+            // Reset loading state to force reactive update
+            isLoadingBookingSlots = true;
             fetchAvailabilityForDate(dateStr, 'booking');
           }
 
           // If this is the currently selected date for rescheduling, refresh it
           if (rescheduleModal && dateStr === newDate) {
             console.log(`Refreshing currently selected reschedule date ${dateStr}...`);
+            // Reset loading state to force reactive update
+            isLoadingRescheduleSlots = true;
             fetchAvailabilityForDate(dateStr, 'reschedule');
           }
         });
@@ -251,11 +257,16 @@
 
   // Consolidated slot fetching with caching
   const slotCache = new Map<string, { slots: string[], isWorking: boolean, timestamp: number }>();
-  const CACHE_DURATION = 1000; // 1 second - very short to catch admin changes immediately
+  const CACHE_DURATION = 500; // 500ms - very aggressive to catch admin changes immediately
 
   // Helper function to clear cache for a date
   function clearCacheForDate(date: string) {
     slotCache.delete(date);
+  }
+
+  // Clear entire cache (used when critical updates happen)
+  function clearAllCache() {
+    slotCache.clear();
   }
 
   // Helper function to check if a date has available slots (considering time passed for today)
@@ -376,7 +387,8 @@
     // Check cache first
     const cached = slotCache.get(date);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`Using cached data for ${date}:`, cached);
+      const cacheAge = Date.now() - cached.timestamp;
+      console.log(`Using cached data for ${date} (age: ${cacheAge}ms):`, cached);
       if (target === 'booking') {
         isLoadingBookingSlots = false;
         fetchedBookingSlots = cached.slots;
@@ -1233,8 +1245,8 @@
       // For other dates without slots, just show message
       Swal.fire({
         icon: 'info',
-        title: 'No Available Slots',
-        text: `${formatDate(date)} has no available time slots. Please select another date.`,
+        title: 'Non-Working Day',
+        text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
       });
     }
     
@@ -1335,11 +1347,11 @@
       // For other dates without slots, just show message
       Swal.fire({
         icon: 'info',
-        title: 'No Available Slots',
-        text: `${formatDate(date)} has no available time slots. Please select another date.`,
+        title: 'Non-Working Day',
+        text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
       });
     }
-    
+
     debouncedFetchReschedule(date);
   }
 
@@ -1458,9 +1470,9 @@
                    <p>This is a non-working day. Please pick a different date.</p>
               </div>
             {:else if fetchedBookingSlots.length === 0}
-              <div class="alert-box alert-info">
-                  <i class="fas fa-info-circle alert-icon"></i>
-                  <p>No available time slots for this date.</p>
+              <div class="alert-box alert-warning">
+                  <i class="fas fa-calendar-times alert-icon"></i>
+                  <p>This is a non-working day. Please pick a different date.</p>
                </div>
             {:else}
               {#if displayMorningSlots.length > 0}
@@ -1745,7 +1757,7 @@
             {:else if !isRescheduleDateWorking}
                 <div class="p-2 text-sm text-orange-700 bg-orange-100 rounded-md border border-orange-200">This is a non-working day. Please pick a different date.</div>
             {:else if fetchedRescheduleSlots.length === 0}
-                <div class="p-2 text-sm text-gray-600 bg-gray-100 rounded-md border border-gray-200">No available slots on this date.</div>
+                <div class="p-2 text-sm text-orange-700 bg-orange-100 rounded-md border border-orange-200">This is a non-working day. Please pick a different date.</div>
             {:else}
                 <select id="newTime" bind:value={newTime} disabled={isLoadingRescheduleSlots || !isRescheduleDateWorking || fetchedRescheduleSlots.length === 0} class="block w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="" disabled selected>Select a time</option>
