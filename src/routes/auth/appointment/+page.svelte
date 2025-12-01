@@ -525,6 +525,18 @@
   }
 
   // Add this function to load available slots when a date is selected (as per notepad instructions)
+  // 
+  // HOW NON-WORKING DAY REVERSION WORKS:
+  // To revert a non-working day back to working, the admin can:
+  // 1. Set isNonWorkingDay: false (explicitly marks as WORKING - takes priority)
+  // 2. Delete isNonWorkingDay field entirely (falls back to isWorkingDay or default days)
+  // 
+  // Priority Order:
+  // 1. isNonWorkingDay: true  → BLOCKED (no appointments allowed)
+  // 2. isNonWorkingDay: false → WORKING (explicit override to force working)
+  // 3. isWorkingDay: true     → WORKING
+  // 4. Default working days   → Check if Mon-Sun based on defaultWorkingDays
+  //
   async function loadAvailableSlots(selectedDate: string) {
     if (!selectedDate || !db) return;
     
@@ -538,19 +550,30 @@
         if (scheduleSnap.exists()) {
             const scheduleData = scheduleSnap.data();
             
-            // If marked as non-working day, no slots available
-            if (scheduleData.isWorkingDay === false) {
-                console.log(`${selectedDate} is marked as a non-working day.`);
-                availableSlots = [];
-                isLoadingSlots = false;
-                return;
+            // Priority 1: Check if explicitly marked as non-working day
+            // isNonWorkingDay: true = BLOCKED (no appointments)
+            if (scheduleData.isNonWorkingDay === true) {
+              console.log(`${selectedDate} is BLOCKED (isNonWorkingDay: true). No appointments allowed.`);
+              availableSlots = [];
+              isLoadingSlots = false;
+              return;
+            } 
+            
+            // Priority 2: isNonWorkingDay: false means "revert to working" 
+            // This allows admin to undo a non-working day marking
+            if (scheduleData.isNonWorkingDay === false) {
+              console.log(`${selectedDate} is WORKING (isNonWorkingDay: false - reverted from blocked status).`);
+            } 
+            // Priority 3: isWorkingDay: true
+            else if (scheduleData.isWorkingDay === true) {
+              console.log(`${selectedDate} is WORKING (isWorkingDay: true).`);
             }
             
             let scheduledSlotsForDay = scheduleData.availableSlots || [];
             
-            // Fallback: if marked as working day but no slots defined, use all possible slots
+            // Fallback: if working day but no slots defined, use all possible slots
             if (scheduledSlotsForDay.length === 0) {
-                console.warn(`${selectedDate} is marked as working day but has no slots. Using all possible slots as fallback.`);
+                console.warn(`${selectedDate} is working but has no slots defined. Using all possible slots as fallback.`);
                 scheduledSlotsForDay = ALL_POSSIBLE_SLOTS;
             }
             
@@ -558,7 +581,7 @@
             const appointmentsQuery = query(
                 collection(db, FIRESTORE_APPOINTMENTS_COLLECTION),
                 where('date', '==', selectedDate),
-                where('status', 'in', ['Accepted', 'pending', 'Scheduled', 'Rescheduled', 'Completed: Need Follow-up'])
+                where('status', 'in', ['Accepted', 'pending', 'confirmed', 'Scheduled', 'Rescheduled', 'Completed: Need Follow-up'])
             );
             
             const querySnapshot = await getDocs(appointmentsQuery);
@@ -571,8 +594,8 @@
             
             console.log(`Available slots for ${selectedDate}:`, availableSlots);
         } else {
-            console.log(`No schedule defined for ${selectedDate}`);
-            availableSlots = [];
+            console.log(`No schedule defined for ${selectedDate}, using all possible slots`);
+            availableSlots = ALL_POSSIBLE_SLOTS;
         }
     } catch (error) {
         console.error('Error loading available slots:', error);
