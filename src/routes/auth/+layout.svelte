@@ -91,8 +91,8 @@
 			text: "You are about to log out.",
 			icon: 'warning',
 			showCancelButton: true,
-			confirmButtonColor: '#3085d6', // Keep Swal styling
-			cancelButtonColor: '#d33',
+			confirmButtonColor: '#1e3a66', // Keep Swal styling
+			cancelButtonColor: '#6c757d',
 			confirmButtonText: 'Yes, log out!',
 			cancelButtonText: 'No, keep me logged in'
 		}).then((result) => {
@@ -260,7 +260,7 @@
 			<!-- Display username when expanded (desktop) or sidebar is open (mobile) -->
 			{#if (!isMobile && !isCollapsed) || (isMobile && isSidebarOpen)}
 				<div class="name-container"> <!-- Use name-container div -->
-					<span class="username">{$username || '...'}</span> <!-- Display username from store -->
+					<span class="username"><b>{$username || '...'}</b></span> <!-- Display username from store -->
 					<span class="patient-id">{$patientId || ''}</span> <!-- Display patient ID below username -->
 				</div>
 			{/if}
