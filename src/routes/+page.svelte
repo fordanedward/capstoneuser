@@ -451,6 +451,7 @@
 
 <script>
     import { onMount } from 'svelte';
+    import VisitorCounter from '$lib/components/VisitorCounter.svelte';
     let aboutVisible = false;
 
     onMount(() => {
@@ -491,6 +492,9 @@
                 </svg>
             </a>
         </div>
+        <div style="margin-top: 2rem; width: 100%; max-width: 350px; margin-left: 2rem;">
+            <VisitorCounter />
+        </div>
     </div>
     <div class="right-section">
         <img src="/images/digital member portal.png" alt="Landing Logo" height="400" />
@@ -526,7 +530,6 @@
         </div>
     </div>
 </div>
-
 
 <!-- Locations -->
 <h2 class="locations-title">LOCATION</h2>

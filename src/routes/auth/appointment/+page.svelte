@@ -1231,23 +1231,94 @@
     if (!hasSlots) {
       const todayStr = new Date().toISOString().split('T')[0];
       
-      // If it's today and all times have passed, automatically move to next available date
+      // If it's today, check if all times have passed or if it's a non-working day
       if (date === todayStr) {
-        const nextDate = await findNextAvailableDate(date);
-        if (nextDate && nextDate !== date) {
-          timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
-          timesPassedModal = true;
-          selectedDate = nextDate;
-          return;
+        // Check if it's marked as a non-working day
+        try {
+          const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+          const scheduleSnap = await getDoc(scheduleRef);
+          
+          let isNonWorkingToday = false;
+          if (scheduleSnap.exists()) {
+            const data = scheduleSnap.data();
+            if (data.isNonWorkingDay === true) {
+              isNonWorkingToday = true;
+            }
+          }
+          
+          if (isNonWorkingToday) {
+            // Today is marked as non-working by admin
+            Swal.fire({
+              icon: 'info',
+              title: 'Non-Working Day',
+              text: `Today is a non-working day set by the admin. Please pick a different date.`,
+            });
+          } else {
+            // Today is a working day but all times have passed, move to next available
+            const nextDate = await findNextAvailableDate(date);
+            if (nextDate && nextDate !== date) {
+              timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+              timesPassedModal = true;
+              selectedDate = nextDate;
+              return;
+            } else {
+              // No next available date found
+              Swal.fire({
+                icon: 'info',
+                title: 'No Slots Available',
+                text: `All available time slots for today have passed and no future dates have available slots. Please try again later.`,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error checking today status:', error);
+          const nextDate = await findNextAvailableDate(date);
+          if (nextDate && nextDate !== date) {
+            timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+            timesPassedModal = true;
+            selectedDate = nextDate;
+            return;
+          }
+        }
+      } else {
+        // For other dates without slots, check if it's a non-working day or just no availability
+        try {
+          const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+          const scheduleSnap = await getDoc(scheduleRef);
+          
+          let isNonWorkingDay = false;
+          if (scheduleSnap.exists()) {
+            const data = scheduleSnap.data();
+            if (data.isNonWorkingDay === true) {
+              isNonWorkingDay = true;
+            }
+          }
+          
+          if (isNonWorkingDay) {
+            // It's explicitly marked as non-working by admin
+            Swal.fire({
+              icon: 'info',
+              title: 'Non-Working Day',
+              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+            });
+          } else {
+            // Non-working but will revert no slot available in case of confusion
+            Swal.fire({
+              icon: 'info',
+              title: 'Non-Working Day',
+              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking if date is non-working:', error);
+          // Default to no slots available message
+          Swal.fire({
+            icon: 'info',
+            title: 'No Slots Available',
+            text: `${formatDate(date)} has no available slots. Please pick a different date.`,
+          });
         }
       }
-      
-      // For other dates without slots, just show message
-      Swal.fire({
-        icon: 'info',
-        title: 'Non-Working Day',
-        text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
-      });
     }
     
     debouncedFetchBooking(date);
@@ -1319,7 +1390,7 @@
         Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
-          text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
+          text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
         });
         return;
       }
@@ -1333,23 +1404,94 @@
     if (!hasSlots) {
       const todayStr = new Date().toISOString().split('T')[0];
       
-      // If it's today and all times have passed, automatically move to next available date
+      // If it's today, check if all times have passed or if it's a non-working day
       if (date === todayStr) {
-        const nextDate = await findNextAvailableDate(date);
-        if (nextDate && nextDate !== date) {
-          timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
-          timesPassedModal = true;
-          newDate = nextDate;
-          return;
+        // Check if it's marked as a non-working day
+        try {
+          const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+          const scheduleSnap = await getDoc(scheduleRef);
+          
+          let isNonWorkingToday = false;
+          if (scheduleSnap.exists()) {
+            const data = scheduleSnap.data();
+            if (data.isNonWorkingDay === true) {
+              isNonWorkingToday = true;
+            }
+          }
+          
+          if (isNonWorkingToday) {
+            // Today is marked as non-working by admin
+            Swal.fire({
+              icon: 'info',
+              title: 'Non-Working Day',
+              text: `Today is a non-working day set by the admin. Please pick a different date.`,
+            });
+          } else {
+            // Today is a working day but all times have passed, move to next available
+            const nextDate = await findNextAvailableDate(date);
+            if (nextDate && nextDate !== date) {
+              timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+              timesPassedModal = true;
+              newDate = nextDate;
+              return;
+            } else {
+              // No next available date found
+              Swal.fire({
+                icon: 'info',
+                title: 'No Slots Available',
+                text: `All available time slots for today have passed and no future dates have available slots. Please try again later.`,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error checking today status:', error);
+          const nextDate = await findNextAvailableDate(date);
+          if (nextDate && nextDate !== date) {
+            timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+            timesPassedModal = true;
+            newDate = nextDate;
+            return;
+          }
+        }
+      } else {
+        // For other dates without slots, check if it's a non-working day or just no availability
+        try {
+          const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
+          const scheduleSnap = await getDoc(scheduleRef);
+          
+          let isNonWorkingDay = false;
+          if (scheduleSnap.exists()) {
+            const data = scheduleSnap.data();
+            if (data.isNonWorkingDay === true) {
+              isNonWorkingDay = true;
+            }
+          }
+          
+          if (isNonWorkingDay) {
+            // It's explicitly marked as non-working by admin
+            Swal.fire({
+              icon: 'info',
+              title: 'Non-Working Day',
+              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+            });
+          } else {
+            // Just no slots available on this working day
+            Swal.fire({
+              icon: 'info',
+              title: 'No Slots Available',
+              text: `${formatDate(date)} has no available slots. Please pick a different date.`,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking if date is non-working:', error);
+          // Default to no slots available message
+          Swal.fire({
+            icon: 'info',
+            title: 'No Slots Available',
+            text: `${formatDate(date)} has no available slots. Please pick a different date.`,
+          });
         }
       }
-      
-      // For other dates without slots, just show message
-      Swal.fire({
-        icon: 'info',
-        title: 'Non-Working Day',
-        text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
-      });
     }
 
     debouncedFetchReschedule(date);
@@ -1464,12 +1606,12 @@
                   <i class="fas fa-exclamation-triangle alert-icon"></i>
                   <p>{bookingSlotsError}</p>
               </div>
-            {:else if !isBookingDateWorking}
+            {:else if !isBookingDateWorking && !timesPassedModal}
               <div class="alert-box alert-warning">
                    <i class="fas fa-calendar-times alert-icon"></i>
                    <p>This is a non-working day. Please pick a different date.</p>
               </div>
-            {:else if fetchedBookingSlots.length === 0}
+            {:else if fetchedBookingSlots.length === 0 && !timesPassedModal}
               <div class="alert-box alert-warning">
                   <i class="fas fa-calendar-times alert-icon"></i>
                   <p>This is a non-working day. Please pick a different date.</p>

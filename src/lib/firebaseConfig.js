@@ -33,4 +33,4 @@ if (browser) {
 }
 
 // Export the Firestore database, Auth, and Firebase config
-export { db, auth };
+export { db, auth, app };
