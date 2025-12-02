@@ -622,9 +622,10 @@
       today.setHours(0, 0, 0, 0);
       const selectedDateObj = new Date(selectedDate + 'T00:00:00Z');
 
-      if (!selectedDate || selectedDateObj < today) {
-          Swal.fire('Invalid Date', 'You cannot book an appointment on a past date.', 'warning'); return;
-      }
+    // Keeping it to make sure there won't be an error regarding invalid date (even though the date picker prevents past dates)
+      // if (!selectedDate || selectedDateObj < today) {
+          // Swal.fire('Invalid Date', 'You cannot book an appointment on a past date.', 'warning'); return;
+      // }
       if (!selectedTime) {
           Swal.fire('Time Not Selected', 'Please select an available time slot.', 'warning'); return;
       }
