@@ -1252,7 +1252,7 @@
             Swal.fire({
               icon: 'info',
               title: 'Non-Working Day',
-              text: `Today is a non-working day set by the admin. Please pick a different date.`,
+              text: `Today is a non-working day. Please pick a different date.`,
             });
           } else {
             // Today is a working day but all times have passed, move to next available
@@ -1300,14 +1300,14 @@
             Swal.fire({
               icon: 'info',
               title: 'Non-Working Day',
-              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+              text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
             });
           } else {
             // Non-working but will revert no slot available in case of confusion
             Swal.fire({
               icon: 'info',
               title: 'Non-Working Day',
-              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+              text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
             });
           }
         } catch (error) {
@@ -1425,7 +1425,7 @@
             Swal.fire({
               icon: 'info',
               title: 'Non-Working Day',
-              text: `Today is a non-working day set by the admin. Please pick a different date.`,
+              text: `Today is a non-working day. Please pick a different date.`,
             });
           } else {
             // Today is a working day but all times have passed, move to next available
@@ -1473,7 +1473,7 @@
             Swal.fire({
               icon: 'info',
               title: 'Non-Working Day',
-              text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
+              text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
             });
           } else {
             // Just no slots available on this working day
