@@ -86,7 +86,13 @@
   };
 
   // --- Component State ---
-  let selectedDate: string = new Date().toISOString().split('T')[0];
+  let selectedDate: string = (() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
   let selectedTime: string | null = null;
   let selectedService: ServiceType | null = null;
   let selectedSubServices: string[] = [];
@@ -151,6 +157,15 @@
   }
 
   function getMinDate(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Helper to get today's date string in local timezone
+  function getTodayLocal(): string {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -280,7 +295,7 @@
       const isWorking = cached.isWorking;
       
       // If it's today, filter out slots where time has passed
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayLocal();
       if (date === today) {
         const availableNow = slots.filter(slot => !isTimePassed(slot));
         return availableNow.length > 0 && isWorking;
@@ -346,7 +361,7 @@
         let availableSlots = slots.filter(slot => !unavailableSlots.includes(slot));
         
         // If it's today, also filter out slots where time has passed
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayLocal();
         if (date === today) {
           availableSlots = availableSlots.filter(slot => !isTimePassed(slot));
         }
@@ -618,9 +633,10 @@
   }
 
   async function bookAppointment() {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const selectedDateObj = new Date(selectedDate + 'T00:00:00Z');
+      // Get today's date in local timezone
+      const todayLocal = getTodayLocal();
+      const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+      const todayDateObj = new Date(todayLocal + 'T00:00:00');
 
     // Keeping it to make sure there won't be an error regarding invalid date (even though the date picker prevents past dates)
       // if (!selectedDate || selectedDateObj < today) {
@@ -926,10 +942,11 @@
            return;
        }
 
-      const selectedDateObj = new Date(newDate + 'T00:00:00Z');
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDateObj < today) {
+      // Get today's date in local timezone
+      const todayLocal = getTodayLocal();
+      const selectedDateObj = new Date(newDate + 'T00:00:00');
+      const todayDateObj = new Date(todayLocal + 'T00:00:00');
+      if (selectedDateObj < todayDateObj) {
           Swal.fire("Invalid Date", "You cannot reschedule to a past date.", "warning"); return;
       }
 
@@ -1070,7 +1087,7 @@
         setupScheduleChangeListener();
         
         // Check if today has available slots, if not, find next available date
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayLocal();
         const hasTodaySlots = await hasAvailableSlots(todayStr);
         
         if (!hasTodaySlots) {
@@ -1149,23 +1166,24 @@
     
     console.log(`Booking date changed to: ${date}`);
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateObj = new Date(date + 'T00:00:00Z');
+    // Get today's date in local timezone
+    const todayLocal = getTodayLocal();
+    const selectedDateObj = new Date(date + 'T00:00:00');
+    const todayDateObj = new Date(todayLocal + 'T00:00:00');
     
     // Don't allow past dates
-    if (selectedDateObj < today) {
+    if (selectedDateObj < todayDateObj) {
       Swal.fire({
         icon: 'warning',
         title: 'Invalid Date',
         text: 'You cannot select a past date.',
       });
       // Find next available date
-      const nextDate = await findNextAvailableDate(new Date().toISOString().split('T')[0]);
+      const nextDate = await findNextAvailableDate(getTodayLocal());
       if (nextDate) {
         selectedDate = nextDate;
       } else {
-        selectedDate = new Date().toISOString().split('T')[0];
+        selectedDate = getTodayLocal();
       }
       return;
     }
@@ -1192,6 +1210,10 @@
           // Explicitly marked as NOT non-working (i.e., working) - this overrides weekday defaults
           isWorkingDay = true;
           console.log(`${date} is explicitly marked as WORKING (isNonWorkingDay: false)`);
+        } else if (data.isWorkingDay === false) {
+          // isWorkingDay: false means NOT a working day
+          isWorkingDay = false;
+          console.log(`${date} is explicitly marked as NON-WORKING (isWorkingDay: false)`);
         } else if (data.isWorkingDay === true) {
           // Explicitly marked as working day
           isWorkingDay = true;
@@ -1229,31 +1251,58 @@
     
     // Check if date has available slots
     const hasSlots = await hasAvailableSlots(date);
+    
+    console.log(`>>> DEBUG: hasSlots for ${date}: ${hasSlots}`);
+    console.log(`>>> DEBUG: todayLocal: ${getTodayLocal()}`);
+    console.log(`>>> DEBUG: date === todayLocal: ${date === getTodayLocal()}`);
+    
     if (!hasSlots) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTodayLocal();
       
       // If it's today, check if all times have passed or if it's a non-working day
       if (date === todayStr) {
-        // Check if it's marked as a non-working day
+        console.log(`>>> DEBUG: Checking today (${date}) for non-working status...`);
+        // Check if it's marked as a non-working day FIRST
         try {
           const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, date);
           const scheduleSnap = await getDoc(scheduleRef);
+          
+          console.log(`>>> DEBUG: Schedule doc exists: ${scheduleSnap.exists()}`);
+          if (scheduleSnap.exists()) {
+            console.log(`>>> DEBUG: Schedule data:`, scheduleSnap.data());
+          }
           
           let isNonWorkingToday = false;
           if (scheduleSnap.exists()) {
             const data = scheduleSnap.data();
             if (data.isNonWorkingDay === true) {
               isNonWorkingToday = true;
+              console.log(`>>> DEBUG: Today IS a non-working day (isNonWorkingDay: true)`);
+            } else if (data.isWorkingDay === false) {
+              isNonWorkingToday = true;
+              console.log(`>>> DEBUG: Today IS a non-working day (isWorkingDay: false)`);
             }
           }
           
           if (isNonWorkingToday) {
-            // Today is marked as non-working by admin
-            Swal.fire({
-              icon: 'info',
-              title: 'Non-Working Day',
-              text: `Today is a non-working day. Please pick a different date.`,
-            });
+            // Today is marked as non-working by admin - Don't show "times passed" modal
+            const nextDate = await findNextAvailableDate(date);
+            if (nextDate && nextDate !== date) {
+              Swal.fire({
+                icon: 'info',
+                title: 'Non-Working Day',
+                text: `Today is a non-working day. Moving to the next available date: ${formatDate(nextDate)}`,
+              });
+              selectedDate = nextDate;
+              return;
+            } else {
+              Swal.fire({
+                icon: 'info',
+                title: 'Non-Working Day',
+                text: `Today is a non-working day. Please pick a different date.`,
+              });
+              return;
+            }
           } else {
             // Today is a working day but all times have passed, move to next available
             const nextDate = await findNextAvailableDate(date);
@@ -1290,7 +1339,7 @@
           let isNonWorkingDay = false;
           if (scheduleSnap.exists()) {
             const data = scheduleSnap.data();
-            if (data.isNonWorkingDay === true) {
+            if (data.isNonWorkingDay === true || data.isWorkingDay === false) {
               isNonWorkingDay = true;
             }
           }
@@ -1303,11 +1352,11 @@
               text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
             });
           } else {
-            // Non-working but will revert no slot available in case of confusion
+            // Just no slots available on this working day
             Swal.fire({
               icon: 'info',
-              title: 'Non-Working Day',
-              text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
+              title: 'No Slots Available',
+              text: `${formatDate(date)} has no available slots. Please pick a different date.`,
             });
           }
         } catch (error) {
@@ -1329,12 +1378,13 @@
   async function handleRescheduleDateChange(date: string) {
     if (!db || !date) return;
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateObj = new Date(date + 'T00:00:00Z');
+    // Get today's date in local timezone
+    const todayLocal = getTodayLocal();
+    const selectedDateObj = new Date(date + 'T00:00:00');
+    const todayDateObj = new Date(todayLocal + 'T00:00:00');
     
     // Don't allow past dates
-    if (selectedDateObj < today) {
+    if (selectedDateObj < todayDateObj) {
       Swal.fire({
         icon: 'warning',
         title: 'Invalid Date',
@@ -1403,7 +1453,7 @@
     // Check if date has available slots
     const hasSlots = await hasAvailableSlots(date);
     if (!hasSlots) {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTodayLocal();
       
       // If it's today, check if all times have passed or if it's a non-working day
       if (date === todayStr) {

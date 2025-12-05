@@ -484,9 +484,10 @@
     
     <!-- Popup Toast Notifications (Top Right) -->
     <div class="toast-container">
-        {#each toastNotifications as notification (notification.id)}
+        {#each toastNotifications as notification, index (notification.id)}
             <div 
                 class="toast"
+                class:toast-even={index % 2 === 1}
                 role="button"
                 tabindex="0"
                 style="border-left-color: {notification.color || '#3b82f6'}"
@@ -656,6 +657,19 @@
         max-width: 380px;
     }
     
+    @media (max-width: 640px) {
+        .toast-container {
+            top: 350px;
+            bottom: auto;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            max-width: calc(100vw - 32px);
+            width: 90%;
+            flex-direction: column-reverse;
+        }
+    }
+    
     .toast {
         background: white;
         border-radius: 12px;
@@ -668,6 +682,22 @@
         transition: all 0.3s ease;
         border-left: 4px solid;
         min-width: 320px;
+    }
+    
+    @media (max-width: 640px) {
+        .toast {
+            min-width: 0;
+        }
+        
+        .toast:first-child {
+            /* First notification appears at the bottom */
+            order: 0;
+        }
+        
+        .toast-even {
+            /* Even notifications stack above */
+            margin-bottom: 12px;
+        }
     }
     
     .toast:hover {
@@ -965,19 +995,6 @@
         .notification-bell {
             width: 44px;
             height: 44px;
-        }
-        
-        .toast-container {
-            top: 60px;
-            left: 50%;
-            right: auto;
-            transform: translateX(-50%);
-            max-width: calc(100vw - 20px);
-        }
-        
-        .toast {
-            min-width: 280px;
-            padding: 12px;
         }
         
         .notification-dropdown {
