@@ -137,6 +137,19 @@
   let requestRefund = false;
   let refundReason = '';
 
+  // Weekly calendar indicator state
+  type WeekDay = {
+    date: string;
+    dayName: string;
+    dayNum: number;
+    isWorking: boolean | null; // null = loading
+    isToday: boolean;
+  };
+  let currentWeekDays: WeekDay[] = [];
+  let isLoadingWeekData: boolean = true;
+  let currentWeekStartDate: Date = new Date(); // Track the start date of the currently displayed week
+  let displayMonthYear: string = ''; // Display month and year
+
   // --- Helper Functions ---
   function sortTimeSlots(slots: string[]): string[] {
       return [...slots].sort((a, b) => {
@@ -199,6 +212,130 @@
       } catch (e) {
           return dateString; // Fallback
       }
+  }
+
+  // Helper to get the start of the current week (Sunday)
+  function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  }
+
+  // Helper to check if a date is working or non-working
+  async function checkDayWorkingStatus(dateStr: string): Promise<boolean> {
+    if (!db) return true; // Default to working if DB not available
+
+    try {
+      const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, dateStr);
+      const scheduleSnap = await getDoc(scheduleRef);
+
+      let isWorkingDay = true; // Default to working day
+
+      if (scheduleSnap.exists()) {
+        const data = scheduleSnap.data();
+        // Priority: isNonWorkingDay: true means NOT working
+        if (data.isNonWorkingDay === true) {
+          isWorkingDay = false;
+        } else if (data.isNonWorkingDay === false) {
+          // Explicitly marked as NOT non-working (i.e., working)
+          isWorkingDay = true;
+        } else if (data.isWorkingDay === false) {
+          // isWorkingDay: false means NOT a working day
+          isWorkingDay = false;
+        } else if (data.isWorkingDay === true) {
+          isWorkingDay = true;
+        } else {
+          // No explicit flag - fall back to default working days
+          const dateObj = new Date(dateStr + 'T00:00:00Z');
+          const dayOfWeek = dateObj.getUTCDay();
+          isWorkingDay = defaultWorkingDays.includes(dayOfWeek);
+        }
+      } else {
+        // No document exists - use default working days
+        const dateObj = new Date(dateStr + 'T00:00:00Z');
+        const dayOfWeek = dateObj.getUTCDay();
+        isWorkingDay = defaultWorkingDays.includes(dayOfWeek);
+      }
+
+      return isWorkingDay;
+    } catch (error) {
+      console.error(`Error checking working status for ${dateStr}:`, error);
+      return true; // Default to working on error
+    }
+  }
+
+  // Load current week's working status
+  async function loadCurrentWeekData(startDate: Date = new Date()) {
+    if (!db) return;
+
+    try {
+      isLoadingWeekData = true;
+      const weekStart = getWeekStart(startDate);
+      currentWeekStartDate = weekStart; // Store the week start date for navigation
+      
+      const weekData: WeekDay[] = [];
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      // Generate 7 days starting from Sunday
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(date.getDate() + i);
+        
+        const dateStr = date.toISOString().split('T')[0];
+        const todayStr = getTodayLocal();
+        const isToday = dateStr === todayStr;
+        const dayNum = date.getDate();
+        const dayName = dayNames[date.getDay()];
+
+        const isWorking = await checkDayWorkingStatus(dateStr);
+
+        weekData.push({
+          date: dateStr,
+          dayName,
+          dayNum,
+          isWorking,
+          isToday
+        });
+      }
+
+      currentWeekDays = weekData;
+      
+      // Generate month/year display based on the week
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      if (weekStart.getMonth() === weekEnd.getMonth()) {
+        displayMonthYear = `${monthNames[weekStart.getMonth()]} ${weekStart.getFullYear()}`;
+      } else {
+        displayMonthYear = `${monthNames[weekStart.getMonth()]} - ${monthNames[weekEnd.getMonth()]} ${weekStart.getFullYear()}`;
+      }
+    } catch (error) {
+      console.error('Error loading current week data:', error);
+    } finally {
+      isLoadingWeekData = false;
+    }
+  }
+
+  // Navigate to previous week
+  async function goToPreviousWeek() {
+    const previousWeekStart = new Date(currentWeekStartDate);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+    await loadCurrentWeekData(previousWeekStart);
+  }
+
+  // Navigate to next week
+  async function goToNextWeek() {
+    const nextWeekStart = new Date(currentWeekStartDate);
+    nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+    await loadCurrentWeekData(nextWeekStart);
+  }
+
+  // Go back to current week
+  async function goToCurrentWeek() {
+    await loadCurrentWeekData(new Date());
   }
 
   // --- Firestore Logic ---
@@ -1117,6 +1254,9 @@
       try {
         await loadDefaultWorkingDays();
         
+        // Load current week data for the indicator
+        await loadCurrentWeekData();
+        
         // Setup real-time listener for schedule changes
         setupScheduleChangeListener();
         
@@ -1628,6 +1768,62 @@
   <div class="page-header">
     <h1 class="page-title">Appointments</h1>
     <p class="page-subtitle">Schedule and manage your medical appointments</p>
+  </div>
+
+  <!-- Weekly Calendar Indicator -->
+  <div class="weekly-calendar-section">
+    <!-- Header with Month/Year and Navigation -->
+    <div class="weekly-calendar-header">
+      <div class="calendar-header-left">
+        <i class="fas fa-calendar-check calendar-icon"></i>
+        <span class="calendar-title">Weekly Schedule</span>
+      </div>
+      <div class="calendar-header-right">
+        <span class="month-year-display">{displayMonthYear}</span>
+        <div class="week-navigation">
+          <button class="nav-arrow-btn" on:click={goToPreviousWeek} title="Previous week" aria-label="Go to previous week">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <button class="nav-arrow-btn refresh-btn" on:click={goToCurrentWeek} title="Refresh to current week" aria-label="Refresh to current week">
+            <i class="fas fa-redo"></i>
+          </button>
+          <button class="nav-arrow-btn" on:click={goToNextWeek} title="Next week" aria-label="Go to next week">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Days Grid -->
+    {#if isLoadingWeekData}
+      <div class="weekly-calendar-loading">
+        <p><i class="fas fa-spinner fa-spin mr-2"></i>Loading week data...</p>
+      </div>
+    {:else}
+      <div class="weekly-calendar-grid">
+        {#each currentWeekDays as day (day.date)}
+          <div 
+            class="day-card {day.isWorking ? 'working-day' : 'non-working-day'} {day.isToday ? 'today' : ''}"
+            title="{day.dayName}, {day.date} - {day.isWorking ? 'Working Day' : 'Non-Working Day'}"
+          >
+            <div class="day-info">
+              <div class="day-name-short">{day.dayName.substring(0, 3)}</div>
+              <div class="day-date">{day.dayNum}</div>
+            </div>
+            <div class="day-indicator">
+              {#if day.isWorking}
+                <i class="fas fa-check-circle"></i>
+              {:else}
+                <i class="fas fa-ban"></i>
+              {/if}
+            </div>
+            {#if day.isToday}
+              <div class="today-marker"></div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <div class="responsive-container">
@@ -2180,6 +2376,366 @@
   .page-subtitle {
     font-size: 1.125rem;
     color: #6b7280;
+  }
+
+  /* Weekly Calendar Section */
+  .weekly-calendar-section {
+    max-width: 1400px;
+    margin: 0 auto 2rem;
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+  }
+
+  /* Calendar Header - Dark Blue */
+  .weekly-calendar-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #3b82f6;
+  }
+
+  .calendar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: white;
+  }
+
+  .calendar-icon {
+    font-size: 1.5rem;
+    color: #ffffff;
+  }
+
+  .calendar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+    text-transform: capitalize;
+  }
+
+  .calendar-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .month-year-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #bfdbfe;
+    min-width: 180px;
+    text-align: right;
+  }
+
+  .week-navigation {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .nav-arrow-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-arrow-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+  }
+
+  .nav-arrow-btn:active {
+    transform: scale(0.95);
+  }
+
+  .nav-arrow-btn.refresh-btn {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: #60a5fa;
+  }
+
+  .nav-arrow-btn.refresh-btn:hover {
+    background: rgba(96, 165, 250, 0.3);
+    border-color: #60a5fa;
+  }
+
+  /* Calendar Grid */
+  .weekly-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    background: #f3f4f6;
+    padding: 1px;
+  }
+
+  .day-card {
+    background: white;
+    padding: 1.25rem 0.75rem;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .day-card.working-day {
+    border-top: 3px solid #22c55e;
+  }
+
+  .day-card.working-day:hover {
+    background: #f0fdf4;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .day-card.non-working-day {
+    background: #fef2f2;
+    border-top: 3px solid #dc2626;
+    opacity: 0.7;
+  }
+
+  .day-card.non-working-day:hover {
+    background: #fee2e2;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .day-card.today {
+    background: #f0f9ff;
+    border: 2px solid #3b82f6;
+    border-top: 3px solid #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: scale(1.02);
+  }
+
+  .day-card.today.working-day {
+    background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%);
+  }
+
+  .day-card.today.non-working-day {
+    background: linear-gradient(135deg, #fee2e2 0%, #f0f9ff 100%);
+  }
+
+  .day-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .day-name-short {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .day-date {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+  }
+
+  .day-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .day-card.working-day .day-indicator i {
+    color: #22c55e;
+    font-size: 1.25rem;
+  }
+
+  .day-card.non-working-day .day-indicator i {
+    color: #dc2626;
+    font-size: 1.25rem;
+  }
+
+  .day-card.today .day-indicator i {
+    color: #3b82f6;
+    font-size: 1.25rem;
+  }
+
+  .today-marker {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0.375rem;
+    height: 0.375rem;
+    background: #3b82f6;
+    border-radius: 50%;
+  }
+
+  .weekly-calendar-loading {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 1200px) {
+    .calendar-header-right {
+      gap: 0.75rem;
+    }
+
+    .month-year-display {
+      font-size: 0.9rem;
+      min-width: 150px;
+    }
+
+    .day-card {
+      padding: 1rem 0.5rem;
+    }
+
+    .day-date {
+      font-size: 1.25rem;
+    }
+
+    .day-card.working-day .day-indicator i,
+    .day-card.non-working-day .day-indicator i,
+    .day-card.today .day-indicator i {
+      font-size: 1.1rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .weekly-calendar-section {
+      margin: 0 -1rem 1.5rem -1rem;
+      border-radius: 0;
+    }
+
+    .weekly-calendar-header {
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .calendar-header-left {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .calendar-header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .month-year-display {
+      text-align: center;
+      min-width: auto;
+    }
+
+    .week-navigation {
+      gap: 0.25rem;
+    }
+
+    .nav-arrow-btn {
+      width: 2rem;
+      height: 2rem;
+      font-size: 0.75rem;
+    }
+
+    .weekly-calendar-grid {
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0px;
+    }
+
+    .day-card {
+      padding: 0.75rem 0.5rem;
+    }
+
+    .day-name-short {
+      font-size: 0.65rem;
+    }
+
+    .day-date {
+      font-size: 1.1rem;
+    }
+
+    .day-card.working-day .day-indicator i,
+    .day-card.non-working-day .day-indicator i,
+    .day-card.today .day-indicator i {
+      font-size: 0.95rem;
+    }
+
+    .day-card.today {
+      transform: scale(1.01);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .calendar-title {
+      font-size: 1rem;
+    }
+
+    .calendar-header-left {
+      gap: 0.5rem;
+    }
+
+    .calendar-icon {
+      font-size: 1.25rem;
+    }
+
+    .month-year-display {
+      font-size: 0.8rem;
+    }
+
+    .nav-arrow-btn {
+      width: 1.75rem;
+      height: 1.75rem;
+      font-size: 0.65rem;
+    }
+
+    .day-card {
+      padding: 0.5rem 0.25rem;
+    }
+
+    .day-name-short {
+      font-size: 0.6rem;
+    }
+
+    .day-date {
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .day-card.working-day .day-indicator i,
+    .day-card.non-working-day .day-indicator i,
+    .day-card.today .day-indicator i {
+      font-size: 0.85rem;
+    }
+
+    .day-card.today {
+      transform: scale(1);
+    }
+
+    .today-marker {
+      width: 0.3rem;
+      height: 0.3rem;
+      bottom: 0.25rem;
+    }
   }
 
   .responsive-container {
