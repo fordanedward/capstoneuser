@@ -657,19 +657,6 @@
         max-width: 380px;
     }
     
-    @media (max-width: 640px) {
-        .toast-container {
-            top: 350px;
-            bottom: auto;
-            left: 50%;
-            right: auto;
-            transform: translateX(-50%);
-            max-width: calc(100vw - 32px);
-            width: 90%;
-            flex-direction: column-reverse;
-        }
-    }
-    
     .toast {
         background: white;
         border-radius: 12px;
@@ -685,18 +672,62 @@
     }
     
     @media (max-width: 640px) {
+        .toast-container {
+            top: 60px;
+            bottom: auto;
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            max-width: calc(100vw - 24px);
+            width: calc(100vw - 24px);
+            flex-direction: column;
+            padding: 0 4px;
+        }
+        
         .toast {
             min-width: 0;
+            width: 100%;
+            padding: 14px;
+            gap: 10px;
         }
         
-        .toast:first-child {
-            /* First notification appears at the bottom */
-            order: 0;
+        .toast-icon {
+            width: 36px;
+            height: 36px;
         }
         
-        .toast-even {
-            /* Even notifications stack above */
-            margin-bottom: 12px;
+        .toast-icon i {
+            font-size: 16px;
+        }
+        
+        .toast-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.3;
+        }
+        
+        .toast-time {
+            font-size: 10px;
+            color: #6b7280;
+        }
+        
+        .toast-message {
+            font-size: 12px;
+            color: #374151;
+            font-weight: 500;
+            line-height: 1.5;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+        }
+        
+        .toast-close {
+            width: 28px;
+            height: 28px;
+        }
+        
+        .toast-close i {
+            font-size: 14px;
         }
     }
     
@@ -738,24 +769,27 @@
         color: #1f2937;
         flex: 1;
         min-width: 0;
+        word-break: break-word;
     }
     
     .toast-time {
         font-size: 11px;
         color: #9ca3af;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
     .toast-message {
         font-size: 13px;
-        color: #6b7280;
-        line-height: 1.4;
+        color: #374151;
+        line-height: 1.5;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         line-clamp: 2;
         -webkit-box-orient: vertical;
+        word-break: break-word;
     }
     
     .toast-close {

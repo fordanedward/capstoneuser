@@ -376,9 +376,23 @@
     }
   }
 
-  // Helper function to find the next available date
-  async function findNextAvailableDate(startDate: string, maxDaysToCheck: number = 30): Promise<string | null> {
+  // Helper function to format a date range from an array of dates
+  function formatDateRange(dates: string[]): string {
+    if (dates.length === 0) return '';
+    if (dates.length === 1) return formatDate(dates[0]);
+    
+    // Sort dates to ensure proper range
+    const sorted = [...dates].sort();
+    const firstDate = formatDate(sorted[0]);
+    const lastDate = formatDate(sorted[sorted.length - 1]);
+    
+    return `${firstDate} to ${lastDate}`;
+  }
+
+  // Helper function to find the next available date and track skipped non-working days
+  async function findNextAvailableDate(startDate: string, maxDaysToCheck: number = 30): Promise<{ date: string | null, skippedNonWorkingDays: string[] }> {
     const start = new Date(startDate + 'T00:00:00Z');
+    const skippedNonWorkingDays: string[] = [];
     
     for (let i = 0; i < maxDaysToCheck; i++) {
       const checkDate = new Date(start);
@@ -387,11 +401,31 @@
       
       const hasSlots = await hasAvailableSlots(dateString);
       if (hasSlots) {
-        return dateString;
+        return { date: dateString, skippedNonWorkingDays };
+      }
+      
+      // Check if this date is a non-working day
+      try {
+        const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, dateString);
+        const scheduleSnap = await getDoc(scheduleRef);
+        
+        let isNonWorking = false;
+        if (scheduleSnap.exists()) {
+          const data = scheduleSnap.data();
+          if (data.isNonWorkingDay === true || data.isWorkingDay === false) {
+            isNonWorking = true;
+          }
+        }
+        
+        if (isNonWorking) {
+          skippedNonWorkingDays.push(dateString);
+        }
+      } catch (error) {
+        console.error(`Error checking if ${dateString} is non-working:`, error);
       }
     }
     
-    return null;
+    return { date: null, skippedNonWorkingDays };
   }
 
   async function fetchAvailabilityForDate(date: string, target: 'booking' | 'reschedule') {
@@ -1091,9 +1125,9 @@
         const hasTodaySlots = await hasAvailableSlots(todayStr);
         
         if (!hasTodaySlots) {
-          const nextDate = await findNextAvailableDate(todayStr);
-          if (nextDate) {
-            selectedDate = nextDate;
+          const result = await findNextAvailableDate(todayStr);
+          if (result.date) {
+            selectedDate = result.date;
           }
         }
         
@@ -1179,9 +1213,9 @@
         text: 'You cannot select a past date.',
       });
       // Find next available date
-      const nextDate = await findNextAvailableDate(getTodayLocal());
-      if (nextDate) {
-        selectedDate = nextDate;
+      const result = await findNextAvailableDate(getTodayLocal());
+      if (result.date) {
+        selectedDate = result.date;
       } else {
         selectedDate = getTodayLocal();
       }
@@ -1286,14 +1320,14 @@
           
           if (isNonWorkingToday) {
             // Today is marked as non-working by admin - Don't show "times passed" modal
-            const nextDate = await findNextAvailableDate(date);
-            if (nextDate && nextDate !== date) {
+            const result = await findNextAvailableDate(date);
+            if (result.date && result.date !== date) {
               Swal.fire({
                 icon: 'info',
                 title: 'Non-Working Day',
-                text: `Today is a non-working day. Moving to the next available date: ${formatDate(nextDate)}`,
+                text: `Today is a non-working day. Moving to the next available date: ${formatDate(result.date)}`,
               });
-              selectedDate = nextDate;
+              selectedDate = result.date;
               return;
             } else {
               Swal.fire({
@@ -1305,11 +1339,17 @@
             }
           } else {
             // Today is a working day but all times have passed, move to next available
-            const nextDate = await findNextAvailableDate(date);
-            if (nextDate && nextDate !== date) {
-              timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+            const result = await findNextAvailableDate(date);
+            if (result.date && result.date !== date) {
+              let message = `All available time slots for today have passed`;
+              if (result.skippedNonWorkingDays.length > 0) {
+                const skippedRange = formatDateRange(result.skippedNonWorkingDays);
+                message += `\n\nIncluding ${skippedRange} (non-working days)`;
+              }
+              message += `\n\nMoving to the next available date: ${formatDate(result.date)}`;
+              timesPassedMessage = message;
               timesPassedModal = true;
-              selectedDate = nextDate;
+              selectedDate = result.date;
               return;
             } else {
               // No next available date found
@@ -1322,11 +1362,17 @@
           }
         } catch (error) {
           console.error('Error checking today status:', error);
-          const nextDate = await findNextAvailableDate(date);
-          if (nextDate && nextDate !== date) {
-            timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+          const result = await findNextAvailableDate(date);
+          if (result.date && result.date !== date) {
+            let message = `All available time slots for today have passed`;
+            if (result.skippedNonWorkingDays.length > 0) {
+              const skippedRange = formatDateRange(result.skippedNonWorkingDays);
+              message += `\n\nIncluding ${skippedRange} (non-working days)`;
+            }
+            message += `\n\nMoving to the next available date: ${formatDate(result.date)}`;
+            timesPassedMessage = message;
             timesPassedModal = true;
-            selectedDate = nextDate;
+            selectedDate = result.date;
             return;
           }
         }
@@ -1391,9 +1437,9 @@
         text: 'You cannot select a past date for rescheduling.',
       });
       // Find next available date
-      const nextDate = await findNextAvailableDate(new Date().toISOString().split('T')[0]);
-      if (nextDate) {
-        newDate = nextDate;
+      const result = await findNextAvailableDate(new Date().toISOString().split('T')[0]);
+      if (result.date) {
+        newDate = result.date;
       } else if (currentAppointment) {
         newDate = currentAppointment.date;
       }
@@ -1479,11 +1525,17 @@
             });
           } else {
             // Today is a working day but all times have passed, move to next available
-            const nextDate = await findNextAvailableDate(date);
-            if (nextDate && nextDate !== date) {
-              timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+            const result = await findNextAvailableDate(date);
+            if (result.date && result.date !== date) {
+              let message = `All available time slots for today have passed`;
+              if (result.skippedNonWorkingDays.length > 0) {
+                const skippedRange = formatDateRange(result.skippedNonWorkingDays);
+                message += `\n\nIncluding ${skippedRange} (non-working days)`;
+              }
+              message += `\n\nMoving to the next available date: ${formatDate(result.date)}`;
+              timesPassedMessage = message;
               timesPassedModal = true;
-              newDate = nextDate;
+              newDate = result.date;
               return;
             } else {
               // No next available date found
@@ -1496,11 +1548,17 @@
           }
         } catch (error) {
           console.error('Error checking today status:', error);
-          const nextDate = await findNextAvailableDate(date);
-          if (nextDate && nextDate !== date) {
-            timesPassedMessage = `All available time slots for today have passed. Moving to the next available date: ${formatDate(nextDate)}`;
+          const result = await findNextAvailableDate(date);
+          if (result.date && result.date !== date) {
+            let message = `All available time slots for today have passed`;
+            if (result.skippedNonWorkingDays.length > 0) {
+              const skippedRange = formatDateRange(result.skippedNonWorkingDays);
+              message += `\n\nIncluding ${skippedRange} (non-working days)`;
+            }
+            message += `\n\nMoving to the next available date: ${formatDate(result.date)}`;
+            timesPassedMessage = message;
             timesPassedModal = true;
-            newDate = nextDate;
+            newDate = result.date;
             return;
           }
         }
@@ -2076,10 +2134,14 @@
     <div class="modal-content times-passed-modal" transition:scale={{ duration: 500, easing: elasticOut, start: 0.5 }}>
       <div class="text-center">
         <div class="times-passed-icon">
-          <i class="fas fa-info-circle"></i>
+          <i class="fas fa-clock"></i>
         </div>
         <h3 class="times-passed-title">All Times Have Passed</h3>
-        <p class="times-passed-message">{timesPassedMessage}</p>
+        <div class="times-passed-message">
+          {#each timesPassedMessage.split('\n\n') as paragraph (paragraph)}
+            <p class="mb-3">{paragraph}</p>
+          {/each}
+        </div>
       </div>
       <div class="modal-actions">
         <Button color="blue" on:click={() => { timesPassedModal = false; }} class="w-full times-passed-btn">
@@ -2440,6 +2502,30 @@
     line-height: 1.6;
     margin-bottom: 2rem;
     font-weight: 500;
+    text-align: center;
+  }
+
+  .times-passed-message p {
+    margin: 0;
+  }
+
+  .times-passed-message p:first-child {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 1.125rem;
+  }
+
+  .times-passed-message p:nth-child(2) {
+    color: #64748b;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .times-passed-message p:last-child {
+    color: #0ea5e9;
+    font-weight: 500;
+    font-size: 1.0625rem;
+    margin-top: 0.5rem;
   }
 
   .times-passed-btn {

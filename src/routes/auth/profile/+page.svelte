@@ -671,8 +671,16 @@ function toggleEditProfile() {
 </div>
 
 {#if isEditingProfile}
-    <div class="modal-overlay" on:click={toggleEditProfile}>
-    <div class="profile-form-container slide-down" on:click|stopPropagation>
+    <div class="modal-overlay" 
+        role="presentation"
+        on:click={toggleEditProfile}
+        on:keydown={(e) => e.key === 'Escape' && toggleEditProfile()}
+        tabindex="-1"
+    >
+    <div class="profile-form-container slide-down" 
+        role="dialog"
+        aria-label="Edit Member Information"
+    >
         <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
             <div class="form-image-upload">
