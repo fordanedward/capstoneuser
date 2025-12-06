@@ -680,6 +680,7 @@ function toggleEditProfile() {
     <div class="profile-form-container slide-down" 
         role="dialog"
         aria-label="Edit Member Information"
+        on:click|stopPropagation
     >
         <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
