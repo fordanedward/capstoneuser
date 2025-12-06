@@ -1,10 +1,10 @@
 import { writable } from "svelte/store";
-import type { User } from "firebase/auth"; // Type-only import
+import type { User, Unsubscribe } from "firebase/auth"; // Type-only import
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { getAuth } from "firebase/auth";
 import { firebaseConfig } from "$lib/firebaseConfig";
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, doc, getDoc, onSnapshot, Unsubscribe } from "firebase/firestore";
+import { getFirestore, doc, getDoc, onSnapshot } from "firebase/firestore";
 
 // Initialize Firebase app (guard against double initialization)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

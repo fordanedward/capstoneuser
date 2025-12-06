@@ -284,32 +284,94 @@
     @media (max-width: 900px) {
         .about-container {
             flex-direction: column;
-            padding-top: 6rem;
+            padding-top: 4rem;
+            gap: 1.5rem;
+            padding-bottom: 2rem;
         }
         .about-image {
-            width: 98vw;      /* Make it almost full width on small screens */
-            height: auto;     /* Maintain aspect ratio */
-            border-radius: 40% 40% 0 0;
+            width: 95vw;
+            max-width: 500px;
+            height: auto;
+            border-radius: 40px 40px 0 0;
+            object-fit: cover;
         }
         .about-content {
             max-width: 95vw;
+            padding: 1.5rem 1rem;
+            text-align: left;
+        }
+        .about-content h1 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .about-content p {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .about-content a {
+            font-size: 1rem;
+        }
+        .about-contact {
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+        .about-contact span {
+            gap: 0.8rem;
+        }
+        .about-contact svg {
+            width: 1.3em;
+            height: 1.3em;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .about-container {
+            padding-top: 3rem;
+            gap: 1rem;
+        }
+        .about-image {
+            width: 100%;
+            height: 280px;
+            border-radius: 30px 30px 0 0;
+        }
+        .about-content {
+            padding: 1.25rem;
+        }
+        .about-content h1 {
+            font-size: 1.75rem;
+        }
+        .about-content p {
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+        .about-contact {
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+        .about-contact svg {
+            width: 1.2em;
+            height: 1.2em;
         }
     }
 
     /* Mobile landing adjustments */
     @media (max-width: 900px) {
         header {
-            padding: 14px;
+            padding: 12px 16px;
+            z-index: 1001;
         }
         .nav-container {
-            padding: 0 6px;
+            padding: 0;
         }
         nav {
-            gap: 12px;
+            gap: 10px;
         }
         nav a {
-            font-size: 0.95rem;
-            padding: 6px 10px;
+            font-size: 0.9rem;
+            padding: 8px 14px;
+            border-radius: 6px;
         }
 
         main {
@@ -317,58 +379,102 @@
             align-items: center;
             height: auto;
             overflow: visible;
-            padding-top: 5.5rem; /* account for fixed header */
+            padding-top: 5.5rem;
+            padding-bottom: 2rem;
         }
         .left-section {
             max-width: 100%;
             text-align: left;
-            padding: 0 1rem;
+            padding: 0 1.25rem;
+            width: 100%;
         }
         .left-section h1 {
-            margin-top: 1rem;
+            margin-top: 1.5rem;
             margin-left: 0;
-            font-size: 2.4rem;
-            line-height: 1.15;
+            font-size: 2.2rem;
+            line-height: 1.2;
+            word-spacing: 0.1em;
         }
         .left-section h2 {
             margin-left: 0;
             margin-top: 1rem;
-            font-size: 1rem;
+            font-size: 1.05rem;
             max-width: 100%;
+            line-height: 1.5;
         }
         .social-links {
             margin-left: 0;
-            gap: 0.4rem;
+            gap: 0.6rem;
+            margin-top: 1.5rem;
+            align-items: center;
+        }
+        .social-links span {
+            font-size: 0.95rem;
+            color: #0b2d56;
+            font-weight: 500;
         }
         .social-links a {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 2px 6px rgba(11, 45, 86, 0.12);
         }
         .right-section {
             width: 100%;
             justify-content: center;
             align-items: center;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
+            padding-bottom: 1rem;
         }
         .right-section img {
-            max-width: 85%;
+            max-width: 70%;
             max-height: none;
             height: auto;
             margin-left: 0;
-            margin-top: 0.5rem;
+            margin-top: 0;
         }
     }
 
     /* Extra-small phones */
     @media (max-width: 480px) {
+        header {
+            padding: 10px 12px;
+        }
+        .navbar-logo {
+            height: 42px;
+            margin-left: 8px;
+        }
+        nav {
+            gap: 8px;
+            margin-right: 8px;
+        }
+        nav a {
+            font-size: 0.85rem;
+            padding: 6px 10px;
+        }
+        main {
+            padding-top: 4.8rem;
+        }
+        .left-section {
+            padding: 0 1rem;
+        }
         .left-section h1 {
-            font-size: 2rem;
+            font-size: 1.75rem;
+            margin-top: 1rem;
+            line-height: 1.25;
         }
         .left-section h2 {
             font-size: 0.95rem;
+            margin-top: 0.75rem;
+        }
+        .social-links span {
+            font-size: 0.85rem;
+        }
+        .social-links a {
+            width: 36px;
+            height: 36px;
         }
         .right-section img {
-            max-width: 90%;
+            max-width: 80%;
         }
     }
 
@@ -431,20 +537,63 @@
     @media (max-width: 900px) {
         .locations-section {
             grid-template-columns: 1fr;
+            min-height: auto;
         }
         .location-left {
-            padding: 2rem 1.25rem;
+            padding: 2rem 1rem;
         }
         .location-left img {
             width: 140px;
             height: 140px;
         }
+        .location-left h3 {
+            font-size: 1.5rem;
+        }
+        .location-left p {
+            font-size: 0.95rem;
+        }
         .locations-title {
             margin-top: 2rem;
+            font-size: 1.75rem;
+            letter-spacing: 2px;
         }
         .location-right, .location-right iframe {
             min-height: 380px;
             height: 380px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .locations-section {
+            margin: 0;
+        }
+        .location-left {
+            padding: 1.5rem 1rem;
+        }
+        .location-left img {
+            width: 110px;
+            height: 110px;
+            margin-bottom: 1rem;
+        }
+        .location-left h3 {
+            font-size: 1.25rem;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        .location-left p {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            max-width: 95vw;
+        }
+        .locations-title {
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            letter-spacing: 1.5px;
+        }
+        .location-right, .location-right iframe {
+            min-height: 300px;
+            height: 300px;
         }
     }
 </style>
@@ -492,7 +641,7 @@
                 </svg>
             </a>
         </div>
-        <div style="margin-top: 2rem; width: 100%; max-width: 350px; margin-left: 2rem;">
+        <div style="margin-top: 2rem; width: 100%; max-width: 350px; margin-left: 2rem; display: flex; justify-content: center; align-items: center;">
             <VisitorCounter />
         </div>
     </div>
