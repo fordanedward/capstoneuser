@@ -2968,16 +2968,31 @@
       font-size: 0.9rem;
     }
 
+    .appointment-card > div:nth-child(4) > div:first-child {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+      min-height: auto;
+    }
+
     .action-buttons {
       margin-top: 0.75rem;
+      gap: 0.5rem;
       justify-content: flex-start;
+      width: 100%;
+      flex-wrap: wrap;
     }
 
     .btn-action {
-      padding: 0.5rem 0.75rem;
+      padding: 0.5rem 1rem;
       font-size: 0.875rem;
-      min-height: 36px;
-      flex: 1;
+      min-height: 40px;
+      width: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      white-space: nowrap;
+      flex: 0 1 calc(50% - 0.25rem);
     }
 
     .tabs-container {
@@ -3371,10 +3386,11 @@
   }
   .btn-action {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 0.375rem;
-      cursor: pointer; border: 1px solid transparent; color: white;
+      padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: 0.5rem;
+      cursor: pointer; border: none; color: white;
       transition: background-color 0.2s ease, box-shadow 0.2s ease;
       line-height: 1.25;
+      white-space: nowrap;
   }
   .btn-action:focus {
       outline: 2px solid transparent; outline-offset: 2px;
