@@ -635,6 +635,37 @@
         .medicine-info {
             font-size: 1rem;
         }
+
+        .service-content-wrapper {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .service-icon-container {
+            width: 7rem;
+            height: 7rem;
+            min-width: 7rem;
+        }
+
+        .service-info-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .service-name {
+            font-size: 1.2rem;
+            margin: 0.5rem 0 0.5rem 0;
+        }
+
+        .service-description {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: left;
+        }
     }
 </style>
 
