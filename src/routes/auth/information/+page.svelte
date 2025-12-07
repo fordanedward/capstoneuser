@@ -400,8 +400,55 @@
         font-weight: 500;
         margin-bottom: 0.25rem;
     }
+    
+    /* Contact Us Section */
+    .contact-section {
+        margin-top: 2rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.5rem;
+        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        padding: 2rem;
+    }
+    .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    .contact-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        background: #f9fbfd;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .contact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(10, 55, 97, 0.1);
+    }
+    .contact-icon {
+        width: 2rem;
+        height: 2rem;
+        color: #f4c542;
+        margin: 0 auto 0.75rem;
+    }
+    .contact-type {
+        color: #0a3761;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+    .contact-number {
+        color: #005b80;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
     @media (max-width: 900px) {
         .schedule-grid { grid-template-columns: 1fr; }
+        .contact-grid { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 900px) {
         .packages-grid { grid-template-columns: 1fr 1fr; }
@@ -786,6 +833,33 @@
                 <div class="schedule-details">Viber Consultation:</div>
                 <div class="schedule-details">Daily (Morning-Night)</div>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="contact-section">
+    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact Us</h2>
+    <div class="contact-grid">
+        <div class="contact-card">
+            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <div class="contact-type">Globe</div>
+            <div class="contact-number">0917-132-1756</div>
+        </div>
+        <div class="contact-card">
+            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <div class="contact-type">Smart</div>
+            <div class="contact-number">0968-856-1807</div>
+        </div>
+        <div class="contact-card">
+            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            <div class="contact-type">Landline</div>
+            <div class="contact-number">(047) 222-4441</div>
         </div>
     </div>
 </div>
