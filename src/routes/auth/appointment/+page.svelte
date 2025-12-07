@@ -2391,7 +2391,7 @@
 
   /* Calendar Header - Dark Blue */
   .weekly-calendar-header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8c 100%);
+    background: linear-gradient(135deg, #1e3a5f 0%, #1e3a5f 100%);
     padding: 1.25rem 1.5rem;
     display: flex;
     justify-content: space-between;

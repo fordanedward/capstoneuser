@@ -7,17 +7,32 @@
 
     // Load from CSV at runtime (fallback to embedded list on failure)
     fetchCoveredMedicines().then((list) => { coveredMedicines = list; });
-    let availableServices = [
-        { name: "Complete Blood Count (CBC)" },
-        { name: "Urinalysis" },
-        { name: "Chest X-Ray" },
-        { name: "Physical Examination" },
-        { name: "Drug Screening" },
-        { name: "Serum hCG" },
-        { name: "Consultations" },
-        { name: "Ultrasound" },
-        { name: "Laboratory" },
-        { name: "Fecalysis" }
+    let ourServices = [
+        { 
+            name: "Lab Test", 
+            description: "Routine lab testing is a key part of annual health check-ups to assess overall well-being. Our comprehensive lab services include blood tests, urinalysis, and specialized diagnostic testing.",
+            icon: "/images/blood-test.png"
+        },
+        { 
+            name: "Doctor Consultation", 
+            description: "Doctor consultations further support patient health by providing accurate diagnoses, personalized treatment plans, and ongoing medical guidance to promote long-term wellness.",
+            icon: "/images/doctor-consultation.png"
+        },
+        { 
+            name: "Imaging (ECG, X-Ray & Ultrasound)", 
+            description: "Imaging also plays a vital role by allowing healthcare providers to detect internal issues early, supporting timely and effective treatment.",
+            icon: "/images/x-rays.png"
+        },
+        { 
+            name: "Vaccination", 
+            description: "Vaccination helps reduce healthcare costs by minimizing hospitalizations from preventable diseases.",
+            icon: "/images/syringe.png"
+        },
+        { 
+            name: "Pharmacy", 
+            description: "Pharmacists are essential in medical services, offering medication counseling to ensure proper use.",
+            icon: "/images/medicine.png"
+        }
     ];
 
     // Use writable stores for search
@@ -53,23 +68,33 @@
     const filteredServices = derived(
         [serviceSearch],
         ([$serviceSearch]) =>
-            availableServices.filter((s: { name: string }) =>
+            ourServices.filter((s: { name: string; description: string; icon: string }) =>
                 s.name.toLowerCase().includes($serviceSearch.toLowerCase())
             )
     );
 
     // Modal state
     let showModal = false;
+    let modalType: 'medicine' | 'service' = 'medicine';
     let selectedMedicine: { name: string; info: string; dosage?: string } | null = null;
+    let selectedService: { name: string; description: string; icon: string } | null = null;
 
     function showMedicineInfo(med: { name: string; info: string; dosage?: string }) {
         selectedMedicine = med;
+        modalType = 'medicine';
+        showModal = true;
+    }
+
+    function showServiceInfo(svc: { name: string; description: string; icon: string }) {
+        selectedService = svc;
+        modalType = 'service';
         showModal = true;
     }
 
     function closeModal() {
         showModal = false;
         selectedMedicine = null;
+        selectedService = null;
     }
 
     // Close modal when clicking outside
@@ -214,6 +239,7 @@
         font-size: 1.1rem;
         transition: background 0.2s, transform 0.15s ease, box-shadow 0.15s ease;
         touch-action: manipulation;
+        gap: 0.75rem;
     }
     .list-item:hover {
         background: #0b457e;
@@ -223,6 +249,12 @@
     .list-item:active {
         background: #08406e;
     }
+    .service-icon-img {
+        width: 1.75rem;
+        height: 1.75rem;
+        object-fit: contain;
+        flex: 0 0 auto;
+    }
     .list-item-name {
         flex: 1 1 auto;
         min-width: 0;
@@ -230,12 +262,6 @@
         text-overflow: ellipsis;
         white-space: nowrap;
         font-weight: 700;
-    }
-    .list-item.static {
-        cursor: default;
-    }
-    .list-item.static:active {
-        background: #0a3761;
     }
     .info-icon {
         display: inline-flex;
@@ -403,7 +429,7 @@
         background: white;
         border-radius: 16px;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        max-width: 500px;
+        max-width: 550px;
         width: 90%;
         max-height: 80vh;
         overflow: hidden;
@@ -445,6 +471,55 @@
 
     .modal-content {
         padding: 2rem;
+    }
+
+    .service-content-wrapper {
+        display: flex;
+        gap: 1.75rem;
+        align-items: flex-start;
+    }
+
+    .service-icon-container {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 9.5rem;
+        height: 9.5rem;
+        background: linear-gradient(135deg, #0a3761, #0b457e);
+        border-radius: 1.5rem;
+        padding: 0.75rem;
+        flex-shrink: 0;
+        min-width: 9.5rem;
+    }
+
+    .service-large-icon {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .service-info-container {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    .service-name {
+        color: #0a3761;
+        font-size: 1.35rem;
+        font-weight: 700;
+        margin: 0.25rem 0 0.75rem 0;
+        line-height: 1.2;
+    }
+
+    .service-description {
+        color: #505050;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
     }
 
     .medicine-name {
@@ -561,7 +636,7 @@
         </div>
     </div>
     <div class="container services-list" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
-        <h2 style="color: #0a3761; font-size: 2rem;">Available Services</h2>
+        <h2 style="color: #0a3761; font-size: 2rem;">Our Services</h2>
         <div class="search-wrap">
             <input
                 type="text"
@@ -579,9 +654,16 @@
         <div class="scroll-list">
             {#each $filteredServices as svc}
                 <div
-                    class="list-item static"
+                    class="list-item"
+                    role="button"
+                    tabindex="0"
+                    aria-label={`Show information for ${svc.name}`}
+                    on:click={() => showServiceInfo(svc)}
+                    on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showServiceInfo(svc); } }}
                 >
+                    <img src={svc.icon} alt={svc.name} class="service-icon-img" />
                     <span class="list-item-name">{svc.name}</span>
+                    <span class="info-icon">i</span>
                 </div>
             {/each}
         </div>
@@ -708,12 +790,12 @@
     </div>
 </div>
 
-<!-- Medicine Information Modal -->
+<!-- Information Modal -->
 {#if showModal}
     <div class="modal-backdrop" role="button" tabindex="0" aria-label="Close modal" on:click={handleBackdropClick} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeModal(); } }}>
         <div class="modal-container" class:show={showModal}>
             <div class="modal-header">
-                <h3 class="modal-title">Medicine Information</h3>
+                <h3 class="modal-title">{modalType === 'medicine' ? 'Medicine Information' : 'Service Information'}</h3>
                 <button class="close-button" on:click={closeModal} aria-label="Close">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -722,7 +804,7 @@
                 </button>
             </div>
             <div class="modal-content">
-                {#if selectedMedicine}
+                {#if modalType === 'medicine' && selectedMedicine}
                     <h4 class="medicine-name">{selectedMedicine.name}</h4>
                     <p class="medicine-info">{selectedMedicine.info}</p>
                     {#if selectedMedicine.dosage}
@@ -730,6 +812,16 @@
                             <strong>Dosage:</strong> {selectedMedicine.dosage}
                         </p>
                     {/if}
+                {:else if modalType === 'service' && selectedService}
+                    <div class="service-content-wrapper">
+                        <div class="service-icon-container">
+                            <img src={selectedService.icon} alt={selectedService.name} class="service-large-icon" />
+                        </div>
+                        <div class="service-info-container">
+                            <h4 class="service-name">{selectedService.name}</h4>
+                            <p class="service-description">{selectedService.description}</p>
+                        </div>
+                    </div>
                 {/if}
             </div>
         </div>
