@@ -68,6 +68,12 @@ async function cacheFirst(request: Request): Promise<Response> {
 
 		return response;
 	} catch {
+		// Return cached version if available, otherwise offline page
+		const cachedResponse = await cache.match(request);
+		if (cachedResponse) {
+			return cachedResponse;
+		}
+
 		return new Response('Offline - Unable to fetch resource', {
 			status: 503,
 			statusText: 'Service Unavailable',

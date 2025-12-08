@@ -9,15 +9,63 @@ export default defineConfig({
 			registerType: 'autoUpdate',
 			strategies: 'generateSW',
 			manifest: {
-				name: 'Healthcare Patient Portal',
-				short_name: 'Healthcare',
+				name: 'PHPDGMP Member Portal',
+				short_name: 'PHPDGMP',
 				description: 'A comprehensive healthcare patient management and communication platform',
 				theme_color: '#1e40af',
 				background_color: '#ffffff',
 				display: 'standalone',
 				orientation: 'portrait-primary',
 				scope: '/',
-				start_url: '/'
+				start_url: '/',
+				prefer_related_applications: false,
+				categories: ['healthcare', 'medical'],
+				screenshots: [
+					{
+						src: '/images/screenshot-192.png',
+						sizes: '192x192',
+						type: 'image/png',
+						form_factor: 'narrow'
+					},
+					{
+						src: '/images/screenshot-512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						form_factor: 'wide'
+					}
+				],
+				icons: [
+					{
+						src: '/favicon.png',
+						sizes: '64x64',
+						type: 'image/png',
+						purpose: 'any'
+					},
+					{
+						src: '/icons/icon-192.png',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'any'
+					},
+					{
+						src: '/icons/icon-192-maskable.png',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'maskable'
+					},
+					{
+						src: '/icons/icon-512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'any'
+					},
+					{
+						src: '/icons/icon-512-maskable.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable'
+					}
+				]
 			},
 			injectRegister: 'auto',
 			pwaAssets: {

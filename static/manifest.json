@@ -1,6 +1,6 @@
 {
   "name": "PHPDGMP Member Portal",
-  "short_name": "PHPDGMP Member",
+  "short_name": "PHPDGMP",
   "description": "A comprehensive healthcare patient management and communication platform",
   "start_url": "/",
   "scope": "/",
@@ -8,6 +8,7 @@
   "orientation": "portrait-primary",
   "theme_color": "#1e40af",
   "background_color": "#ffffff",
+  "prefer_related_applications": false,
   "categories": ["healthcare", "medical"],
   "screenshots": [
     {
@@ -27,7 +28,8 @@
     {
       "src": "/favicon.png",
       "sizes": "64x64",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-192.png",

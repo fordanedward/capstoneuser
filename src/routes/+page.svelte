@@ -599,23 +599,8 @@
 </style>
 
 <script>
-    import { onMount } from 'svelte';
     import VisitorCounter from '$lib/components/VisitorCounter.svelte';
-    let aboutVisible = false;
-
-    onMount(() => {
-        const aboutSection = document.querySelector('.about-container');
-        const observer = new window.IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    aboutVisible = true;
-                    observer.disconnect();
-                }
-            },
-            { threshold: 0.3 }
-        );
-        if (aboutSection) observer.observe(aboutSection);
-    });
+    let aboutVisible = true;
 </script>
 
 <header>
@@ -694,7 +679,6 @@
     <div class="location-right">
         <iframe
             title="PHP Headquarters Map"
-            loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d616.321993588706!2d120.279708!3d14.857400!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3396702d6b6f0a1b%3A0x0!2sMayumi%20St%2C%20Santa%20Rita%2C%20Olongapo%20City%2C%20Zambales!5e0!3m2!1sen!2sPH!4v1700000000000">
         </iframe>

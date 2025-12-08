@@ -8,6 +8,9 @@ interface BeforeInstallPromptEvent extends Event {
 declare global {
 	interface Navigator {
 		standalone?: boolean;
+		app?: {
+			installState?: string;
+		};
 	}
 }
 
@@ -30,7 +33,13 @@ export function initPWAInstallPrompt() {
 	});
 
 	// Check if already installed (PWA mode)
+	// Works on Chrome, Samsung Internet, Firefox
 	if (window.navigator.standalone === true) {
+		isInstalled.set(true);
+	}
+
+	// Additional check for Samsung Internet
+	if (window.navigator.app?.installState === 'installed') {
 		isInstalled.set(true);
 	}
 }
