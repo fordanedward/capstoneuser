@@ -106,6 +106,12 @@
 </script>
 
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Poppins', sans-serif;
+    }
+    
     .prescription-page-container {
         padding: 15px;
         max-width: 1200px;
@@ -410,45 +416,100 @@
         box-shadow: 0 2px 8px rgba(10,55,97,0.08);
         padding: 2rem;
     }
+    .contact-section h2 {
+        font-family: 'Poppins', sans-serif;
+    }
     .contact-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1.5rem;
-        margin-top: 1rem;
+        margin-top: 1.5rem;
     }
     .contact-card {
         border: 1px solid #e2e8f0;
-        border-radius: 1rem;
-        padding: 1.5rem;
-        background: #f9fbfd;
+        border-radius: 1.25rem;
+        padding: 2rem 1.5rem;
+        background: #ffffff;
         text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    .contact-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #f4c542, #d4a835);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+    .contact-card:hover::before {
+        transform: scaleX(1);
     }
     .contact-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(10, 55, 97, 0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(10, 55, 97, 0.12);
+        border-color: #f4c542;
     }
-    .contact-icon {
-        width: 2rem;
-        height: 2rem;
+    .contact-logo-container {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 50%;
+        padding: 15px;
+        transition: all 0.3s ease;
+    }
+    .contact-card:hover .contact-logo-container {
+        background: linear-gradient(135deg, #f4c542, #d4a835);
+        transform: scale(1.05);
+    }
+    .contact-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    .contact-phone-icon {
+        width: 50px;
+        height: 50px;
         color: #f4c542;
-        margin: 0 auto 0.75rem;
     }
     .contact-type {
         color: #0a3761;
         font-weight: 700;
-        font-size: 0.95rem;
-        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+        font-family: 'Poppins', sans-serif;
+        letter-spacing: 0.02em;
     }
     .contact-number {
-        color: #005b80;
+        color: #1e293b;
         font-weight: 600;
-        font-size: 1.1rem;
+        font-size: 1.25rem;
+        font-family: 'Poppins', sans-serif;
+        letter-spacing: 0.01em;
     }
     
     @media (max-width: 900px) {
         .schedule-grid { grid-template-columns: 1fr; }
-        .contact-grid { grid-template-columns: 1fr 1fr; }
+        .contact-grid { 
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+        .contact-card {
+            padding: 1.75rem 1.25rem;
+        }
+        .contact-logo-container {
+            width: 85px;
+            height: 85px;
+        }
     }
     @media (max-width: 900px) {
         .packages-grid { grid-template-columns: 1fr 1fr; }
@@ -872,23 +933,25 @@
     <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact Us</h2>
     <div class="contact-grid">
         <div class="contact-card">
-            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            </svg>
+            <div class="contact-logo-container">
+                <img src="/images/Globe logo.png" alt="Globe" class="contact-logo" />
+            </div>
             <div class="contact-type">Globe</div>
             <div class="contact-number">0917-132-1756</div>
         </div>
         <div class="contact-card">
-            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            </svg>
+            <div class="contact-logo-container">
+                <img src="/images/Smart telecom logo.png" alt="Smart" class="contact-logo" />
+            </div>
             <div class="contact-type">Smart</div>
             <div class="contact-number">0968-856-1807</div>
         </div>
         <div class="contact-card">
-            <svg class="contact-icon" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-            </svg>
+            <div class="contact-logo-container">
+                <svg class="contact-phone-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+            </div>
             <div class="contact-type">Landline</div>
             <div class="contact-number">(047) 222-4441</div>
         </div>
