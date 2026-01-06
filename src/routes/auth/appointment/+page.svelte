@@ -1886,7 +1886,7 @@
           {#if selectedService && selectedService in subServices}
           <div class="form-group">
               <label for="subservices-group" class="form-label">
-                <i class="fas fa-list-check text-blue-500 mr-1"></i>Select Sub-Services (Optional)
+                <i class="fas fa-list-check text-blue-500 mr-1"></i>Select Sub-Services
               </label>
               <div id="subservices-group" class="sub-services-grid">
                     {#each subServices[selectedService as ServiceWithSubServices] as subService}
