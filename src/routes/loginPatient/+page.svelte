@@ -551,13 +551,6 @@
             </div>
             </form>
 
-            <div class="my-6 flex items-center">
-                <hr class="flex-grow border-gray-300">
-                <span class="mx-4 text-gray-500 text-sm">OR</span>
-                <hr class="flex-grow border-gray-300">
-            </div>
-
-
             <div class="register-link {isPageLoaded ? 'loaded' : ''} text-center">
                 <p class="text-gray-600 mb-2">Don't have an account?</p>
                 <a href="/registerPatient" class="ml-1 text-sm font-medium text-blue-600 hover:text-blue-500">
