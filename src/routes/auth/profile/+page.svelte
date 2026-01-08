@@ -604,9 +604,6 @@ function toggleEditProfile() {
         </div>
         <div class="patient-info">
             <h1>{[patientProfile.name, patientProfile.middleName, patientProfile.lastName, patientProfile.suffix].filter(Boolean).join(' ') || "<Patient Name>"}</h1>
-            <div class="status-row">
-                <span class={`status-badge ${accountStatus === 'Active' ? 'active' : 'inactive'}`}>Status: {accountStatus}</span>
-            </div>
             {#if isMobile}
                 <button class="toggle-details-btn" on:click={() => showDetails = !showDetails}>
                     {showDetails ? 'Hide Details' : 'Show Details'}
