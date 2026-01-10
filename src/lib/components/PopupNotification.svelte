@@ -15,27 +15,6 @@
     
     export const popupNotifications: Writable<PopupNotification[]> = writable<PopupNotification[]>([]);
     
-    // Store for permanently dismissed notification IDs
-    const dismissedNotificationsKey = 'dismissedNotifications';
-    
-    function getDismissedNotifications(): Set<string> {
-        try {
-            const dismissed = localStorage.getItem(dismissedNotificationsKey);
-            return dismissed ? new Set(JSON.parse(dismissed)) : new Set();
-        } catch (e) {
-            console.error('Failed to load dismissed notifications:', e);
-            return new Set();
-        }
-    }
-    
-    function saveDismissedNotifications(dismissed: Set<string>) {
-        try {
-            localStorage.setItem(dismissedNotificationsKey, JSON.stringify([...dismissed]));
-        } catch (e) {
-            console.error('Failed to save dismissed notifications:', e);
-        }
-    }
-    
     function saveToLocalStorage(notifs: PopupNotification[]) {
         try {
             localStorage.setItem('popupNotifications', JSON.stringify(notifs));
@@ -52,14 +31,8 @@
             read: false
         };
         
-        // Check if this notification was previously dismissed
-        const dismissed = getDismissedNotifications();
-        if (dismissed.has(newNotification.id)) {
-            return;
-        }
-        
         popupNotifications.update(notifs => {
-            const updated = [newNotification, ...notifs].slice(0, 20); // Keep last 20
+            const updated = [newNotification, ...notifs].slice(0, 50); // Keep last 50
             saveToLocalStorage(updated);
             return updated;
         });
@@ -82,8 +55,7 @@
 
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import { fly, fade, scale } from 'svelte/transition';
-    import { quintOut } from 'svelte/easing';
+    import { fly, fade } from 'svelte/transition';
     import { browser } from '$app/environment';
     import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
     import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -109,13 +81,47 @@
     let isFirstAppointmentLoad = true;
     let seenAppointmentStatuses = new Set<string>();
     let currentUserId: string | null = null;
+    let seenPopupIds = new Set<string>(); // Track which popups have been shown
+    
+    // Load seen popup IDs from localStorage for specific user
+    function loadSeenPopupIds(userId: string) {
+        try {
+            const saved = localStorage.getItem(`seenPopupIds_${userId}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                seenPopupIds = new Set(parsed);
+            } else {
+                seenPopupIds = new Set();
+            }
+        } catch (e) {
+            console.error('Failed to load seen popup IDs:', e);
+            seenPopupIds = new Set();
+        }
+    }
+    
+    // Save seen popup IDs to localStorage for specific user
+    function saveSeenPopupIds(userId: string) {
+        try {
+            localStorage.setItem(`seenPopupIds_${userId}`, JSON.stringify(Array.from(seenPopupIds)));
+        } catch (e) {
+            console.error('Failed to save seen popup IDs:', e);
+        }
+    }
     
     popupNotifications.subscribe(value => {
         notifications = value;
         unreadCount = value.filter(n => !n.read).length;
         
-        // Update toast notifications - only unread ones
-        toastNotifications = value.filter(n => !n.read).slice(0, 3);
+        // Update toast notifications - only unread ones that haven't been shown as popups before
+        toastNotifications = value.filter(n => !n.read && !seenPopupIds.has(n.id)).slice(0, 3);
+        
+        // Mark newly displayed toast notifications as seen
+        toastNotifications.forEach(n => {
+            if (!seenPopupIds.has(n.id) && currentUserId) {
+                seenPopupIds.add(n.id);
+                saveSeenPopupIds(currentUserId);
+            }
+        });
         
         // Set timeout for any unread notifications that haven't been processed yet
         value.forEach(notif => {
@@ -153,12 +159,6 @@
     });
     
     function pushOrReplace(notif: PopupNotification) {
-        // Check if notification was permanently dismissed
-        const dismissed = getDismissedNotifications();
-        if (dismissed.has(notif.id)) {
-            return;
-        }
-        
         popupNotifications.update(notifs => {
             const idx = notifs.findIndex(n => n.id === notif.id);
             if (idx >= 0) {
@@ -288,18 +288,17 @@
     }
     
     function clearAll() {
-        popupNotifications.update(notifs => {
-            const updated = notifs.map(n => ({...n, read: true}));
-            saveToLocalStorage(updated);
-            return updated;
-        });
+        popupNotifications.set([]);
+        localStorage.removeItem('popupNotifications');
+        seenPopupIds.clear();
+        if (currentUserId) {
+            localStorage.removeItem(`seenPopupIds_${currentUserId}`);
+        }
     }
     
     function removeNotification(id: string) {
         popupNotifications.update(notifs => {
-            const updated = notifs.map(n => 
-                n.id === id ? {...n, read: true} : n
-            );
+            const updated = notifs.filter(n => n.id !== id);
             saveToLocalStorage(updated);
             return updated;
         });
@@ -308,19 +307,18 @@
     function loadFromLocalStorage() {
         try {
             const saved = localStorage.getItem('popupNotifications');
-            const dismissed = getDismissedNotifications();
-            
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // Filter out dismissed notifications
-                const filtered = parsed
-                    .map((n: any) => ({
-                        ...n,
-                        timestamp: new Date(n.timestamp)
-                    }))
-                    .filter((n: PopupNotification) => !dismissed.has(n.id));
-                    
-                popupNotifications.set(filtered);
+                const loadedNotifications = parsed.map((n: any) => ({
+                    ...n,
+                    timestamp: new Date(n.timestamp)
+                }));
+                popupNotifications.set(loadedNotifications);
+                
+                // Mark all loaded notifications as already seen to prevent popups on refresh
+                loadedNotifications.forEach((n: PopupNotification) => {
+                    seenPopupIds.add(n.id);
+                });
             }
         } catch (e) {
             console.error('Failed to load notifications:', e);
@@ -351,6 +349,7 @@
         if (!browser) return;
         
         loadFromLocalStorage();
+        // Note: loadSeenPopupIds will be called after auth state is determined
         
         // Initialize Firebase
         try {
@@ -367,24 +366,53 @@
         unsubAuth = onAuthStateChanged(auth!, async (user: User | null) => {
             isLoading = true;
             
-            // If user changed (new login), clear old notifications
+            // Only clear notifications if user actually changed (different user logged in)
             if (user && currentUserId && currentUserId !== user.uid) {
                 popupNotifications.set([]);
                 localStorage.removeItem('popupNotifications');
+                seenPopupIds.clear();
+                isFirstAppointmentLoad = true;
+                seenAppointmentStatuses.clear();
             }
             
-            // Update current user ID
-            if (user) {
-                currentUserId = user.uid;
-            } else {
-                currentUserId = null;
+            // If user logged out, clear notifications
+            if (!user && currentUserId) {
                 popupNotifications.set([]);
                 localStorage.removeItem('popupNotifications');
+                seenPopupIds.clear();
+                isFirstAppointmentLoad = true;
+                seenAppointmentStatuses.clear();
+                currentUserId = null;
             }
             
-            // Reset tracking for new login
-            isFirstAppointmentLoad = true;
-            seenAppointmentStatuses.clear();
+            // Update current user ID and load user-specific seen popups
+            if (user) {
+                // First time setting user ID (initial load) - don't clear anything
+                if (!currentUserId) {
+                    currentUserId = user.uid;
+                    // Load user-specific seen popup IDs
+                    loadSeenPopupIds(user.uid);
+                    // Merge with notifications already loaded from localStorage
+                    const existingNotifs = notifications;
+                    existingNotifs.forEach(n => {
+                        seenPopupIds.add(n.id);
+                        if (n.id.startsWith('appt-')) {
+                            const parts = n.id.split('-');
+                            if (parts.length >= 3) {
+                                const apptId = parts[1];
+                                const statusType = parts.slice(2).join('-');
+                                seenAppointmentStatuses.add(`${apptId}_${statusType}`);
+                            }
+                        }
+                    });
+                    // Save the merged seen popup IDs
+                    saveSeenPopupIds(user.uid);
+                } else {
+                    currentUserId = user.uid;
+                    // Load user-specific seen popup IDs for the new user
+                    loadSeenPopupIds(user.uid);
+                }
+            }
             
             // Clean up previous listeners
             if (unsubAppointments) { unsubAppointments(); unsubAppointments = null; }
@@ -537,8 +565,8 @@
                 role="button"
                 tabindex="0"
                 style="border-left-color: {notification.color || '#3b82f6'}"
-                in:fly={{ x: 300, duration: 400, easing: quintOut }}
-                out:scale={{ duration: 250, easing: quintOut, start: 0.8, opacity: 0 }}
+                in:fly={{ x: 300, duration: 300 }}
+                out:fly={{ x: 300, duration: 200 }}
                 on:click={() => handleNotificationClick(notification)}
                 on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
             >
@@ -567,8 +595,7 @@
     {#if isDropdownOpen}
         <div 
             class="notification-dropdown"
-            in:scale={{ duration: 200, easing: quintOut, start: 0.95, opacity: 0 }}
-            out:scale={{ duration: 150, easing: quintOut, start: 0.95, opacity: 0 }}
+            transition:fly={{ y: -10, duration: 200 }}
         >
             <div class="dropdown-header">
                 <h3>Notifications</h3>
@@ -627,16 +654,11 @@
 </div>
 
 <style>
-    * {
-        -webkit-tap-highlight-color: transparent;
-    }
-    
     .notification-container {
         position: fixed;
         top: 20px;
         right: 20px;
         z-index: 10000;
-        will-change: transform;
     }
     
     /* Adjust position for auth layout pages */
@@ -668,17 +690,12 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 12px rgba(30, 58, 102, 0.3);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        will-change: transform;
+        transition: all 0.3s ease;
     }
     
     .notification-bell:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 20px rgba(30, 58, 102, 0.4);
-    }
-    
-    .notification-bell:active {
-        transform: scale(1.05);
     }
     
     .notification-bell i {
@@ -700,16 +717,6 @@
         text-align: center;
         border: 2px solid white;
         box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.8;
-        }
     }
     
     /* Toast Notifications */
@@ -721,25 +728,21 @@
         flex-direction: column;
         gap: 12px;
         z-index: 9998;
-        max-width: 450px;
-        pointer-events: none;
+        max-width: 380px;
     }
     
     .toast {
         background: white;
         border-radius: 12px;
         padding: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         display: flex;
         align-items: flex-start;
         gap: 12px;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         border-left: 4px solid;
-        min-width: 400px;
-        pointer-events: auto;
-        will-change: transform, box-shadow;
-        backdrop-filter: blur(10px);
+        min-width: 320px;
     }
     
     @media (max-width: 640px) {
@@ -803,12 +806,8 @@
     }
     
     .toast:hover {
-        transform: translateX(-4px) translateY(-2px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .toast:active {
-        transform: translateX(-2px) translateY(-1px);
+        transform: translateX(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
     }
     
     .toast-icon {
@@ -819,11 +818,6 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .toast:hover .toast-icon {
-        transform: scale(1.1);
     }
     
     .toast-icon i {
@@ -883,18 +877,13 @@
         align-items: center;
         justify-content: center;
         color: #9ca3af;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
         flex-shrink: 0;
     }
     
     .toast-close:hover {
-        background: #fee2e2;
-        color: #ef4444;
-        transform: scale(1.1);
-    }
-    
-    .toast-close:active {
-        transform: scale(0.95);
+        background: #f3f4f6;
+        color: #1f2937;
     }
     
     /* Dropdown Panel */
@@ -906,12 +895,10 @@
         max-height: 600px;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 2px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        will-change: transform, opacity;
-        backdrop-filter: blur(10px);
     }
     
     .dropdown-header {
@@ -939,22 +926,16 @@
         cursor: pointer;
         padding: 4px 8px;
         border-radius: 6px;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
     }
     
     .clear-btn:hover {
         background: rgba(59, 130, 246, 0.1);
-        transform: scale(1.05);
-    }
-    
-    .clear-btn:active {
-        transform: scale(0.98);
     }
     
     .dropdown-content {
         overflow-y: auto;
         max-height: 540px;
-        overscroll-behavior: contain;
     }
     
     .dropdown-content::-webkit-scrollbar {
@@ -968,7 +949,6 @@
     .dropdown-content::-webkit-scrollbar-thumb {
         background: #d1d5db;
         border-radius: 4px;
-        transition: background 0.2s;
     }
     
     .dropdown-content::-webkit-scrollbar-thumb:hover {
@@ -1012,16 +992,6 @@
     
     .loading-state i {
         font-size: 20px;
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
     }
     
     .notification-item {
@@ -1031,8 +1001,7 @@
         align-items: flex-start;
         gap: 12px;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        will-change: background-color;
+        transition: all 0.2s ease;
     }
     
     .notification-item:last-child {
@@ -1040,17 +1009,11 @@
     }
     
     .notification-item.unread {
-        background: rgba(59, 130, 246, 0.04);
-        border-left: 3px solid #3b82f6;
-        padding-left: 17px;
+        background: rgba(59, 130, 246, 0.05);
     }
     
     .notification-item:hover {
         background: #f9fafb;
-    }
-    
-    .notification-item:active {
-        background: #f3f4f6;
     }
     
     .item-icon {
@@ -1061,11 +1024,6 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .notification-item:hover .item-icon {
-        transform: scale(1.1);
     }
     
     .item-icon i {
@@ -1083,7 +1041,6 @@
         color: #1f2937;
         margin-bottom: 4px;
     }
-    
     .item-message {
         font-size: 13px;
         color: #6b7280;
@@ -1120,7 +1077,7 @@
         align-items: center;
         justify-content: center;
         color: #9ca3af;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
         flex-shrink: 0;
         opacity: 0;
     }
@@ -1132,11 +1089,6 @@
     .item-remove:hover {
         background: #fee2e2;
         color: #ef4444;
-        transform: scale(1.1);
-    }
-    
-    .item-remove:active {
-        transform: scale(0.95);
     }
     
     /* Mobile Responsive */
@@ -1159,10 +1111,6 @@
             left: 50%;
             right: auto;
             transform: translateX(-50%);
-        }
-        
-        .item-remove {
-            opacity: 1;
         }
     }
 </style>
