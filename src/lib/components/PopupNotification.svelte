@@ -288,22 +288,18 @@
     }
     
     function clearAll() {
-        const dismissed = getDismissedNotifications();
-        notifications.forEach(n => dismissed.add(n.id));
-        saveDismissedNotifications(dismissed);
-        
-        popupNotifications.set([]);
-        localStorage.removeItem('popupNotifications');
+        popupNotifications.update(notifs => {
+            const updated = notifs.map(n => ({...n, read: true}));
+            saveToLocalStorage(updated);
+            return updated;
+        });
     }
     
     function removeNotification(id: string) {
-        // Add to permanently dismissed list
-        const dismissed = getDismissedNotifications();
-        dismissed.add(id);
-        saveDismissedNotifications(dismissed);
-        
         popupNotifications.update(notifs => {
-            const updated = notifs.filter(n => n.id !== id);
+            const updated = notifs.map(n => 
+                n.id === id ? {...n, read: true} : n
+            );
             saveToLocalStorage(updated);
             return updated;
         });
