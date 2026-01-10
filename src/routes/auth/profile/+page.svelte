@@ -328,12 +328,11 @@ async function savePatientProfile() {
         return;
     }
 
-    // Check required fields (email optional)
+    // Check required fields (email is optional)
     const requiredFields = {
         'First Name': formPatientName,
         'Last Name': formLastName,
         'Age': formAge,
-        // 'Email': formEmail,
         'Phone': formPhone,
         'Birthday': formBirthday,
         'Gender': formGender

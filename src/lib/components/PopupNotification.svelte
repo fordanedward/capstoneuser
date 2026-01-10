@@ -128,18 +128,23 @@
             if (!notif.read && !processedNotifications.has(notif.id)) {
                 processedNotifications.add(notif.id);
                 
-                // Set the auto-hide timeout
+                // Set the auto-read timeout if page is active
                 const timeout = setTimeout(() => {
-                    popupNotifications.update(notifs => {
-                        const notification = notifs.find(n => n.id === notif.id);
-                        // Only hide if still not read (meaning it wasn't tapped)
-                        if (notification && !notification.read) {
-                            return notifs.map(n => 
-                                n.id === notif.id ? {...n, read: true} : n
-                            );
-                        }
-                        return notifs;
-                    });
+                    // Only mark as read if page is visible (user is actively viewing)
+                    if (!document.hidden) {
+                        popupNotifications.update(notifs => {
+                            const notification = notifs.find(n => n.id === notif.id);
+                            // Mark as read after 5 seconds
+                            if (notification && !notification.read) {
+                                const updated = notifs.map(n => 
+                                    n.id === notif.id ? {...n, read: true} : n
+                                );
+                                saveToLocalStorage(updated);
+                                return updated;
+                            }
+                            return notifs;
+                        });
+                    }
                     timeoutMap.delete(notif.id);
                 }, 5000);
                 
