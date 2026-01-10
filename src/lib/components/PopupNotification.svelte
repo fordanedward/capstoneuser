@@ -37,19 +37,7 @@
             return updated;
         });
         
-        // Auto-hide popup after 5 seconds if not tapped
-        setTimeout(() => {
-            popupNotifications.update(notifs => {
-                const notif = notifs.find(n => n.id === newNotification.id);
-                // Only hide if not read (meaning it wasn't tapped)
-                if (notif && !notif.read) {
-                    return notifs.map(n => 
-                        n.id === newNotification.id ? {...n, read: true} : n
-                    );
-                }
-                return notifs;
-            });
-        }, 5000);
+        // Note: Auto-hide is now handled by the subscription logic
     }
 </script>
 
@@ -82,6 +70,7 @@
     let seenAppointmentStatuses = new Set<string>();
     let currentUserId: string | null = null;
     let seenPopupIds = new Set<string>(); // Track which popups have been shown
+    let isInitialLoad = true; // Track if we're still in initial load phase
     
     // Load seen popup IDs from localStorage for specific user
     function loadSeenPopupIds(userId: string) {
@@ -113,37 +102,25 @@
         unreadCount = value.filter(n => !n.read).length;
         
         // Update toast notifications - only unread ones that haven't been shown as popups before
-        toastNotifications = value.filter(n => !n.read && !seenPopupIds.has(n.id)).slice(0, 3);
+        // Don't show toasts during initial load to prevent flash on refresh
+        if (isInitialLoad) {
+            toastNotifications = [];
+        } else {
+            toastNotifications = value.filter(n => !n.read && !seenPopupIds.has(n.id)).slice(0, 3);
+        }
         
-        // Mark newly displayed toast notifications as seen
-        toastNotifications.forEach(n => {
-            if (!seenPopupIds.has(n.id) && currentUserId) {
-                seenPopupIds.add(n.id);
-                saveSeenPopupIds(currentUserId);
-            }
-        });
-        
-        // Set timeout for any unread notifications that haven't been processed yet
+        // Track new notifications and set auto-hide timer for toast popups
         value.forEach(notif => {
             if (!notif.read && !processedNotifications.has(notif.id)) {
                 processedNotifications.add(notif.id);
                 
-                // Set the auto-read timeout if page is active
+                // Auto-hide toast popup after 5 seconds (mark as seen to remove from toast)
                 const timeout = setTimeout(() => {
-                    // Only mark as read if page is visible (user is actively viewing)
-                    if (!document.hidden) {
-                        popupNotifications.update(notifs => {
-                            const notification = notifs.find(n => n.id === notif.id);
-                            // Mark as read after 5 seconds
-                            if (notification && !notification.read) {
-                                const updated = notifs.map(n => 
-                                    n.id === notif.id ? {...n, read: true} : n
-                                );
-                                saveToLocalStorage(updated);
-                                return updated;
-                            }
-                            return notifs;
-                        });
+                    if (!seenPopupIds.has(notif.id) && currentUserId) {
+                        seenPopupIds.add(notif.id);
+                        saveSeenPopupIds(currentUserId);
+                        // Force update to remove from toast
+                        popupNotifications.update(n => n);
                     }
                     timeoutMap.delete(notif.id);
                 }, 5000);
@@ -193,6 +170,7 @@
                 type: 'appointment',
                 title: 'Appointment Accepted',
                 message: `Appointment on ${appt.date} at ${appt.time} has been accepted.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -205,6 +183,7 @@
                 type: 'appointment',
                 title: 'Appointment Declined',
                 message: `Appointment on ${appt.date} at ${appt.time} was declined.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -217,6 +196,7 @@
                 type: 'appointment',
                 title: 'Appointment Rescheduled',
                 message: `Appointment reschedule approved to ${appt.requestedDate || appt.date} at ${appt.requestedTime || appt.time}.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -229,6 +209,7 @@
                 type: 'appointment',
                 title: 'Cancellation Approved',
                 message: `Your cancellation request was approved for ${appt.date} ${appt.time}.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -241,6 +222,7 @@
                 type: 'appointment',
                 title: 'Cancellation Declined',
                 message: `Your cancellation request was declined for ${appt.date} ${appt.time}.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -253,6 +235,7 @@
                 type: 'appointment',
                 title: 'Appointment Completed',
                 message: `Appointment on ${appt.date} at ${appt.time} is completed.`,
+                link: '/auth/appointment',
                 read: false
             });
         }
@@ -271,6 +254,7 @@
                 type: 'info',
                 title: 'Account Archived',
                 message: 'Your account has been archived.',
+                link: '/auth/profile',
                 read: false
             });
         }
@@ -318,12 +302,14 @@
                     ...n,
                     timestamp: new Date(n.timestamp)
                 }));
-                popupNotifications.set(loadedNotifications);
                 
-                // Mark all loaded notifications as already seen to prevent popups on refresh
+                // Mark all loaded notifications as already seen FIRST
                 loadedNotifications.forEach((n: PopupNotification) => {
                     seenPopupIds.add(n.id);
                 });
+                
+                // Then set the notifications
+                popupNotifications.set(loadedNotifications);
             }
         } catch (e) {
             console.error('Failed to load notifications:', e);
@@ -344,10 +330,25 @@
     }
     
     function handleNotificationClick(notification: PopupNotification) {
+        // Mark as seen and read when clicked
+        if (!seenPopupIds.has(notification.id) && currentUserId) {
+            seenPopupIds.add(notification.id);
+            saveSeenPopupIds(currentUserId);
+        }
+        
+        // Mark as read
+        popupNotifications.update(notifs => {
+            const updated = notifs.map(n => 
+                n.id === notification.id ? {...n, read: true} : n
+            );
+            saveToLocalStorage(updated);
+            return updated;
+        });
+        
+        // Navigate if there's a link
         if (notification.link) {
             window.location.href = notification.link;
         }
-        removeNotification(notification.id);
     }
     
     onMount(() => {
@@ -426,21 +427,38 @@
 
             if (!user || !db) { 
                 isLoading = false; 
+                // Mark initial load as complete
+                setTimeout(() => { isInitialLoad = false; }, 100);
                 return; 
             }
 
             // Appointments listener
             const apptQuery = query(collection(db, 'appointments'), where('patientId', '==', user.uid));
             unsubAppointments = onSnapshot(apptQuery, (snap) => {
-                // On first load, only track existing appointments without showing notifications
+                // On first load, check if notifications exist in localStorage, if not create them
                 if (isFirstAppointmentLoad) {
                     snap.forEach((d) => {
                         const appt = d.data();
                         const statusKey = `${d.id}_${appt.status}_${appt.cancellationStatus}`;
                         seenAppointmentStatuses.add(statusKey);
+                        
+                        // Build potential notifications for this appointment
+                        const potentialNotifs = buildAppointmentNotifs(appt, d.id);
+                        
+                        // Check if these notifications already exist in localStorage
+                        potentialNotifs.forEach(notif => {
+                            const existsInStore = notifications.find(n => n.id === notif.id);
+                            if (!existsInStore) {
+                                // Notification doesn't exist, create it and mark as read (so it doesn't popup)
+                                notif.read = true;
+                                pushOrReplace(notif);
+                            }
+                        });
                     });
                     isFirstAppointmentLoad = false;
                     isLoading = false;
+                    // Mark initial load as complete after first snapshot
+                    setTimeout(() => { isInitialLoad = false; }, 100);
                     return;
                 }
 
