@@ -15,6 +15,27 @@
     
     export const popupNotifications: Writable<PopupNotification[]> = writable<PopupNotification[]>([]);
     
+    // Store for permanently dismissed notification IDs
+    const dismissedNotificationsKey = 'dismissedNotifications';
+    
+    function getDismissedNotifications(): Set<string> {
+        try {
+            const dismissed = localStorage.getItem(dismissedNotificationsKey);
+            return dismissed ? new Set(JSON.parse(dismissed)) : new Set();
+        } catch (e) {
+            console.error('Failed to load dismissed notifications:', e);
+            return new Set();
+        }
+    }
+    
+    function saveDismissedNotifications(dismissed: Set<string>) {
+        try {
+            localStorage.setItem(dismissedNotificationsKey, JSON.stringify([...dismissed]));
+        } catch (e) {
+            console.error('Failed to save dismissed notifications:', e);
+        }
+    }
+    
     function saveToLocalStorage(notifs: PopupNotification[]) {
         try {
             localStorage.setItem('popupNotifications', JSON.stringify(notifs));
@@ -30,6 +51,12 @@
             timestamp: new Date(),
             read: false
         };
+        
+        // Check if this notification was previously dismissed
+        const dismissed = getDismissedNotifications();
+        if (dismissed.has(newNotification.id)) {
+            return;
+        }
         
         popupNotifications.update(notifs => {
             const updated = [newNotification, ...notifs].slice(0, 20); // Keep last 20
@@ -55,7 +82,8 @@
 
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
-    import { fly, fade } from 'svelte/transition';
+    import { fly, fade, scale } from 'svelte/transition';
+    import { quintOut } from 'svelte/easing';
     import { browser } from '$app/environment';
     import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
     import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -125,6 +153,12 @@
     });
     
     function pushOrReplace(notif: PopupNotification) {
+        // Check if notification was permanently dismissed
+        const dismissed = getDismissedNotifications();
+        if (dismissed.has(notif.id)) {
+            return;
+        }
+        
         popupNotifications.update(notifs => {
             const idx = notifs.findIndex(n => n.id === notif.id);
             if (idx >= 0) {
@@ -254,11 +288,20 @@
     }
     
     function clearAll() {
+        const dismissed = getDismissedNotifications();
+        notifications.forEach(n => dismissed.add(n.id));
+        saveDismissedNotifications(dismissed);
+        
         popupNotifications.set([]);
         localStorage.removeItem('popupNotifications');
     }
     
     function removeNotification(id: string) {
+        // Add to permanently dismissed list
+        const dismissed = getDismissedNotifications();
+        dismissed.add(id);
+        saveDismissedNotifications(dismissed);
+        
         popupNotifications.update(notifs => {
             const updated = notifs.filter(n => n.id !== id);
             saveToLocalStorage(updated);
@@ -269,12 +312,19 @@
     function loadFromLocalStorage() {
         try {
             const saved = localStorage.getItem('popupNotifications');
+            const dismissed = getDismissedNotifications();
+            
             if (saved) {
                 const parsed = JSON.parse(saved);
-                popupNotifications.set(parsed.map((n: any) => ({
-                    ...n,
-                    timestamp: new Date(n.timestamp)
-                })));
+                // Filter out dismissed notifications
+                const filtered = parsed
+                    .map((n: any) => ({
+                        ...n,
+                        timestamp: new Date(n.timestamp)
+                    }))
+                    .filter((n: PopupNotification) => !dismissed.has(n.id));
+                    
+                popupNotifications.set(filtered);
             }
         } catch (e) {
             console.error('Failed to load notifications:', e);
@@ -491,8 +541,8 @@
                 role="button"
                 tabindex="0"
                 style="border-left-color: {notification.color || '#3b82f6'}"
-                in:fly={{ x: 300, duration: 300 }}
-                out:fly={{ x: 300, duration: 200 }}
+                in:fly={{ x: 300, duration: 400, easing: quintOut }}
+                out:scale={{ duration: 250, easing: quintOut, start: 0.8, opacity: 0 }}
                 on:click={() => handleNotificationClick(notification)}
                 on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
             >
@@ -521,7 +571,8 @@
     {#if isDropdownOpen}
         <div 
             class="notification-dropdown"
-            transition:fly={{ y: -10, duration: 200 }}
+            in:scale={{ duration: 200, easing: quintOut, start: 0.95, opacity: 0 }}
+            out:scale={{ duration: 150, easing: quintOut, start: 0.95, opacity: 0 }}
         >
             <div class="dropdown-header">
                 <h3>Notifications</h3>
@@ -580,11 +631,16 @@
 </div>
 
 <style>
+    * {
+        -webkit-tap-highlight-color: transparent;
+    }
+    
     .notification-container {
         position: fixed;
         top: 20px;
         right: 20px;
         z-index: 10000;
+        will-change: transform;
     }
     
     /* Adjust position for auth layout pages */
@@ -616,12 +672,17 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 4px 12px rgba(30, 58, 102, 0.3);
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
     }
     
     .notification-bell:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 20px rgba(30, 58, 102, 0.4);
+    }
+    
+    .notification-bell:active {
+        transform: scale(1.05);
     }
     
     .notification-bell i {
@@ -643,6 +704,16 @@
         text-align: center;
         border: 2px solid white;
         box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.8;
+        }
     }
     
     /* Toast Notifications */
@@ -654,21 +725,25 @@
         flex-direction: column;
         gap: 12px;
         z-index: 9998;
-        max-width: 380px;
+        max-width: 450px;
+        pointer-events: none;
     }
     
     .toast {
         background: white;
         border-radius: 12px;
         padding: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08);
         display: flex;
         align-items: flex-start;
         gap: 12px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         border-left: 4px solid;
-        min-width: 320px;
+        min-width: 400px;
+        pointer-events: auto;
+        will-change: transform, box-shadow;
+        backdrop-filter: blur(10px);
     }
     
     @media (max-width: 640px) {
@@ -732,8 +807,12 @@
     }
     
     .toast:hover {
-        transform: translateX(-4px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+        transform: translateX(-4px) translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .toast:active {
+        transform: translateX(-2px) translateY(-1px);
     }
     
     .toast-icon {
@@ -744,6 +823,11 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .toast:hover .toast-icon {
+        transform: scale(1.1);
     }
     
     .toast-icon i {
@@ -803,13 +887,18 @@
         align-items: center;
         justify-content: center;
         color: #9ca3af;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         flex-shrink: 0;
     }
     
     .toast-close:hover {
-        background: #f3f4f6;
-        color: #1f2937;
+        background: #fee2e2;
+        color: #ef4444;
+        transform: scale(1.1);
+    }
+    
+    .toast-close:active {
+        transform: scale(0.95);
     }
     
     /* Dropdown Panel */
@@ -821,10 +910,12 @@
         max-height: 600px;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 2px 12px rgba(0, 0, 0, 0.1);
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        will-change: transform, opacity;
+        backdrop-filter: blur(10px);
     }
     
     .dropdown-header {
@@ -852,16 +943,22 @@
         cursor: pointer;
         padding: 4px 8px;
         border-radius: 6px;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .clear-btn:hover {
         background: rgba(59, 130, 246, 0.1);
+        transform: scale(1.05);
+    }
+    
+    .clear-btn:active {
+        transform: scale(0.98);
     }
     
     .dropdown-content {
         overflow-y: auto;
         max-height: 540px;
+        overscroll-behavior: contain;
     }
     
     .dropdown-content::-webkit-scrollbar {
@@ -875,6 +972,7 @@
     .dropdown-content::-webkit-scrollbar-thumb {
         background: #d1d5db;
         border-radius: 4px;
+        transition: background 0.2s;
     }
     
     .dropdown-content::-webkit-scrollbar-thumb:hover {
@@ -918,6 +1016,16 @@
     
     .loading-state i {
         font-size: 20px;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
     }
     
     .notification-item {
@@ -927,7 +1035,8 @@
         align-items: flex-start;
         gap: 12px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: background-color;
     }
     
     .notification-item:last-child {
@@ -935,11 +1044,17 @@
     }
     
     .notification-item.unread {
-        background: rgba(59, 130, 246, 0.05);
+        background: rgba(59, 130, 246, 0.04);
+        border-left: 3px solid #3b82f6;
+        padding-left: 17px;
     }
     
     .notification-item:hover {
         background: #f9fafb;
+    }
+    
+    .notification-item:active {
+        background: #f3f4f6;
     }
     
     .item-icon {
@@ -950,6 +1065,11 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .notification-item:hover .item-icon {
+        transform: scale(1.1);
     }
     
     .item-icon i {
@@ -967,6 +1087,7 @@
         color: #1f2937;
         margin-bottom: 4px;
     }
+    
     .item-message {
         font-size: 13px;
         color: #6b7280;
@@ -1003,7 +1124,7 @@
         align-items: center;
         justify-content: center;
         color: #9ca3af;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         flex-shrink: 0;
         opacity: 0;
     }
@@ -1015,6 +1136,11 @@
     .item-remove:hover {
         background: #fee2e2;
         color: #ef4444;
+        transform: scale(1.1);
+    }
+    
+    .item-remove:active {
+        transform: scale(0.95);
     }
     
     /* Mobile Responsive */
@@ -1037,6 +1163,10 @@
             left: 50%;
             right: auto;
             transform: translateX(-50%);
+        }
+        
+        .item-remove {
+            opacity: 1;
         }
     }
 </style>
