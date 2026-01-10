@@ -93,13 +93,15 @@
             const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
             const statusField = (userData.status || '').toString().toLowerCase();
             if (isArchivedFlag || statusField === 'inactive') {
+                await auth.signOut();
                 Swal.fire({
                     icon: 'error',
                     title: 'Account Inactive',
                     text: 'Your account has been deactivated by the administrator. Contact support for help.',
                     showConfirmButton: true
+                }).then(() => {
+                    goto('/');
                 });
-                await auth.signOut();
                 return false;
             }
 
@@ -416,17 +418,6 @@
 }
 
 .login-button.loaded {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-}
-
-.google-button {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 1.1s;
-}
-
-.google-button.loaded {
     opacity: 1;
     transform: translateY(0) scale(1);
 }

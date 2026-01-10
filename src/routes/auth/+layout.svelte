@@ -164,11 +164,29 @@
                                }
                            }
 
-                           // Set patient ID label
+                           // Set patient ID label and check account status
                            if (userDoc.exists()) {
                                const userData = userDoc.data();
                                const customUserId = userData.customUserId || "N/A";
                                patientId.set(`ID: ${customUserId}`);
+                               
+                               // Check if account is deactivated
+                               const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
+                               const statusField = (userData.status || '').toString().toLowerCase();
+                               
+                               if (isArchivedFlag || statusField === 'inactive') {
+                                   // Account has been deactivated, log out and redirect
+                                   await signOut(auth);
+                                   Swal.fire({
+                                       icon: 'error',
+                                       title: 'Account Deactivated',
+                                       text: 'Your account was deactivated by the administrator. Contact support for assistance.',
+                                       confirmButtonText: 'OK'
+                                   }).then(() => {
+                                       goto('/');
+                                   });
+                                   return;
+                               }
                            } else {
                                patientId.set("ID: N/A");
                            }

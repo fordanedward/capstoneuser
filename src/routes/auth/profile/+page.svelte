@@ -677,6 +677,8 @@ function toggleEditProfile() {
         role="dialog"
         aria-label="Edit Member Information"
         on:click|stopPropagation
+        on:keydown={(e) => e.key === 'Enter' && e.stopPropagation()}
+        tabindex="0"
     >
         <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
@@ -1200,15 +1202,6 @@ function toggleEditProfile() {
         box-shadow: 0 12px 40px rgba(30, 58, 102, 0.4);
     }
 
-    .patient-card .logo {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid var(--white);
-        flex-shrink: 0;
-    }
-
     .patient-info {
         flex-grow: 1;
         min-width: 0;
@@ -1225,9 +1218,6 @@ function toggleEditProfile() {
         text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .status-row {
-        margin: 6px 0 10px 0;
-    }
     .patient-info .info-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1259,11 +1249,7 @@ function toggleEditProfile() {
             padding: 16px;
             gap: 16px;
         }
-         .patient-card .logo {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 10px;
-        }
+
         .patient-info h1 {
             font-size: 1.5rem;
         }
@@ -1280,35 +1266,6 @@ function toggleEditProfile() {
             margin: 10px;
             padding: 15px;
          }
-    }
-
-
-    .edit-profile-section {
-        margin-bottom: 32px;
-    }
-
-    .edit-button {
-        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-        color: var(--white);
-        font-weight: 500;
-        padding: 10px 20px;
-        border-radius: var(--border-radius);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-        outline: none;
-        width: auto;
-        min-width: 150px;
-    }
-
-    .edit-button:hover {
-        background: linear-gradient(90deg, var(--secondary-color), var(--primary-color));
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
-        transform: translateY(-2px);
     }
 
     .modal-overlay {
