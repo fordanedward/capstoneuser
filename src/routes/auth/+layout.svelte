@@ -180,10 +180,16 @@
                                    Swal.fire({
                                        icon: 'error',
                                        title: 'Account Deactivated',
-                                       text: 'Your account was deactivated by the administrator. Contact support for assistance.',
+                                       html: `
+                                           <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account was deactivated by the administrator. Contact support for assistance.</p>
+                                           <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                                               <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
+                                               <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
+                                           </div>
+                                       `,
                                        confirmButtonText: 'OK'
                                    }).then(() => {
-                                       goto('/');
+                                       goto('/loginPatient');
                                    });
                                    return;
                                }

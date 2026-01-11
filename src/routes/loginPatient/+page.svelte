@@ -68,7 +68,13 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Account Deactivated',
-                    text: 'Your account was deactivated by the administrator. Contact support for assistance.',
+                    html: `
+                        <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account was deactivated by the administrator. Contact support for assistance.</p>
+                        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                            <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
+                            <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
+                        </div>
+                    `,
                     confirmButtonText: 'OK'
                 });
             }
@@ -97,10 +103,14 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Account Inactive',
-                    text: 'Your account has been deactivated by the administrator. Contact support for help.',
+                    html: `
+                        <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account has been deactivated by the administrator. Contact support for help.</p>
+                        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
+                            <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
+                            <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
+                        </div>
+                    `,
                     showConfirmButton: true
-                }).then(() => {
-                    goto('/');
                 });
                 return false;
             }
@@ -467,92 +477,87 @@
 {/if}
 
 <div class="min-h-screen bg-[#0b2d56] flex items-center justify-center px-4 sm:px-8 md:px-16 lg:px-24">
-    <div class="login-container {isPageLoaded ? 'loaded' : ''} bg-white p-8 rounded-lg shadow-lg w-full max-w-md"> 
-        <div class="flex flex-col items-center mb-4">
-            <img src="/images/digital member portal.png" alt="Member Icon" class="login-logo {isPageLoaded ? 'loaded' : ''} w-24 h-24 mb-2" />
-            <h2 class="login-title {isPageLoaded ? 'loaded' : ''} text-3xl font-semibold text-gray-800 text-center">Welcome Member!</h2>
-          </div>
-          
+    <div class="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 w-full max-w-7xl">
+        <!-- Left side - Logo (shown on desktop, hidden on mobile) -->
+        <div class="hidden lg:flex flex-shrink-0 items-center justify-center">
+            <img src="/images/digital member portal.png" alt="PHP Logo" class="login-logo {isPageLoaded ? 'loaded' : ''} w-[29rem] h-[29rem] object-contain" />
+        </div>
+
+        <!-- Right side - Login Form with mobile logo/title -->
+        <div class="login-container {isPageLoaded ? 'loaded' : ''} bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md">
+            <!-- Logo and Title for Mobile -->
+            <div class="flex lg:hidden flex-col items-center mb-8">
+                <img src="/images/digital member portal.png" alt="PHP Logo" class="login-logo {isPageLoaded ? 'loaded' : ''} w-24 h-24 mb-4 object-contain" />
+                <h2 class="login-title {isPageLoaded ? 'loaded' : ''} text-3xl font-bold text-gray-900 text-center">Welcome Member!</h2>
+            </div>
+
+            <!-- Title for Desktop -->
+            <div class="hidden lg:block mb-8">
+                <h2 class="login-title {isPageLoaded ? 'loaded' : ''} text-3xl font-bold text-gray-900 text-center">Welcome Member</h2>
+            </div>
 
         <div class="login-form {isPageLoaded ? 'loaded' : ''}">
             <form on:submit|preventDefault={handleLogin}>
-            <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                <Label for="identifier" class="block mb-2">Patient ID</Label>
-                <Input
-                    type="text"
-                    id="identifier"
-                    placeholder="Enter your Patient ID"
-                    class="border p-2 w-full"
-                    bind:value={identifier}
-                    required
-                />
-                <p class="text-xs text-gray-500 mt-1">Type in your 5-digit Patient ID.</p>
-            </div>
-
-            <!-- Password field -->
-            <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                <Label for="password" class="block mb-2">Password</Label>
-                <div class="relative">
+                <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="identifier" class="block mb-2 text-sm font-medium text-gray-700">Patient ID</Label>
                     <Input
-                        type={showPassword ? 'text' : 'password'}
-                        id="password"
-                        placeholder="Enter your password"
-                        class="border p-2 w-full"
-                        bind:value={password}
+                        type="text"
+                        id="identifier"
+                        placeholder="Enter your patient ID"
+                        class="border border-gray-300 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        bind:value={identifier}
                         required
                     />
+                </div>
+
+                <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
+                    <Label for="password" class="block mb-2 text-sm font-medium text-gray-700">Password</Label>
+                    <div class="relative">
+                        <Input
+                            type={showPassword ? 'text' : 'password'}
+                            id="password"
+                            placeholder="Enter your password"
+                            class="border border-gray-300 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            bind:value={password}
+                            required
+                        />
+                        <button
+                            type="button"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                            on:click={() => showPassword = !showPassword}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                            {#if showPassword}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19.5c-5.162 0-9.246-3.697-10.125-8.55a1.286 1.286 0 010-.9c.879-4.853 4.963-8.55 10.125-8.55a10.05 10.05 0 011.875.175M15 12a3 3 0 11-6 0 3 3 0 016 0zm6-6.75L4.5 19.5" />
+                                </svg>
+                            {:else}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            {/if}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="login-button {isPageLoaded ? 'loaded' : ''} mb-6">
                     <button
-                        type="button"
-                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600 focus:outline-none"
-                        on:click={() => showPassword = !showPassword}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        type="submit" 
+                        class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 shadow-md"
+                        disabled={isLoggingIn}
                     >
-                        {#if showPassword}
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19.5c-5.162 0-9.246-3.697-10.125-8.55a1.286 1.286 0 010-.9c.879-4.853 4.963-8.55 10.125-8.55a10.05 10.05 0 011.875.175M15 12a3 3 0 11-6 0 3 3 0 016 0zm6-6.75L4.5 19.5" />
-                            </svg>
-                        {:else}
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        {/if}
+                        {isLoggingIn ? 'Logging in...' : 'Login'}
                     </button>
                 </div>
-            </div>
-
-            <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6 flex items-center">
-                <input
-                    type="checkbox"
-                    id="remember"
-                    class="mr-2"
-                    bind:checked={rememberMe}
-                />
-                <label for="remember" class="text-gray-600">Remember me</label>
-            </div>
-
-            <div class="login-button {isPageLoaded ? 'loaded' : ''} mb-6">
-                <button
-                    type="submit" 
-                    class="w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    disabled={isLoggingIn}
-                >
-                    {isLoggingIn ? 'Logging in...' : 'Login'}
-                </button>
-            </div>
             </form>
 
-            <div class="register-link {isPageLoaded ? 'loaded' : ''} text-center">
-                <p class="text-gray-600 mb-2">Don't have an account?</p>
-                <a href="/registerPatient" class="ml-1 text-sm font-medium text-blue-600 hover:text-blue-500">
-                    Register
+            <div class="register-link {isPageLoaded ? 'loaded' : ''} text-center mt-6">
+                <a href="/" class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors duration-200">
+                    Back Home
                 </a>
             </div>
-            <div class="register-link {isPageLoaded ? 'loaded' : ''} text-center mt-4">
-                <a href="/" class="text-sm font-medium text-gray-600 hover:text-gray-800 underline">
-                    Back to Home
-                </a>
-            </div>
+        </div>
         </div>
     </div>
 </div>
