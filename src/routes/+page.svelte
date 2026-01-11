@@ -596,6 +596,66 @@
             height: 300px;
         }
     }
+
+    /* Membership section */
+    .membership-section {
+        width: 100%;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 4rem 2rem;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .membership-section h2 {
+        color: #0b2d56;
+        font-size: 2.2rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 2rem;
+        letter-spacing: -0.5px;
+        line-height: 1.3;
+        max-width: 900px;
+    }
+    .facebook-embed-container {
+        width: 100%;
+        max-width: 700px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    @media (max-width: 900px) {
+        .membership-section {
+            padding: 3rem 1.5rem;
+        }
+        .membership-section h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .facebook-embed-container {
+            padding: 1rem;
+            max-width: 100%;
+        }
+    }
+    @media (max-width: 640px) {
+        .membership-section {
+            padding: 2rem 1rem;
+        }
+        .membership-section h2 {
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        .facebook-embed-container {
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+    }
 </style>
 
 <script>
@@ -664,6 +724,22 @@
         </div>
     </div>
 </div>
+
+<!-- Membership Section -->
+<section class="membership-section" aria-label="PHP Membership Information">
+    <h2>Want to become a PHP Member? Here's how to get a PHP Multispecialty Membership</h2>
+    <div class="facebook-embed-container">
+        <video 
+            controls
+            preload="metadata"
+            style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+            title="PHP Membership Video">
+            <source src="/php multispecialty membership.mp4" type="video/mp4">
+            <track kind="captions" src="/captions.vtt" label="English captions">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+</section>
 
 <!-- Locations -->
 <h2 class="locations-title">LOCATION</h2>
