@@ -603,6 +603,10 @@ function toggleEditProfile() {
         </div>
         <div class="patient-info">
             <h1>{[patientProfile.name, patientProfile.middleName, patientProfile.lastName, patientProfile.suffix].filter(Boolean).join(' ') || "<Patient Name>"}</h1>
+            <div class="status-badge {isArchived ? 'inactive' : 'active'}">
+                <i class="fas {isArchived ? 'fa-ban' : 'fa-check-circle'}"></i>
+                {accountStatus}
+            </div>
             {#if isMobile}
                 <button class="toggle-details-btn" on:click={() => showDetails = !showDetails}>
                     {showDetails ? 'Hide Details' : 'Show Details'}
@@ -1216,6 +1220,36 @@ function toggleEditProfile() {
         word-break: break-word;
         letter-spacing: 0.5px;
         text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        margin-top: -8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .status-badge.active {
+        background: #22c55e;
+        color: white;
+    }
+
+    .status-badge.inactive {
+        background: #ef4444;
+        color: white;
+    }
+
+    .status-badge i {
+        font-size: 1rem;
     }
 
     .patient-info .info-grid {
