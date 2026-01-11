@@ -5,7 +5,7 @@ import { getAuth } from "firebase/auth";
 import { firebaseConfig } from "$lib/firebaseConfig";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, doc, getDoc, onSnapshot } from "firebase/firestore";
-import { showDeactivationAlert } from "$lib/stores/deactivation";
+import { showDeactivationAlert, hideDeactivationAlert } from "$lib/stores/deactivation";
 
 // Initialize Firebase app (guard against double initialization)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -16,6 +16,7 @@ export const currentUser = writable<User | null>(null);
 
 // Keep a live listener for the currently signed-in user's Firestore document
 let userDocUnsub: Unsubscribe | null = null;
+let logoutTimeout: ReturnType<typeof setTimeout> | null = null;
 
 onAuthStateChanged(auth, async (user) => {
   // Clean up any previous listener when auth state changes
@@ -50,8 +51,13 @@ onAuthStateChanged(auth, async (user) => {
         // Show the deactivation alert popup immediately
         showDeactivationAlert();
         
+        // Clear any existing timeout to prevent duplicate logouts
+        if (logoutTimeout) {
+          clearTimeout(logoutTimeout);
+        }
+        
         // Wait 3 seconds for user to see the alert before signing out
-        setTimeout(async () => {
+        logoutTimeout = setTimeout(async () => {
           try {
             await signOut(auth);
           } catch (e) {
@@ -66,7 +72,15 @@ onAuthStateChanged(auth, async (user) => {
             }
           }
           currentUser.set(null);
+          logoutTimeout = null;
         }, 3000);
+      } else {
+        // Account is active - clear any deactivation alert and logout timeout
+        hideDeactivationAlert();
+        if (logoutTimeout) {
+          clearTimeout(logoutTimeout);
+          logoutTimeout = null;
+        }
       }
     });
   } catch (error) {

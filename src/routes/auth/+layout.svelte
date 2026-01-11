@@ -13,7 +13,7 @@
 	import '../../app.css';
 	import PopupNotification from '$lib/components/PopupNotification.svelte'; 
 	import DeactivationAlert from '$lib/components/DeactivationAlert.svelte';
-	import { showDeactivationAlert } from '$lib/stores/deactivation'; 
+	import { showDeactivationAlert, hideDeactivationAlert } from '$lib/stores/deactivation'; 
 
  
 	let isMobile = false;
@@ -114,6 +114,9 @@
 							console.error('Error signing out:', error);
 						}
 					}, 3000);
+				} else {
+					// Account is active - clear any deactivation alert
+					hideDeactivationAlert();
 				}
 			}
 		} catch (error) {

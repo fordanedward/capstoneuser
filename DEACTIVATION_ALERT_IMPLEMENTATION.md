@@ -32,6 +32,13 @@ The system uses **two mechanisms** to ensure immediate detection and logout:
    - Redirected to the login page
    - Shown another alert on the login page confirming the deactivation
 
+### 3. Reactivation Handling
+If an account is **reactivated** while the user is still logged in (admin changes status back to active):
+1. The deactivation alert is **immediately hidden**
+2. Any pending logout timeout is **cancelled**
+3. User can continue using the application normally
+4. No alerts or popups appear upon reactivation
+
 ### 3. Technical Components
 
 #### Created Files:
@@ -49,16 +56,20 @@ The system uses **two mechanisms** to ensure immediate detection and logout:
 
 #### Modified Files:
 1. **`src/routes/authStore.ts`**
-   - Added import for `showDeactivationAlert`
-   - Modified the onSnapshot listener to show alert before signing out
-   - Added 3-second delay for user to see the alert
+   - Added import for `showDeactivationAlert` and `hideDeactivationAlert`
+   - Added `logoutTimeout` variable to track pending logout
+   - Modified the onSnapshot listener to:
+     - Show alert and set timeout when account becomes inactive
+     - **Hide alert and clear timeout when account becomes active**
+     - Prevent duplicate logout timeouts
 
 2. **`src/routes/auth/+layout.svelte`**
    - Added import for `DeactivationAlert` component
-   - Added import for `showDeactivationAlert` function
+   - Added import for `showDeactivationAlert` and `hideDeactivationAlert` functions
    - Included `<DeactivationAlert />` in the template
    - **Added `checkUserActiveStatus()` function** - checks Firestore for account status
    - **Added navigation-based status check** - runs on every page change via `$page` subscription
+   - **Clears alert when account is active** during navigation checks
    - Prevents deactivated users from navigating between pages
 
 ## Testing Instructions
@@ -94,13 +105,24 @@ The system uses **two mechanisms** to ensure immediate detection and logout:
 4. Return to the browser (keep it on the logged-in page)
 5. **Expected Result**: The deactivation alert should appear immediately
 6. After 3 seconds, automatic sign-out and redirect to login
-
+4: Reactivation Scenario
+1. Log in as a patient user
+2. Deactivate the account using Firebase Console or the deactivation script
+3. **Expected Result**: Deactivation alert appears
+4. **Before the 3-second timeout expires**, reactivate the account:
+   - Set `isArchived: false` in Firestore
+   - Set `status: "Active"` in Firestore
+5. **Expected Result**: 
+   - The deactivation alert should **disappear immediately**
+   - The logout should be **cancelled**
+   - User can continue using the application normally
+   - No need to refresh or take any action
 ### Test 3: Multiple Tab Scenario
 1. Log in as a patient user
 2. ODual-Layer Detection**: Real-time listener + navigation-based checks
 ✅ **Instant Navigation Block**: Cannot browse pages after deactivation
-✅ **Real-time Monitoring**: Firestore snapshot listener for background detection
-✅ **User-friendly Alert**: Beautiful modal with clear information
+✅ **Real-time Monitoring**: Firestore snapshot listener for background detection✅ **Reactivation Support**: Alert clears automatically if account is reactivated
+✅ **Smart Timeout Management**: Prevents duplicate logouts and cancels on reactivation✅ **User-friendly Alert**: Beautiful modal with clear information
 ✅ **Contact Information**: Displays support emails for assistance
 ✅ **Graceful Logout**: 3-second delay allows users to read the message
 ✅ **Multi-tab Support**: Works across all open tabs/windows
