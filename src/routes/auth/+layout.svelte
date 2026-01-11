@@ -31,6 +31,7 @@
 	export const patientId = writable<string>('');
 	let loading = writable(false);
 	let isCheckingStatus = false;
+	let navigationLogoutTimeout: ReturnType<typeof setTimeout> | null = null;
  
 	// --- Layout Logic (from TemplateComponent, adapted) ---
 	function checkLayoutMode() {
@@ -99,24 +100,36 @@
 				const userData = userDoc.data();
 				const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
 				const statusField = (userData.status || '').toString().toLowerCase();
+				const isInactive = isArchivedFlag || statusField === 'inactive';
 				
-				if (isArchivedFlag || statusField === 'inactive') {
-					// Show deactivation alert
+				if (isInactive) {
+					// Only show alert and create timeout if not already in progress
 					showDeactivationAlert();
 					
+					// Clear existing timeout to prevent duplicates
+					if (navigationLogoutTimeout) {
+						clearTimeout(navigationLogoutTimeout);
+					}
+					
 					// Wait 3 seconds before signing out
-					setTimeout(async () => {
+					navigationLogoutTimeout = setTimeout(async () => {
 						try {
 							await signOut(auth);
 							localStorage.setItem('accountDeactivated', 'true');
 							goto('/loginPatient');
 						} catch (error) {
 							console.error('Error signing out:', error);
+						} finally {
+							navigationLogoutTimeout = null;
 						}
 					}, 3000);
 				} else {
-					// Account is active - clear any deactivation alert
+					// Account is active - clear any deactivation alert and timeout
 					hideDeactivationAlert();
+					if (navigationLogoutTimeout) {
+						clearTimeout(navigationLogoutTimeout);
+						navigationLogoutTimeout = null;
+					}
 				}
 			}
 		} catch (error) {
@@ -297,6 +310,11 @@
 			window.removeEventListener('resize', checkLayoutMode);
 			if (unsubscribeAuthState) unsubscribeAuthState();
 			pageUnsubscribe();
+			// Clear navigation logout timeout if it exists
+			if (navigationLogoutTimeout) {
+				clearTimeout(navigationLogoutTimeout);
+				navigationLogoutTimeout = null;
+			}
 		};
 	});
  

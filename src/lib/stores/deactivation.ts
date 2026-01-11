@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 
 export interface DeactivationAlert {
   show: boolean;
@@ -11,15 +11,27 @@ export const deactivationAlert = writable<DeactivationAlert>({
 });
 
 export function showDeactivationAlert() {
-  deactivationAlert.set({
-    show: true,
-    message: 'Your account has been deactivated by the administrator.'
-  });
+  const current = get(deactivationAlert);
+  // Only update if not already showing to prevent unnecessary re-renders
+  if (!current.show) {
+    deactivationAlert.set({
+      show: true,
+      message: 'Your account has been deactivated by the administrator.'
+    });
+  }
 }
 
 export function hideDeactivationAlert() {
-  deactivationAlert.set({
-    show: false,
-    message: ''
-  });
+  const current = get(deactivationAlert);
+  // Only update if currently showing to prevent unnecessary re-renders
+  if (current.show) {
+    deactivationAlert.set({
+      show: false,
+      message: ''
+    });
+  }
+}
+
+export function isAlertShowing(): boolean {
+  return get(deactivationAlert).show;
 }
