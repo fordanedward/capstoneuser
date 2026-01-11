@@ -599,7 +599,6 @@
 </style>
 
 <script>
-    import VisitorCounter from '$lib/components/VisitorCounter.svelte';
     let aboutVisible = true;
 </script>
 
@@ -625,9 +624,6 @@
                     <path d="M22.675 0h-21.35C.597 0 0 .597 0 1.326v21.348C0 23.403.597 24 1.326 24h11.49v-9.294H9.692V11.08h3.124V8.41c0-3.1 1.893-4.787 4.659-4.787 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.312h3.59l-.467 3.626h-3.123V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .597 23.403 0 22.675 0z"/>
                 </svg>
             </a>
-        </div>
-        <div style="margin-top: 2rem; width: 100%; max-width: 350px; margin-left: 2rem; display: flex; justify-content: center; align-items: center;">
-            <VisitorCounter />
         </div>
     </div>
     <div class="right-section">

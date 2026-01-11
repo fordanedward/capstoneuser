@@ -69,13 +69,26 @@
                     icon: 'error',
                     title: 'Account Deactivated',
                     html: `
-                        <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account was deactivated by the administrator. Contact support for assistance.</p>
-                        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                            <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
-                            <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
+                        <p style="margin-bottom: 20px; color: #6b7280; font-size: 15px; line-height: 1.6;">Your account has been deactivated by the administrator. Contact support for help.</p>
+                        <div style="background-color: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin-top: 20px;">
+                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m2 7 10 7 10-7"></path>
+                                </svg>
+                                <span>customerservice@permanentehealthplan.org</span>
+                            </a>
+                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m2 7 10 7 10-7"></path>
+                                </svg>
+                                <span>thepermanentehealthplancorpcs@gmail.com</span>
+                            </a>
                         </div>
                     `,
-                    confirmButtonText: 'OK'
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#6366f1'
                 });
             }
         } catch (e) {
@@ -104,13 +117,26 @@
                     icon: 'error',
                     title: 'Account Inactive',
                     html: `
-                        <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account has been deactivated by the administrator. Contact support for help.</p>
-                        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                            <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
-                            <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
+                        <p style="margin-bottom: 20px; color: #6b7280; font-size: 15px; line-height: 1.6;">Your account has been deactivated by the administrator. Contact support for help.</p>
+                        <div style="background-color: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin-top: 20px;">
+                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m2 7 10 7 10-7"></path>
+                                </svg>
+                                <span>customerservice@permanentehealthplan.org</span>
+                            </a>
+                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path d="m2 7 10 7 10-7"></path>
+                                </svg>
+                                <span>thepermanentehealthplancorpcs@gmail.com</span>
+                            </a>
                         </div>
                     `,
-                    showConfirmButton: true
+                    showConfirmButton: true,
+                    confirmButtonColor: '#6366f1'
                 });
                 return false;
             }
