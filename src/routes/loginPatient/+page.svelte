@@ -105,23 +105,9 @@
                     title: 'Account Inactive',
                     html: `
                         <p style="margin-bottom: 20px; color: #374151; font-size: 15px;">Your account has been deactivated by the administrator. Contact support for help.</p>
-                        <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb; margin-bottom: 12px;">
-                            <p style="margin: 0 0 12px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=customerservice@permanentehealthplan.org" target="_blank" style="padding: 6px 12px; background-color: #4285f4; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Gmail</a>
-                                <a href="https://compose.mail.yahoo.com/?to=customerservice@permanentehealthplan.org" target="_blank" style="padding: 6px 12px; background-color: #6001d2; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Yahoo</a>
-                                <a href="https://outlook.live.com/mail/0/deeplink/compose?to=customerservice@permanentehealthplan.org" target="_blank" style="padding: 6px 12px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Outlook</a>
-                                <a href="mailto:customerservice@permanentehealthplan.org" style="padding: 6px 12px; background-color: #64748b; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Default</a>
-                            </div>
-                        </div>
                         <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                            <p style="margin: 0 0 12px 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=thepermanentehealthplancorpcs@gmail.com" target="_blank" style="padding: 6px 12px; background-color: #4285f4; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Gmail</a>
-                                <a href="https://compose.mail.yahoo.com/?to=thepermanentehealthplancorpcs@gmail.com" target="_blank" style="padding: 6px 12px; background-color: #6001d2; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Yahoo</a>
-                                <a href="https://outlook.live.com/mail/0/deeplink/compose?to=thepermanentehealthplancorpcs@gmail.com" target="_blank" style="padding: 6px 12px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Outlook</a>
-                                <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="padding: 6px 12px; background-color: #64748b; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">Default</a>
-                            </div>
+                            <p style="margin: 0 0 8px 0; color: #1e40af; font-weight: 600; font-size: 14px;">customerservice@permanentehealthplan.org</p>
+                            <p style="margin: 0; color: #1e40af; font-weight: 600; font-size: 14px;">thepermanentehealthplancorpcs@gmail.com</p>
                         </div>
                     `,
                     showConfirmButton: true

@@ -682,6 +682,7 @@ function toggleEditProfile() {
         aria-label="Edit Member Information"
         on:click|stopPropagation
         on:keydown={(e) => e.key === 'Enter' && e.stopPropagation()}
+        tabindex="0"
     >
         <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
