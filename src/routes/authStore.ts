@@ -5,6 +5,7 @@ import { getAuth } from "firebase/auth";
 import { firebaseConfig } from "$lib/firebaseConfig";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { showDeactivationAlert } from "$lib/stores/deactivation";
 
 // Initialize Firebase app (guard against double initialization)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -46,20 +47,26 @@ onAuthStateChanged(auth, async (user) => {
       const status = (data.status || '').toString().toLowerCase();
 
       if (isArchived || status === 'inactive') {
-        try {
-          await signOut(auth);
-        } catch (e) {
-          console.error('Error signing out inactive user:', e);
-        }
-        if (typeof window !== 'undefined') {
+        // Show the deactivation alert popup immediately
+        showDeactivationAlert();
+        
+        // Wait 3 seconds for user to see the alert before signing out
+        setTimeout(async () => {
           try {
-            localStorage.setItem('accountDeactivated', 'true');
-            window.location.replace('/loginPatient');
+            await signOut(auth);
           } catch (e) {
-            console.error('Error redirecting after deactivation:', e);
+            console.error('Error signing out inactive user:', e);
           }
-        }
-        currentUser.set(null);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('accountDeactivated', 'true');
+              window.location.replace('/loginPatient');
+            } catch (e) {
+              console.error('Error redirecting after deactivation:', e);
+            }
+          }
+          currentUser.set(null);
+        }, 3000);
       }
     });
   } catch (error) {

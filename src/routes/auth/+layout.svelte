@@ -12,6 +12,8 @@
 	import Swal from 'sweetalert2';
 	import '../../app.css';
 	import PopupNotification from '$lib/components/PopupNotification.svelte'; 
+	import DeactivationAlert from '$lib/components/DeactivationAlert.svelte';
+	import { showDeactivationAlert } from '$lib/stores/deactivation'; 
 
  
 	let isMobile = false;
@@ -28,6 +30,7 @@
 	export const username = writable<string>('');
 	export const patientId = writable<string>('');
 	let loading = writable(false);
+	let isCheckingStatus = false;
  
 	// --- Layout Logic (from TemplateComponent, adapted) ---
 	function checkLayoutMode() {
@@ -74,6 +77,49 @@
 	function closeSidebarMobile() {
 		if (isSidebarOpen) {
 			isSidebarOpen = false;
+		}
+	}
+
+	// Check user active status
+	async function checkUserActiveStatus() {
+		if (!browser || !auth || !app || isCheckingStatus) return;
+		
+		const currentUser = auth.currentUser;
+		if (!currentUser) return;
+		
+		isCheckingStatus = true;
+		
+		try {
+			const { getFirestore, doc, getDoc } = await import("firebase/firestore");
+			const db = getFirestore(app);
+			const userRef = doc(db, "users", currentUser.uid);
+			const userDoc = await getDoc(userRef);
+			
+			if (userDoc.exists()) {
+				const userData = userDoc.data();
+				const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
+				const statusField = (userData.status || '').toString().toLowerCase();
+				
+				if (isArchivedFlag || statusField === 'inactive') {
+					// Show deactivation alert
+					showDeactivationAlert();
+					
+					// Wait 3 seconds before signing out
+					setTimeout(async () => {
+						try {
+							await signOut(auth);
+							localStorage.setItem('accountDeactivated', 'true');
+							goto('/loginPatient');
+						} catch (error) {
+							console.error('Error signing out:', error);
+						}
+					}, 3000);
+				}
+			}
+		} catch (error) {
+			console.error('Error checking user status:', error);
+		} finally {
+			isCheckingStatus = false;
 		}
 	}
  
@@ -236,6 +282,11 @@
                  // console.log("Redirecting to login due to no user on protected route:", currentPage.url.pathname);
                  // goto('/loginPatient');
             }
+            
+            // Check user active status on every page navigation
+            if (auth && auth.currentUser) {
+            	checkUserActiveStatus();
+            }
 		});
  
 		// Cleanup function
@@ -356,6 +407,9 @@
  
 	<!-- PopupNotification Component -->
 	<PopupNotification />
+
+	<!-- DeactivationAlert Component -->
+	<DeactivationAlert />
  
 	<!-- Loading Spinner Overlay (from OriginalComponent) -->
 	{#if $loading}
