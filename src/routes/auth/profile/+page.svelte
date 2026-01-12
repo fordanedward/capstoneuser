@@ -421,58 +421,112 @@ async function savePatientProfile() {
 }
 
 function toggleEditProfile() {
-    isEditingProfile = !isEditingProfile; 
+    try {
+        isEditingProfile = !isEditingProfile; 
 
-    if (isEditingProfile) {
-        // Disable body scroll when modal opens
-        document.body.style.overflow = 'hidden';
-        
-        formPatientName = patientProfile.name || '';
-        formMiddleName = patientProfile.middleName || '';
-        formLastName = patientProfile.lastName || '';
-        formSuffix = patientProfile.suffix || '';
-        formAge = patientProfile.age || '';
-        formBirthday = patientProfile.birthday || ''; 
-        formGender = patientProfile.gender || '';
-        formEmail = patientProfile.email || '';
-        formPhone = patientProfile.phone || '';
-        formHomeAddress = patientProfile.address || '';
-        
-        // Load medical information
-        formBloodType = patientProfile.bloodType || '';
-        formAllergies = patientProfile.allergies || '';
-        formCurrentMedications = patientProfile.currentMedications || '';
-        // Deep clone to avoid modifying original data
-        medicalConditions = JSON.parse(JSON.stringify(patientProfile.medicalConditions || {
-            anemia: false, anxiety: false, arthritis: false, asthma: false,
-            bloodTransfusion: false, cancer: false, clottingDisorder: false,
-            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-        }));
-        surgicalHistory = JSON.parse(JSON.stringify(patientProfile.surgicalHistory || {
-            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-            prostateSurgery: false, weightReductionSurgery: false
-        }));
-        familyHistory = JSON.parse(JSON.stringify(patientProfile.familyHistory || {
-            mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
-        }));
-        formOtherMedicalConditions = patientProfile.otherMedicalConditions || '';
-        formOtherFamilyHistory = patientProfile.otherFamilyHistory || '';
-        formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
-        formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
-        profileImage = patientProfile.profileImage || '';
-    } else {
+        if (isEditingProfile) {
+            // Disable body scroll when modal opens
+            document.body.style.overflow = 'hidden';
+            
+            formPatientName = patientProfile.name || '';
+            formMiddleName = patientProfile.middleName || '';
+            formLastName = patientProfile.lastName || '';
+            formSuffix = patientProfile.suffix || '';
+            formAge = patientProfile.age || '';
+            formBirthday = patientProfile.birthday || ''; 
+            formGender = patientProfile.gender || '';
+            formEmail = patientProfile.email || '';
+            formPhone = patientProfile.phone || '';
+            formHomeAddress = patientProfile.address || '';
+            
+            // Load medical information
+            formBloodType = patientProfile.bloodType || '';
+            formAllergies = patientProfile.allergies || '';
+            formCurrentMedications = patientProfile.currentMedications || '';
+            
+            // Handle medicalConditions - could be array or object
+            let medConditionsData = patientProfile.medicalConditions;
+            if (Array.isArray(medConditionsData)) {
+                // If it's an array from admin registration, store as string for now
+                formOtherMedicalConditions = medConditionsData.join(', ');
+                medicalConditions = {
+                    anemia: false, anxiety: false, arthritis: false, asthma: false,
+                    bloodTransfusion: false, cancer: false, clottingDisorder: false,
+                    congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+                    emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+                    heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+                };
+            } else if (medConditionsData && typeof medConditionsData === 'object') {
+                medicalConditions = JSON.parse(JSON.stringify(medConditionsData));
+            } else {
+                medicalConditions = {
+                    anemia: false, anxiety: false, arthritis: false, asthma: false,
+                    bloodTransfusion: false, cancer: false, clottingDisorder: false,
+                    congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+                    emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+                    heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+                };
+            }
+            
+            // Handle surgicalHistory - could be string or object
+            let surgicalData = patientProfile.surgicalHistory;
+            if (typeof surgicalData === 'string') {
+                // If it's a string, it will be displayed in otherMedicalConditions
+                surgicalHistory = {
+                    appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+                    cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+                    thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+                    fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+                    jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+                    prostateSurgery: false, weightReductionSurgery: false
+                };
+            } else if (surgicalData && typeof surgicalData === 'object') {
+                surgicalHistory = JSON.parse(JSON.stringify(surgicalData));
+            } else {
+                surgicalHistory = {
+                    appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+                    cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+                    thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+                    fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+                    jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+                    prostateSurgery: false, weightReductionSurgery: false
+                };
+            }
+            
+            // Handle familyHistory - could be array or object
+            let familyData = patientProfile.familyHistory;
+            if (Array.isArray(familyData)) {
+                // If it's an array from admin registration, store as string for now
+                formOtherFamilyHistory = (patientProfile.otherFamilyHistory || '') + (patientProfile.otherFamilyHistory ? ', ' : '') + familyData.join(', ');
+                familyHistory = {
+                    mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+                };
+            } else if (familyData && typeof familyData === 'object') {
+                familyHistory = JSON.parse(JSON.stringify(familyData));
+            } else {
+                familyHistory = {
+                    mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+                    otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+                };
+            }
+            
+            formOtherMedicalConditions = formOtherMedicalConditions || patientProfile.otherMedicalConditions || '';
+            formOtherFamilyHistory = formOtherFamilyHistory || patientProfile.otherFamilyHistory || '';
+            formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
+            formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
+            profileImage = patientProfile.profileImage || '';
+        } else {
         // Re-enable body scroll when modal closes
         document.body.style.overflow = '';
         
@@ -522,6 +576,16 @@ function toggleEditProfile() {
             son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
             otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
         };
+    }
+    } catch (error) {
+        console.error("Error in toggleEditProfile:", error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error Loading Profile',
+            text: 'There was an error loading your profile data for editing. Please try again or contact support.'
+        });
+        isEditingProfile = false;
+        document.body.style.overflow = '';
     }
 }
 
