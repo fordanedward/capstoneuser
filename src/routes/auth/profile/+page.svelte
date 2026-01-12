@@ -200,72 +200,57 @@
         return result;
     }
 
-    // Helper function to normalize medical conditions from array to object format
-    function normalizeMedicalConditions(data: any): Record<string, boolean> {
-        console.log("Normalizing medical conditions, input:", data);
+    // Generic normalization function to handle array/string/object formats
+    // Note: Debug logging is intentional for troubleshooting admin-created profile issues
+    function normalizeDataStructure<T extends Record<string, any>>(
+        data: any, 
+        defaultObj: T, 
+        dataType: string
+    ): T {
+        console.log(`Normalizing ${dataType}, input:`, data);
         
         if (!data) {
-            return { ...DEFAULT_MEDICAL_CONDITIONS };
+            return { ...defaultObj };
         }
         
-        // If data is already an object with boolean values, return it
+        // If data is already an object (not array), return it
         if (typeof data === 'object' && !Array.isArray(data)) {
-            console.log("Medical conditions already in object format");
+            console.log(`${dataType} already in object format`);
             return data;
         }
         
         // If data is an array, convert to object format
         if (Array.isArray(data)) {
-            console.log("Converting medical conditions from array to object format");
-            const normalized = arrayToObjectWithBooleans(data, DEFAULT_MEDICAL_CONDITIONS);
-            console.log("Normalized medical conditions:", normalized);
-            return normalized;
+            console.log(`Converting ${dataType} from array to object format`);
+            const normalized = arrayToObjectWithBooleans(data, defaultObj as Record<string, boolean>);
+            console.log(`Normalized ${dataType}:`, normalized);
+            return normalized as T;
         }
         
         // If data is a string (comma-separated), parse it
         if (typeof data === 'string') {
-            console.log("Converting medical conditions from string to object format");
-            return arrayToObjectWithBooleans(data.split(','), DEFAULT_MEDICAL_CONDITIONS);
+            console.log(`Converting ${dataType} from string to object format`);
+            return arrayToObjectWithBooleans(data.split(','), defaultObj as Record<string, boolean>) as T;
         }
         
-        console.log("Returning default medical conditions");
-        return { ...DEFAULT_MEDICAL_CONDITIONS };
+        console.log(`Returning default ${dataType}`);
+        return { ...defaultObj };
+    }
+
+    // Helper function to normalize medical conditions from array to object format
+    function normalizeMedicalConditions(data: any): Record<string, boolean> {
+        return normalizeDataStructure(data, DEFAULT_MEDICAL_CONDITIONS, 'medical conditions');
     }
 
     // Helper function to normalize surgical history from array/string to object format
     function normalizeSurgicalHistory(data: any): Record<string, boolean> {
-        console.log("Normalizing surgical history, input:", data);
-        
-        if (!data) {
-            return { ...DEFAULT_SURGICAL_HISTORY };
-        }
-        
-        // If data is already an object with boolean values, return it
-        if (typeof data === 'object' && !Array.isArray(data)) {
-            console.log("Surgical history already in object format");
-            return data;
-        }
-        
-        // If data is an array, convert to object format
-        if (Array.isArray(data)) {
-            console.log("Converting surgical history from array to object format");
-            const normalized = arrayToObjectWithBooleans(data, DEFAULT_SURGICAL_HISTORY);
-            console.log("Normalized surgical history:", normalized);
-            return normalized;
-        }
-        
-        // If data is a string (comma-separated), parse it
-        if (typeof data === 'string') {
-            console.log("Converting surgical history from string to object format");
-            return arrayToObjectWithBooleans(data.split(','), DEFAULT_SURGICAL_HISTORY);
-        }
-        
-        console.log("Returning default surgical history");
-        return { ...DEFAULT_SURGICAL_HISTORY };
+        return normalizeDataStructure(data, DEFAULT_SURGICAL_HISTORY, 'surgical history');
     }
 
     // Helper function to normalize family history from array to object format
-    function normalizeFamilyHistory(data: any): any {
+    type FamilyHistoryStructure = Record<string, Record<string, boolean>>;
+    
+    function normalizeFamilyHistory(data: any): FamilyHistoryStructure {
         console.log("Normalizing family history, input:", data);
         
         if (!data) {
@@ -578,6 +563,7 @@ async function savePatientProfile() {
 }
 
 function toggleEditProfile() {
+    // Note: Console logging is intentional for debugging admin-created profile issues
     console.log("=== toggleEditProfile called ===");
     console.log("Current isEditingProfile state:", isEditingProfile);
     console.log("Patient profile data:", patientProfile);
