@@ -306,6 +306,16 @@
                 // Mark all loaded notifications as already seen FIRST
                 loadedNotifications.forEach((n: PopupNotification) => {
                     seenPopupIds.add(n.id);
+                    
+                    // Also populate seenAppointmentStatuses to prevent re-creation
+                    if (n.id.startsWith('appt-')) {
+                        const parts = n.id.split('-');
+                        if (parts.length >= 3) {
+                            const apptId = parts[1];
+                            const statusType = parts.slice(2).join('-');
+                            seenAppointmentStatuses.add(`${apptId}_${statusType}`);
+                        }
+                    }
                 });
                 
                 // Then set the notifications
@@ -409,6 +419,9 @@
                                 const statusType = parts.slice(2).join('-');
                                 seenAppointmentStatuses.add(`${apptId}_${statusType}`);
                             }
+                        }
+                        if (n.id.startsWith('chat-')) {
+                            lastProcessedMessageId = n.id.replace('chat-', '');
                         }
                     });
                     // Save the merged seen popup IDs
@@ -623,8 +636,8 @@
             <div class="dropdown-header">
                 <h3>Notifications</h3>
                 {#if notifications.length > 0}
-                    <button class="clear-btn" on:click={clearAll}>
-                        Clear All
+                    <button class="clear-btn" on:click={markAllAsRead}>
+                        Mark All as Read
                     </button>
                 {/if}
             </div>
