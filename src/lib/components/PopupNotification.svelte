@@ -144,7 +144,8 @@
         popupNotifications.update(notifs => {
             const idx = notifs.findIndex(n => n.id === notif.id);
             if (idx >= 0) {
-                notifs[idx] = notif;
+                // Preserve the read status when updating existing notification
+                notifs[idx] = { ...notif, read: notifs[idx].read };
             } else {
                 notifs = [notif, ...notifs];
             }
