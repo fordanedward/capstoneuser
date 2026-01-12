@@ -29,7 +29,7 @@
     let showPassword = false;
     let rememberMe = false;
 
-    // identifier (Patient ID) npte: instead of a member's email, we allow login via Patient ID
+    // identifier (Member ID) npte: instead of a member's email, we allow login via Member ID
 
     type ToastTypeFB = 'info' | 'success' | 'warning' | 'error'; 
     let toastVisibleFB: boolean = false;
@@ -202,11 +202,11 @@
             return;
         }
 
-        // Determine if identifier is an email or a patient ID
+        // Determine if identifier is an email or a Member ID
         let resolvedEmail: string | null = null;
         const input = identifier.trim();
         if (!input) {
-            Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your Email or Patient ID.', showConfirmButton: true });
+            Swal.fire({ icon: 'warning', title: 'Input Required', text: 'Please enter your Email or Member ID.', showConfirmButton: true });
             return;
         }
         const looksLikeEmail = /.+@.+\..+/.test(input);
@@ -281,7 +281,7 @@
                         Swal.fire({ 
                             icon: 'error', 
                             title: 'Configuration Error', 
-                            text: 'Patient ID login is not properly configured. Please use email login or contact support.', 
+                            text: 'Member ID login is not properly configured. Please use email login or contact support.', 
                             showConfirmButton: true 
                         });
                         return;
@@ -294,7 +294,7 @@
                     if (cleanupAnon) {
                         try { await signOut(auth); } catch {}
                     }
-                    Swal.fire({ icon: 'error', title: 'Patient ID Not Found', text: 'Please check your Patient ID and try again.', showConfirmButton: true });
+                    Swal.fire({ icon: 'error', title: 'Member ID Not Found', text: 'Please check your Member ID and try again.', showConfirmButton: true });
                     return;
                 }
                 const userDoc = snap.docs[0];
@@ -322,7 +322,7 @@
                     if (cleanupAnon) {
                         try { await signOut(auth); } catch {}
                     }
-                    Swal.fire({ icon: 'error', title: 'Login Unavailable', text: 'Could not resolve your login email from Patient ID. Please contact support.', showConfirmButton: true });
+                    Swal.fire({ icon: 'error', title: 'Login Unavailable', text: 'Could not resolve your login email from Member ID. Please contact support.', showConfirmButton: true });
                     return;
                 }
                 // Sign out anonymous session before real login
@@ -330,8 +330,8 @@
                     try { await signOut(auth); } catch {}
                 }
             } catch (lookupErr) {
-                console.error('Patient ID lookup error:', lookupErr);
-                Swal.fire({ icon: 'error', title: 'Login Failed', text: 'Unable to verify Patient ID. Please try again later.', showConfirmButton: true });
+                console.error('Member ID lookup error:', lookupErr);
+                Swal.fire({ icon: 'error', title: 'Login Failed', text: 'Unable to verify Member ID. Please try again later.', showConfirmButton: true });
                 return;
             }
         }
@@ -341,15 +341,16 @@
         try {
             const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail!, password);
             await processSuccessfulLogin(userCredential.user, 'password');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error during login:', error);
             let errorMessage = 'An error occurred. Please try again.';
             if (error.code) {
+                const looksLikeEmail = /.+@.+\..+/.test(identifier.trim());
                 switch (error.code) {
                     case 'auth/invalid-credential':
                     case 'auth/user-not-found':
                     case 'auth/wrong-password':
-                        errorMessage = loginMode === 'email' ? 'Invalid email or password. Please try again.' : 'Invalid Patient ID or password. Please try again.';
+                        errorMessage = looksLikeEmail ? 'Invalid email or password. Please try again.' : 'Invalid Member ID or password. Please try again.';
                         break;
                     case 'auth/invalid-email':
                         errorMessage = 'The email address is not valid.';
@@ -527,11 +528,11 @@
         <div class="login-form {isPageLoaded ? 'loaded' : ''}">
             <form on:submit|preventDefault={handleLogin}>
                 <div class="form-field {isPageLoaded ? 'loaded' : ''} mb-6">
-                    <Label for="identifier" class="block mb-2 text-sm font-medium text-gray-700">Patient ID</Label>
+                    <Label for="identifier" class="block mb-2 text-sm font-medium text-gray-700">Member ID</Label>
                     <Input
                         type="text"
                         id="identifier"
-                        placeholder="Enter your patient ID"
+                        placeholder="Enter your Member ID"
                         class="border border-gray-300 rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         bind:value={identifier}
                         required

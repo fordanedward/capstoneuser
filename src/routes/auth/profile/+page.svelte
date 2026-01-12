@@ -3,7 +3,7 @@
     import { getFirestore, setDoc, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
-    import { getAuth, onAuthStateChanged } from "firebase/auth";
+    import { getAuth, onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
     import type { User } from "firebase/auth";
     import Swal from 'sweetalert2';
 
@@ -27,6 +27,12 @@
     // Add new state for profile image
     let profileImage: string = '';
     let isUploading = false;
+
+    // Password change state variables
+    let currentPassword = "";
+    let newPassword = "";
+    let confirmNewPassword = "";
+    let showPasswordSection = false;
 
     // Medical Information state variables
     let formBloodType = "";
@@ -420,6 +426,98 @@ async function savePatientProfile() {
     }
 }
 
+async function changePassword() {
+    if (!currentUser) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Not Logged In',
+            text: 'Please log in to change your password.'
+        });
+        return;
+    }
+
+    // Validate password fields
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Information',
+            text: 'Please fill in all password fields.'
+        });
+        return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Passwords Do Not Match',
+            text: 'New password and confirmation do not match.'
+        });
+        return;
+    }
+
+    if (newPassword.length < 6) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Weak Password',
+            text: 'Password must be at least 6 characters long.'
+        });
+        return;
+    }
+
+    if (newPassword === currentPassword) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Same Password',
+            text: 'New password must be different from current password.'
+        });
+        return;
+    }
+
+    try {
+        // Reauthenticate user before changing password
+        const credential = EmailAuthProvider.credential(
+            currentUser.email!,
+            currentPassword
+        );
+        
+        await reauthenticateWithCredential(currentUser, credential);
+        
+        // Update password
+        await updatePassword(currentUser, newPassword);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Password Changed',
+            text: 'Your password has been updated successfully.'
+        });
+        
+        // Clear password fields
+        currentPassword = "";
+        newPassword = "";
+        confirmNewPassword = "";
+        showPasswordSection = false;
+        
+    } catch (error: any) {
+        console.error("Error changing password:", error);
+        
+        let errorMessage = 'Failed to change password. Please try again.';
+        
+        if (error.code === 'auth/wrong-password') {
+            errorMessage = 'Current password is incorrect.';
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = 'New password is too weak.';
+        } else if (error.code === 'auth/requires-recent-login') {
+            errorMessage = 'Please log out and log back in before changing your password.';
+        }
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: errorMessage
+        });
+    }
+}
+
 function toggleEditProfile() {
     try {
         isEditingProfile = !isEditingProfile; 
@@ -550,6 +648,12 @@ function toggleEditProfile() {
         formBloodTransfusionHistory = "";
         formBloodTransfusionDate = "";
         profileImage = "";
+        
+        // Reset password fields
+        currentPassword = "";
+        newPassword = "";
+        confirmNewPassword = "";
+        showPasswordSection = false;
         
         // Reset medical condition objects to defaults
         medicalConditions = {
@@ -1173,6 +1277,82 @@ function toggleEditProfile() {
                         </tbody>
                     </table>
                 </div>
+            </div>
+            
+            <!-- Password Change Section -->
+            <div class="form-section">
+                <div class="password-section-header">
+                    <h4 class="section-subtitle">Change Password</h4>
+                    <button 
+                        type="button" 
+                        class="toggle-password-btn"
+                        on:click={() => showPasswordSection = !showPasswordSection}
+                    >
+                        {showPasswordSection ? 'Hide' : 'Show'}
+                        <i class="fas {showPasswordSection ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
+                    </button>
+                </div>
+                
+                {#if showPasswordSection}
+                    <div class="password-change-content">
+                        <p class="password-info">
+                            <i class="fas fa-info-circle"></i>
+                            For security reasons, you'll need to enter your current password to set a new one.
+                        </p>
+                        
+                        <div class="input-grid">
+                            <div class="form-group">
+                                <label for="currentPassword">
+                                    Current Password <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="password" 
+                                    id="currentPassword" 
+                                    bind:value={currentPassword}
+                                    placeholder="Enter current password"
+                                    autocomplete="current-password"
+                                />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="newPassword">
+                                    New Password <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="password" 
+                                    id="newPassword" 
+                                    bind:value={newPassword}
+                                    placeholder="At least 6 characters"
+                                    autocomplete="new-password"
+                                />
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="confirmNewPassword">
+                                    Confirm New Password <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="password" 
+                                    id="confirmNewPassword" 
+                                    bind:value={confirmNewPassword}
+                                    placeholder="Re-enter new password"
+                                    autocomplete="new-password"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div class="password-action-container">
+                            <button 
+                                type="button" 
+                                class="change-password-btn"
+                                on:click={changePassword}
+                            >
+                                <i class="fas fa-key"></i>
+                                Change Password
+                            </button>
+                        </div>
+                    </div>
+                {/if}
             </div>
             
             <!-- Other Medical Information Section -->
@@ -2115,6 +2295,118 @@ function toggleEditProfile() {
 
         .family-member-label {
             font-size: 0.85rem;
+        }
+    }
+
+    /* Password Change Section Styles */
+    .password-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0;
+    }
+
+    .toggle-password-btn {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all var(--transition-speed) ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .toggle-password-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(30, 58, 102, 0.3);
+    }
+
+    .password-change-content {
+        margin-top: 16px;
+        padding: 20px;
+        background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 8px;
+        border: 2px solid var(--medium-gray);
+    }
+
+    .password-info {
+        background: linear-gradient(to right, #fff3cd 0%, #fff8e1 100%);
+        border-left: 4px solid #ffc107;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+        color: #856404;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .password-info i {
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .password-action-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .change-password-btn {
+        background: #172f85;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 2px 8px rgba(23, 47, 133, 0.3);
+    }
+
+    .change-password-btn:hover {
+        background: #1a3592;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(23, 47, 133, 0.4);
+    }
+
+    .change-password-btn i {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 640px) {
+        .password-section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .toggle-password-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .password-change-content {
+            padding: 16px;
+        }
+
+        .password-action-container {
+            width: 100%;
+        }
+
+        .change-password-btn {
+            width: 100%;
+            justify-content: center;
         }
     }
 
