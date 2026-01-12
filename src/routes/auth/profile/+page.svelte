@@ -427,16 +427,16 @@ function toggleEditProfile() {
         // Disable body scroll when modal opens
         document.body.style.overflow = 'hidden';
         
-        formPatientName = patientProfile.name;
+        formPatientName = patientProfile.name || '';
         formMiddleName = patientProfile.middleName || '';
-        formLastName = patientProfile.lastName;
+        formLastName = patientProfile.lastName || '';
         formSuffix = patientProfile.suffix || '';
-        formAge = patientProfile.age;
-        formBirthday = patientProfile.birthday; 
-        formGender = patientProfile.gender;
-        formEmail = patientProfile.email;
-        formPhone = patientProfile.phone;
-        formHomeAddress = patientProfile.address;
+        formAge = patientProfile.age || '';
+        formBirthday = patientProfile.birthday || ''; 
+        formGender = patientProfile.gender || '';
+        formEmail = patientProfile.email || '';
+        formPhone = patientProfile.phone || '';
+        formHomeAddress = patientProfile.address || '';
         
         // Load medical information
         formBloodType = patientProfile.bloodType || '';
@@ -596,8 +596,13 @@ function toggleEditProfile() {
                     <i class="fas fa-user"></i>
                 </div>
             {/if}
-            <!-- svelte-ignore a11y_consider_explicit_label -->
-            <button class="edit-pen-btn" on:click={toggleEditProfile} title="Edit Profile">
+            <button 
+                class="edit-pen-btn" 
+                on:click={toggleEditProfile} 
+                title="Edit Profile"
+                aria-label="Edit Profile"
+                type="button"
+            >
                 <i class="fas fa-pen"></i>
             </button>
         </div>
@@ -1819,14 +1824,18 @@ function toggleEditProfile() {
         justify-content: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.25);
         cursor: pointer;
-        z-index: 3;
+        z-index: 10;
         transition: all var(--transition-speed) ease;
         font-size: 1.1rem;
+        pointer-events: auto;
     }
     .edit-pen-btn:hover {
         background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
         transform: scale(1.1) rotate(15deg);
         box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    }
+    .edit-pen-btn:active {
+        transform: scale(0.95);
     }
     @media (max-width: 768px) {
         .profile-image-container {
