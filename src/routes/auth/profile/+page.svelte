@@ -33,6 +33,9 @@
     let newPassword = "";
     let confirmNewPassword = "";
     let showPasswordSection = false;
+    let showCurrentPassword = false;
+    let showNewPassword = false;
+    let showConfirmNewPassword = false;
 
     // Medical Information state variables
     let formBloodType = "";
@@ -1334,39 +1337,69 @@ function toggleEditProfile() {
                                 <label for="currentPassword">
                                     Current Password <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="password" 
-                                    id="currentPassword" 
-                                    bind:value={currentPassword}
-                                    placeholder="Enter current password"
-                                    autocomplete="current-password"
-                                />
+                                <div class="password-input-container">
+                                    <input 
+                                        type={showCurrentPassword ? "text" : "password"}
+                                        id="currentPassword" 
+                                        bind:value={currentPassword}
+                                        placeholder="Enter current password"
+                                        autocomplete="current-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="toggle-visibility-btn"
+                                        on:click={() => showCurrentPassword = !showCurrentPassword}
+                                        aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <i class="fas {showCurrentPassword ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="form-group">
                                 <label for="newPassword">
                                     New Password <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="password" 
-                                    id="newPassword" 
-                                    bind:value={newPassword}
-                                    placeholder="At least 6 characters"
-                                    autocomplete="new-password"
-                                />
+                                <div class="password-input-container">
+                                    <input 
+                                        type={showNewPassword ? "text" : "password"}
+                                        id="newPassword" 
+                                        bind:value={newPassword}
+                                        placeholder="At least 6 characters"
+                                        autocomplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="toggle-visibility-btn"
+                                        on:click={() => showNewPassword = !showNewPassword}
+                                        aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <i class="fas {showNewPassword ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="form-group">
                                 <label for="confirmNewPassword">
                                     Confirm New Password <span class="required">*</span>
                                 </label>
-                                <input 
-                                    type="password" 
-                                    id="confirmNewPassword" 
-                                    bind:value={confirmNewPassword}
-                                    placeholder="Re-enter new password"
-                                    autocomplete="new-password"
-                                />
+                                <div class="password-input-container">
+                                    <input 
+                                        type={showConfirmNewPassword ? "text" : "password"}
+                                        id="confirmNewPassword" 
+                                        bind:value={confirmNewPassword}
+                                        placeholder="Re-enter new password"
+                                        autocomplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        class="toggle-visibility-btn"
+                                        on:click={() => showConfirmNewPassword = !showConfirmNewPassword}
+                                        aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
+                                    >
+                                        <i class="fas {showConfirmNewPassword ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         
@@ -2382,6 +2415,43 @@ function toggleEditProfile() {
 
     .change-password-btn i {
         font-size: 1.1rem;
+    }
+
+    .password-input-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    .password-input-container input {
+        width: 100%;
+        padding-right: 40px;
+    }
+
+    .toggle-visibility-btn {
+        position: absolute;
+        right: 12px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #1e3a66;
+        font-size: 1.1rem;
+        padding: 6px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s ease;
+    }
+
+    .toggle-visibility-btn:hover {
+        color: #172f85;
+    }
+
+    .toggle-visibility-btn:focus {
+        outline: 2px solid #172f85;
+        outline-offset: 2px;
+        border-radius: 4px;
     }
 
     @media (max-width: 640px) {
