@@ -263,9 +263,8 @@
     
     function toggleDropdown() {
         isDropdownOpen = !isDropdownOpen;
-        if (isDropdownOpen) {
-            markAllAsRead();
-        }
+        // Don't automatically mark all as read when opening dropdown
+        // User needs to tap individual notifications to mark them as read
     }
     
     function markAllAsRead() {
@@ -1032,11 +1031,18 @@
     }
     
     .notification-item.unread {
-        background: rgba(59, 130, 246, 0.05);
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+        border-left: 3px solid #3b82f6;
+    }
+    
+    .notification-item.read {
+        background: white;
+        opacity: 0.85;
     }
     
     .notification-item:hover {
         background: #f9fafb;
+        opacity: 1;
     }
     
     .item-icon {
