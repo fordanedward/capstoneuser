@@ -153,18 +153,59 @@
     let isArchived: boolean = false;
     $: accountStatus = isArchived ? 'Inactive' : 'Active';
 
+    // Default medical data structures as constants
+    const DEFAULT_MEDICAL_CONDITIONS = {
+        anemia: false, anxiety: false, arthritis: false, asthma: false,
+        bloodTransfusion: false, cancer: false, clottingDisorder: false,
+        congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+        emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+        heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+    };
+
+    const DEFAULT_SURGICAL_HISTORY = {
+        appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+        cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+        thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+        fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+        jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+        prostateSurgery: false, weightReductionSurgery: false
+    };
+
+    const DEFAULT_FAMILY_MEMBER = {
+        alcoholAbuse: false, breastCancer: false, ovarianCancer: false,
+        prostateCancer: false, otherCancer: false, diabetes: false,
+        heartDisease: false, highCholesterol: false, hypertension: false,
+        mentalIllness: false
+    };
+
+    const DEFAULT_FAMILY_HISTORY = {
+        mother: { ...DEFAULT_FAMILY_MEMBER },
+        father: { ...DEFAULT_FAMILY_MEMBER },
+        sister: { ...DEFAULT_FAMILY_MEMBER },
+        brother: { ...DEFAULT_FAMILY_MEMBER },
+        daughter: { ...DEFAULT_FAMILY_MEMBER },
+        son: { ...DEFAULT_FAMILY_MEMBER },
+        otherRelative: { ...DEFAULT_FAMILY_MEMBER }
+    };
+
+    // Helper function to convert array/string to object with boolean properties
+    function arrayToObjectWithBooleans(items: string[], defaultObj: Record<string, boolean>): Record<string, boolean> {
+        const result = { ...defaultObj };
+        items.forEach((item: string) => {
+            const key = item.trim();
+            if (key in result) {
+                result[key] = true;
+            }
+        });
+        return result;
+    }
+
     // Helper function to normalize medical conditions from array to object format
-    function normalizeMedicalConditions(data: any): any {
+    function normalizeMedicalConditions(data: any): Record<string, boolean> {
         console.log("Normalizing medical conditions, input:", data);
         
         if (!data) {
-            return {
-                anemia: false, anxiety: false, arthritis: false, asthma: false,
-                bloodTransfusion: false, cancer: false, clottingDisorder: false,
-                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-            };
+            return { ...DEFAULT_MEDICAL_CONDITIONS };
         }
         
         // If data is already an object with boolean values, return it
@@ -176,21 +217,7 @@
         // If data is an array, convert to object format
         if (Array.isArray(data)) {
             console.log("Converting medical conditions from array to object format");
-            const normalized: any = {
-                anemia: false, anxiety: false, arthritis: false, asthma: false,
-                bloodTransfusion: false, cancer: false, clottingDisorder: false,
-                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-            };
-            
-            data.forEach((condition: string) => {
-                const key = condition.trim();
-                if (key in normalized) {
-                    normalized[key] = true;
-                }
-            });
-            
+            const normalized = arrayToObjectWithBooleans(data, DEFAULT_MEDICAL_CONDITIONS);
             console.log("Normalized medical conditions:", normalized);
             return normalized;
         }
@@ -198,47 +225,19 @@
         // If data is a string (comma-separated), parse it
         if (typeof data === 'string') {
             console.log("Converting medical conditions from string to object format");
-            const normalized: any = {
-                anemia: false, anxiety: false, arthritis: false, asthma: false,
-                bloodTransfusion: false, cancer: false, clottingDisorder: false,
-                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-            };
-            
-            data.split(',').forEach((condition: string) => {
-                const key = condition.trim();
-                if (key in normalized) {
-                    normalized[key] = true;
-                }
-            });
-            
-            return normalized;
+            return arrayToObjectWithBooleans(data.split(','), DEFAULT_MEDICAL_CONDITIONS);
         }
         
         console.log("Returning default medical conditions");
-        return {
-            anemia: false, anxiety: false, arthritis: false, asthma: false,
-            bloodTransfusion: false, cancer: false, clottingDisorder: false,
-            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-        };
+        return { ...DEFAULT_MEDICAL_CONDITIONS };
     }
 
     // Helper function to normalize surgical history from array/string to object format
-    function normalizeSurgicalHistory(data: any): any {
+    function normalizeSurgicalHistory(data: any): Record<string, boolean> {
         console.log("Normalizing surgical history, input:", data);
         
         if (!data) {
-            return {
-                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-                prostateSurgery: false, weightReductionSurgery: false
-            };
+            return { ...DEFAULT_SURGICAL_HISTORY };
         }
         
         // If data is already an object with boolean values, return it
@@ -250,22 +249,7 @@
         // If data is an array, convert to object format
         if (Array.isArray(data)) {
             console.log("Converting surgical history from array to object format");
-            const normalized: any = {
-                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-                prostateSurgery: false, weightReductionSurgery: false
-            };
-            
-            data.forEach((surgery: string) => {
-                const key = surgery.trim();
-                if (key in normalized) {
-                    normalized[key] = true;
-                }
-            });
-            
+            const normalized = arrayToObjectWithBooleans(data, DEFAULT_SURGICAL_HISTORY);
             console.log("Normalized surgical history:", normalized);
             return normalized;
         }
@@ -273,59 +257,19 @@
         // If data is a string (comma-separated), parse it
         if (typeof data === 'string') {
             console.log("Converting surgical history from string to object format");
-            const normalized: any = {
-                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-                prostateSurgery: false, weightReductionSurgery: false
-            };
-            
-            data.split(',').forEach((surgery: string) => {
-                const key = surgery.trim();
-                if (key in normalized) {
-                    normalized[key] = true;
-                }
-            });
-            
-            return normalized;
+            return arrayToObjectWithBooleans(data.split(','), DEFAULT_SURGICAL_HISTORY);
         }
         
         console.log("Returning default surgical history");
-        return {
-            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-            prostateSurgery: false, weightReductionSurgery: false
-        };
+        return { ...DEFAULT_SURGICAL_HISTORY };
     }
 
     // Helper function to normalize family history from array to object format
     function normalizeFamilyHistory(data: any): any {
         console.log("Normalizing family history, input:", data);
         
-        const defaultFamilyMember = {
-            alcoholAbuse: false, breastCancer: false, ovarianCancer: false,
-            prostateCancer: false, otherCancer: false, diabetes: false,
-            heartDisease: false, highCholesterol: false, hypertension: false,
-            mentalIllness: false
-        };
-        
-        const defaultFamilyHistory = {
-            mother: { ...defaultFamilyMember },
-            father: { ...defaultFamilyMember },
-            sister: { ...defaultFamilyMember },
-            brother: { ...defaultFamilyMember },
-            daughter: { ...defaultFamilyMember },
-            son: { ...defaultFamilyMember },
-            otherRelative: { ...defaultFamilyMember }
-        };
-        
         if (!data) {
-            return defaultFamilyHistory;
+            return { ...DEFAULT_FAMILY_HISTORY };
         }
         
         // If data is already in the correct object format, return it
@@ -340,11 +284,11 @@
             console.log("Converting family history from array to object format");
             // For now, just return the default structure
             // In a real scenario, you might need to parse specific conditions
-            return defaultFamilyHistory;
+            return { ...DEFAULT_FAMILY_HISTORY };
         }
         
         console.log("Returning default family history");
-        return defaultFamilyHistory;
+        return { ...DEFAULT_FAMILY_HISTORY };
     }
 
 onMount(() => {
