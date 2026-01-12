@@ -32,6 +32,8 @@
 	let loading = writable(false);
 	let isCheckingStatus = false;
 	let navigationLogoutTimeout: ReturnType<typeof setTimeout> | null = null;
+	let lastStatusCheckResult: 'active' | 'inactive' | null = null;
+	let lastStatusCheckTime = 0;
  
 	// --- Layout Logic (from TemplateComponent, adapted) ---
 	function checkLayoutMode() {
@@ -88,6 +90,12 @@
 		const currentUser = auth.currentUser;
 		if (!currentUser) return;
 		
+		// Skip check if we verified the account is active very recently (within 2 seconds)
+		const now = Date.now();
+		if (lastStatusCheckResult === 'active' && (now - lastStatusCheckTime) < 2000) {
+			return;
+		}
+		
 		isCheckingStatus = true;
 		
 		try {
@@ -102,8 +110,23 @@
 				const statusField = (userData.status || '').toString().toLowerCase();
 				const isInactive = isArchivedFlag || statusField === 'inactive';
 				
-				if (isInactive) {
-					// Only show alert and create timeout if not already in progress
+				// Update cache
+				lastStatusCheckResult = isInactive ? 'inactive' : 'active';
+				lastStatusCheckTime = now;
+				
+				// Check status FIRST, then decide what to do
+				if (!isInactive) {
+					// Account is active - ONLY clear alert if it's currently showing
+					// Don't show anything, just cleanup
+					hideDeactivationAlert();
+					if (navigationLogoutTimeout) {
+						clearTimeout(navigationLogoutTimeout);
+						navigationLogoutTimeout = null;
+					}
+				} else {
+					// Account is inactive - show alert only if not already handled
+					// The real-time listener in authStore should handle this primarily
+					// This is a backup check
 					showDeactivationAlert();
 					
 					// Clear existing timeout to prevent duplicates
@@ -123,13 +146,6 @@
 							navigationLogoutTimeout = null;
 						}
 					}, 3000);
-				} else {
-					// Account is active - clear any deactivation alert and timeout
-					hideDeactivationAlert();
-					if (navigationLogoutTimeout) {
-						clearTimeout(navigationLogoutTimeout);
-						navigationLogoutTimeout = null;
-					}
 				}
 			}
 		} catch (error) {
