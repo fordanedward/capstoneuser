@@ -69,16 +69,17 @@
                     icon: 'error',
                     title: 'Account Deactivated',
                     html: `
-                        <p style="margin-bottom: 20px; color: #6b7280; font-size: 15px; line-height: 1.6;">Your account has been deactivated by the administrator. Contact support for help.</p>
-                        <div style="background-color: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin-top: 20px;">
-                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                        <p style="margin-bottom: 12px; color: #4b5563; font-size: 15px; line-height: 1.6;">Your account was deactivated by the administrator.</p>
+                        <p style="margin-bottom: 24px; color: #6b7280; font-size: 14px;">Contact support for assistance.</p>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
+                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: #2563eb; font-size: 14px;" onmouseover="this.style.color='#1e40af'" onmouseout="this.style.color='#2563eb'">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
                                     <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                                     <path d="m2 7 10 7 10-7"></path>
                                 </svg>
                                 <span>customerservice@permanentehealthplan.org</span>
                             </a>
-                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: #2563eb; font-size: 14px;" onmouseover="this.style.color='#1e40af'" onmouseout="this.style.color='#2563eb'">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
                                     <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                                     <path d="m2 7 10 7 10-7"></path>
@@ -117,16 +118,17 @@
                     icon: 'error',
                     title: 'Account Inactive',
                     html: `
-                        <p style="margin-bottom: 20px; color: #6b7280; font-size: 15px; line-height: 1.6;">Your account has been deactivated by the administrator. Contact support for help.</p>
-                        <div style="background-color: #f3f4f6; padding: 16px 20px; border-radius: 8px; margin-top: 20px;">
-                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                        <p style="margin-bottom: 12px; color: #4b5563; font-size: 15px; line-height: 1.6;">Your account was deactivated by the administrator.</p>
+                        <p style="margin-bottom: 24px; color: #6b7280; font-size: 14px;">Contact support for assistance.</p>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px;">
+                            <a href="mailto:customerservice@permanentehealthplan.org" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: #2563eb; font-size: 14px;" onmouseover="this.style.color='#1e40af'" onmouseout="this.style.color='#2563eb'">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
                                     <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                                     <path d="m2 7 10 7 10-7"></path>
                                 </svg>
                                 <span>customerservice@permanentehealthplan.org</span>
                             </a>
-                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; color: #1e40af; font-size: 14px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'">
+                            <a href="mailto:thepermanentehealthplancorpcs@gmail.com" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: #2563eb; font-size: 14px;" onmouseover="this.style.color='#1e40af'" onmouseout="this.style.color='#2563eb'">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
                                     <rect x="2" y="4" width="20" height="16" rx="2"></rect>
                                     <path d="m2 7 10 7 10-7"></path>
