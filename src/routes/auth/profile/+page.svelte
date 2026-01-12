@@ -682,7 +682,7 @@ function toggleEditProfile() {
         on:keydown={(e) => e.key === 'Escape' && toggleEditProfile()}
         tabindex="-1"
     >
-    <div class="profile-form-container slide-down" 
+        <div class="profile-form-container slide-down" 
         role="dialog"
         aria-label="Edit Member Information"
         on:click|stopPropagation
