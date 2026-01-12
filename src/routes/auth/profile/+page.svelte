@@ -1279,6 +1279,35 @@ function toggleEditProfile() {
                 </div>
             </div>
             
+            <!-- Other Medical Information Section -->
+            <div class="form-section">
+                <h4 class="section-subtitle">Other Medical Information</h4>
+                <div class="form-group full-width">
+                    <label for="otherMedicalConditions">Other Medical Conditions (specify)</label>
+                    <textarea id="otherMedicalConditions" bind:value={formOtherMedicalConditions} placeholder="Specify any other medical conditions" rows="3"></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label for="otherFamilyHistory">Other family history</label>
+                    <textarea id="otherFamilyHistory" bind:value={formOtherFamilyHistory} placeholder="Specify other family history" rows="3"></textarea>
+                </div>
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label for="bloodTransfusionHistory">Have you ever had blood transfusion?</label>
+                        <select id="bloodTransfusionHistory" bind:value={formBloodTransfusionHistory}>
+                            <option value="">Select</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    {#if formBloodTransfusionHistory === 'Yes'}
+                    <div class="form-group">
+                        <label for="bloodTransfusionDate">Approximate date</label>
+                        <input type="text" id="bloodTransfusionDate" bind:value={formBloodTransfusionDate} placeholder="e.g., January 2020"/>
+                    </div>
+                    {/if}
+                </div>
+            </div>
+            
             <!-- Password Change Section -->
             <div class="form-section">
                 <div class="password-section-header">
@@ -1353,35 +1382,6 @@ function toggleEditProfile() {
                         </div>
                     </div>
                 {/if}
-            </div>
-            
-            <!-- Other Medical Information Section -->
-            <div class="form-section">
-                <h4 class="section-subtitle">Other Medical Information</h4>
-                <div class="form-group full-width">
-                    <label for="otherMedicalConditions">Other Medical Conditions (specify)</label>
-                    <textarea id="otherMedicalConditions" bind:value={formOtherMedicalConditions} placeholder="Specify any other medical conditions" rows="3"></textarea>
-                </div>
-                <div class="form-group full-width">
-                    <label for="otherFamilyHistory">Other family history</label>
-                    <textarea id="otherFamilyHistory" bind:value={formOtherFamilyHistory} placeholder="Specify other family history" rows="3"></textarea>
-                </div>
-                <div class="input-grid">
-                    <div class="form-group">
-                        <label for="bloodTransfusionHistory">Have you ever had blood transfusion?</label>
-                        <select id="bloodTransfusionHistory" bind:value={formBloodTransfusionHistory}>
-                            <option value="">Select</option>
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                        </select>
-                    </div>
-                    {#if formBloodTransfusionHistory === 'Yes'}
-                    <div class="form-group">
-                        <label for="bloodTransfusionDate">Approximate date</label>
-                        <input type="text" id="bloodTransfusionDate" bind:value={formBloodTransfusionDate} placeholder="e.g., January 2020"/>
-                    </div>
-                    {/if}
-                </div>
             </div>
             
             <div class="save-button-container">
