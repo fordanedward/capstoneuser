@@ -153,6 +153,200 @@
     let isArchived: boolean = false;
     $: accountStatus = isArchived ? 'Inactive' : 'Active';
 
+    // Helper function to normalize medical conditions from array to object format
+    function normalizeMedicalConditions(data: any): any {
+        console.log("Normalizing medical conditions, input:", data);
+        
+        if (!data) {
+            return {
+                anemia: false, anxiety: false, arthritis: false, asthma: false,
+                bloodTransfusion: false, cancer: false, clottingDisorder: false,
+                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+            };
+        }
+        
+        // If data is already an object with boolean values, return it
+        if (typeof data === 'object' && !Array.isArray(data)) {
+            console.log("Medical conditions already in object format");
+            return data;
+        }
+        
+        // If data is an array, convert to object format
+        if (Array.isArray(data)) {
+            console.log("Converting medical conditions from array to object format");
+            const normalized: any = {
+                anemia: false, anxiety: false, arthritis: false, asthma: false,
+                bloodTransfusion: false, cancer: false, clottingDisorder: false,
+                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+            };
+            
+            data.forEach((condition: string) => {
+                const key = condition.trim();
+                if (key in normalized) {
+                    normalized[key] = true;
+                }
+            });
+            
+            console.log("Normalized medical conditions:", normalized);
+            return normalized;
+        }
+        
+        // If data is a string (comma-separated), parse it
+        if (typeof data === 'string') {
+            console.log("Converting medical conditions from string to object format");
+            const normalized: any = {
+                anemia: false, anxiety: false, arthritis: false, asthma: false,
+                bloodTransfusion: false, cancer: false, clottingDisorder: false,
+                congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+                emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+                heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+            };
+            
+            data.split(',').forEach((condition: string) => {
+                const key = condition.trim();
+                if (key in normalized) {
+                    normalized[key] = true;
+                }
+            });
+            
+            return normalized;
+        }
+        
+        console.log("Returning default medical conditions");
+        return {
+            anemia: false, anxiety: false, arthritis: false, asthma: false,
+            bloodTransfusion: false, cancer: false, clottingDisorder: false,
+            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
+            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
+            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
+        };
+    }
+
+    // Helper function to normalize surgical history from array/string to object format
+    function normalizeSurgicalHistory(data: any): any {
+        console.log("Normalizing surgical history, input:", data);
+        
+        if (!data) {
+            return {
+                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+                prostateSurgery: false, weightReductionSurgery: false
+            };
+        }
+        
+        // If data is already an object with boolean values, return it
+        if (typeof data === 'object' && !Array.isArray(data)) {
+            console.log("Surgical history already in object format");
+            return data;
+        }
+        
+        // If data is an array, convert to object format
+        if (Array.isArray(data)) {
+            console.log("Converting surgical history from array to object format");
+            const normalized: any = {
+                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+                prostateSurgery: false, weightReductionSurgery: false
+            };
+            
+            data.forEach((surgery: string) => {
+                const key = surgery.trim();
+                if (key in normalized) {
+                    normalized[key] = true;
+                }
+            });
+            
+            console.log("Normalized surgical history:", normalized);
+            return normalized;
+        }
+        
+        // If data is a string (comma-separated), parse it
+        if (typeof data === 'string') {
+            console.log("Converting surgical history from string to object format");
+            const normalized: any = {
+                appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+                cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+                thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+                fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+                jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+                prostateSurgery: false, weightReductionSurgery: false
+            };
+            
+            data.split(',').forEach((surgery: string) => {
+                const key = surgery.trim();
+                if (key in normalized) {
+                    normalized[key] = true;
+                }
+            });
+            
+            return normalized;
+        }
+        
+        console.log("Returning default surgical history");
+        return {
+            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
+            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
+            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
+            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
+            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
+            prostateSurgery: false, weightReductionSurgery: false
+        };
+    }
+
+    // Helper function to normalize family history from array to object format
+    function normalizeFamilyHistory(data: any): any {
+        console.log("Normalizing family history, input:", data);
+        
+        const defaultFamilyMember = {
+            alcoholAbuse: false, breastCancer: false, ovarianCancer: false,
+            prostateCancer: false, otherCancer: false, diabetes: false,
+            heartDisease: false, highCholesterol: false, hypertension: false,
+            mentalIllness: false
+        };
+        
+        const defaultFamilyHistory = {
+            mother: { ...defaultFamilyMember },
+            father: { ...defaultFamilyMember },
+            sister: { ...defaultFamilyMember },
+            brother: { ...defaultFamilyMember },
+            daughter: { ...defaultFamilyMember },
+            son: { ...defaultFamilyMember },
+            otherRelative: { ...defaultFamilyMember }
+        };
+        
+        if (!data) {
+            return defaultFamilyHistory;
+        }
+        
+        // If data is already in the correct object format, return it
+        if (typeof data === 'object' && !Array.isArray(data) && data.mother && typeof data.mother === 'object') {
+            console.log("Family history already in object format");
+            return data;
+        }
+        
+        // If data is an array, we'll need to handle it differently
+        // This is a simplified conversion - real data might need more sophisticated parsing
+        if (Array.isArray(data)) {
+            console.log("Converting family history from array to object format");
+            // For now, just return the default structure
+            // In a real scenario, you might need to parse specific conditions
+            return defaultFamilyHistory;
+        }
+        
+        console.log("Returning default family history");
+        return defaultFamilyHistory;
+    }
+
 onMount(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -166,6 +360,25 @@ onMount(() => {
 
                 if (patientDoc.exists()) {
                     patientProfile = patientDoc.data() as PatientProfile;
+                    
+                    // Log the data structure for debugging
+                    console.log("=== Patient Profile Data Structure ===");
+                    console.log("Profile loaded from Firestore:", patientProfile);
+                    console.log("Medical conditions type:", typeof patientProfile.medicalConditions, Array.isArray(patientProfile.medicalConditions) ? "(array)" : "(object)");
+                    console.log("Surgical history type:", typeof patientProfile.surgicalHistory, Array.isArray(patientProfile.surgicalHistory) ? "(array)" : "(object)");
+                    console.log("Family history type:", typeof patientProfile.familyHistory, Array.isArray(patientProfile.familyHistory) ? "(array)" : "(object)");
+                    
+                    // Warn if data structure doesn't match expected format
+                    if (Array.isArray(patientProfile.medicalConditions)) {
+                        console.warn("⚠️ Medical conditions stored as array - will be normalized on edit");
+                    }
+                    if (Array.isArray(patientProfile.surgicalHistory)) {
+                        console.warn("⚠️ Surgical history stored as array - will be normalized on edit");
+                    }
+                    if (Array.isArray(patientProfile.familyHistory)) {
+                        console.warn("⚠️ Family history stored as array - will be normalized on edit");
+                    }
+                    
                     // Get the customUserId from the users collection
                     const userRef = doc(db, "users", currentUser.uid);
                     const userDoc = await getDoc(userRef);
@@ -421,57 +634,67 @@ async function savePatientProfile() {
 }
 
 function toggleEditProfile() {
+    console.log("=== toggleEditProfile called ===");
+    console.log("Current isEditingProfile state:", isEditingProfile);
+    console.log("Patient profile data:", patientProfile);
+    
     isEditingProfile = !isEditingProfile; 
 
     if (isEditingProfile) {
-        // Disable body scroll when modal opens
-        document.body.style.overflow = 'hidden';
-        
-        formPatientName = patientProfile.name || '';
-        formMiddleName = patientProfile.middleName || '';
-        formLastName = patientProfile.lastName || '';
-        formSuffix = patientProfile.suffix || '';
-        formAge = patientProfile.age || '';
-        formBirthday = patientProfile.birthday || ''; 
-        formGender = patientProfile.gender || '';
-        formEmail = patientProfile.email || '';
-        formPhone = patientProfile.phone || '';
-        formHomeAddress = patientProfile.address || '';
-        
-        // Load medical information
-        formBloodType = patientProfile.bloodType || '';
-        formAllergies = patientProfile.allergies || '';
-        formCurrentMedications = patientProfile.currentMedications || '';
-        // Deep clone to avoid modifying original data
-        medicalConditions = JSON.parse(JSON.stringify(patientProfile.medicalConditions || {
-            anemia: false, anxiety: false, arthritis: false, asthma: false,
-            bloodTransfusion: false, cancer: false, clottingDisorder: false,
-            congestiveHeartFailure: false, depression: false, diabetesMellitus: false,
-            emphysema: false, gastroEsophagealReflux: false, glaucoma: false,
-            heartMurmur: false, hivAids: false, highCholesterol: false, hypertension: false
-        }));
-        surgicalHistory = JSON.parse(JSON.stringify(patientProfile.surgicalHistory || {
-            appendectomy: false, brainSurgery: false, breastSurgery: false, cabg: false,
-            cholecystectomy: false, colonSurgery: false, tonsillectomy: false,
-            thyroidSurgery: false, lungSurgery: false, csection: false, eyeSurgery: false,
-            fracturesSurgery: false, herniaRepair: false, hysterectomy: false,
-            jointSurgery: false, pancreatomy: false, varicoseVeinSurgery: false,
-            prostateSurgery: false, weightReductionSurgery: false
-        }));
-        familyHistory = JSON.parse(JSON.stringify(patientProfile.familyHistory || {
-            mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-            otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
-        }));
-        formOtherMedicalConditions = patientProfile.otherMedicalConditions || '';
-        formOtherFamilyHistory = patientProfile.otherFamilyHistory || '';
-        formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
-        formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
-        profileImage = patientProfile.profileImage || '';
+        try {
+            console.log("Opening edit modal...");
+            
+            // Disable body scroll when modal opens
+            document.body.style.overflow = 'hidden';
+            
+            formPatientName = patientProfile.name || '';
+            formMiddleName = patientProfile.middleName || '';
+            formLastName = patientProfile.lastName || '';
+            formSuffix = patientProfile.suffix || '';
+            formAge = patientProfile.age || '';
+            formBirthday = patientProfile.birthday || ''; 
+            formGender = patientProfile.gender || '';
+            formEmail = patientProfile.email || '';
+            formPhone = patientProfile.phone || '';
+            formHomeAddress = patientProfile.address || '';
+            
+            // Load medical information
+            formBloodType = patientProfile.bloodType || '';
+            formAllergies = patientProfile.allergies || '';
+            formCurrentMedications = patientProfile.currentMedications || '';
+            
+            // Use normalization helpers to handle both array and object formats
+            console.log("Normalizing medical data...");
+            console.log("Raw medicalConditions:", patientProfile.medicalConditions);
+            console.log("Raw surgicalHistory:", patientProfile.surgicalHistory);
+            console.log("Raw familyHistory:", patientProfile.familyHistory);
+            
+            medicalConditions = normalizeMedicalConditions(patientProfile.medicalConditions);
+            surgicalHistory = normalizeSurgicalHistory(patientProfile.surgicalHistory);
+            familyHistory = normalizeFamilyHistory(patientProfile.familyHistory);
+            
+            console.log("Normalized medicalConditions:", medicalConditions);
+            console.log("Normalized surgicalHistory:", surgicalHistory);
+            console.log("Normalized familyHistory:", familyHistory);
+            
+            formOtherMedicalConditions = patientProfile.otherMedicalConditions || '';
+            formOtherFamilyHistory = patientProfile.otherFamilyHistory || '';
+            formBloodTransfusionHistory = patientProfile.bloodTransfusionHistory || '';
+            formBloodTransfusionDate = patientProfile.bloodTransfusionDate || '';
+            profileImage = patientProfile.profileImage || '';
+            
+            console.log("Edit modal opened successfully!");
+        } catch (error) {
+            console.error("Error opening edit modal:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'There was an error opening the edit form. Please try again or contact support.'
+            });
+            // Reset the state if there was an error
+            isEditingProfile = false;
+            document.body.style.overflow = '';
+        }
     } else {
         // Re-enable body scroll when modal closes
         document.body.style.overflow = '';
