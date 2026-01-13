@@ -491,7 +491,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background-color: #e1a800; /* gold tone */
+        background-color: #f4c542; /* gold tone */
         padding: 2.5rem 1rem;
         text-align: center;
     }
@@ -599,6 +599,7 @@
 </style>
 
 <script>
+    import Footer from '$lib/components/Footer.svelte';
     let aboutVisible = true;
 </script>
 
@@ -681,3 +682,5 @@
     </div>
     
 </section>
+
+<Footer />

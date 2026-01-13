@@ -15,10 +15,10 @@ export const firebaseConfig = {
 };
 
 // Initialize Firebase App only in browser
-let app;
-let db;
-let auth;
-let analytics;
+export let app;
+export let db;
+export let auth;
+export let analytics;
 
 if (browser) {
   try {
@@ -31,6 +31,3 @@ if (browser) {
     console.error("Error initializing Firebase:", error);
   }
 }
-
-// Export the Firestore database, Auth, and Firebase config
-export { db, auth, app };
