@@ -21,6 +21,16 @@ export const isInstalled = writable(false);
 export function initPWAInstallPrompt() {
 	if (typeof window === 'undefined') return;
 
+	// Check if already installed
+	const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+	const isIOSStandalone = window.navigator.standalone === true;
+	const isSamsungInstalled = window.navigator.app?.installState === 'installed';
+	
+	if (isStandalone || isIOSStandalone || isSamsungInstalled) {
+		isInstalled.set(true);
+		return;
+	}
+
 	window.addEventListener('beforeinstallprompt', (e: Event) => {
 		e.preventDefault();
 		deferredPrompt.set(e as BeforeInstallPromptEvent);
@@ -32,16 +42,20 @@ export function initPWAInstallPrompt() {
 		installPromptVisible.set(false);
 	});
 
-	// Check if already installed (PWA mode)
-	// Works on Chrome, Samsung Internet, Firefox
-	if (window.navigator.standalone === true) {
-		isInstalled.set(true);
-	}
+	// For Samsung Internet, show custom prompt after delay if no native prompt
+	setTimeout(() => {
+		let hasPrompt = false;
+		const unsubscribe = deferredPrompt.subscribe((value) => {
+			hasPrompt = value !== null;
+		});
+		unsubscribe();
 
-	// Additional check for Samsung Internet
-	if (window.navigator.app?.installState === 'installed') {
-		isInstalled.set(true);
-	}
+		// Samsung Internet may not fire beforeinstallprompt immediately
+		// Show our custom UI if manifest is valid
+		if (!hasPrompt && !isStandalone && !isIOSStandalone && !isSamsungInstalled) {
+			installPromptVisible.set(true);
+		}
+	}, 2000);
 }
 
 export async function installPWA() {
