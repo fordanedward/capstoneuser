@@ -10,6 +10,11 @@ service cloud.firestore {
       return request.auth.uid == patientId;
     }
 
+    // Analytics collection - allow public read/write for visitor counter
+    match /analytics/{document} {
+      allow read, write: if true;
+    }
+
     // General match for documents
     match /{document=**} {
       allow read, write: if isAuthenticated();
