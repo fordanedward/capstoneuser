@@ -1,24 +1,6 @@
 <script lang="ts">
-	import { installPromptVisible, installPWA, isInstalled, hideInstallPrompt, deferredPrompt } from '$lib/stores/pwa';
+	import { installPromptVisible, installPWA, isInstalled, hideInstallPrompt } from '$lib/stores/pwa';
 	import { page } from '$app/stores';
-	
-	async function handleInstall() {
-		// Try native install first
-		let currentPrompt: any;
-		const unsubscribe = deferredPrompt.subscribe((value) => {
-			currentPrompt = value;
-		});
-		unsubscribe();
-		
-		if (currentPrompt) {
-			await installPWA();
-		} else {
-			// For Samsung Internet without native prompt
-			// Show instructions
-			alert('To install this app:\n\n1. Tap the menu button (⋮)\n2. Select "Add page to"\n3. Choose "Home screen"\n\nThis will install the app on your device.');
-			hideInstallPrompt();
-		}
-	}
 </script>
 
 
@@ -35,7 +17,7 @@
 				</div>
 				<div class="flex gap-2">
 					<button
-						on:click={handleInstall}
+						on:click={installPWA}
 						class="flex-1 bg-white text-[#0b2d56] font-semibold py-2 px-4 rounded hover:bg-blue-50 transition-colors"
 					>
 						Install
