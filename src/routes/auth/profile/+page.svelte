@@ -790,7 +790,7 @@ function toggleEditProfile() {
                 </button>
                 {#if showDetails}
                     <div class="info-grid details-section show">
-                        <p><strong>Patient ID:</strong> {patientProfile.id || "N/A"}</p>
+                        <p><strong>Member ID:</strong> {patientProfile.id || "N/A"}</p>
                         <p><strong>Age:</strong> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
                         <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
                         <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
@@ -800,7 +800,7 @@ function toggleEditProfile() {
                 {/if}
             {:else}
                 <div class="info-grid">
-                    <p><strong>Patient ID:</strong> {patientProfile.id || "N/A"}</p>
+                    <p><strong>Member ID:</strong> {patientProfile.id || "N/A"}</p>
                     <p><strong>Age:</strong> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
                     <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
                     <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
