@@ -790,22 +790,22 @@ function toggleEditProfile() {
                 </button>
                 {#if showDetails}
                     <div class="info-grid details-section show">
-                        <p><strong>Member ID:</strong> {patientProfile.id || "N/A"}</p>
-                        <p><strong>Age:</strong> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
-                        <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
-                        <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
-                        <p><strong>Email:</strong> {patientProfile.email || "N/A"}</p>
-                        <p class="address-info"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
+                        <p><i class="fas fa-id-card icon-label" title="Member ID"></i> {patientProfile.id || "N/A"}</p>
+                        <p><i class="fas fa-birthday-cake icon-label" title="Age"></i> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
+                        <p><i class="fas fa-{patientProfile.gender === 'male' ? 'mars' : patientProfile.gender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {patientProfile.gender || "N/A"}</p>
+                        <p><i class="fas fa-phone icon-label" title="Phone"></i> {patientProfile.phone || "N/A"}</p>
+                        <p><i class="fas fa-envelope icon-label" title="Email"></i> {patientProfile.email || "N/A"}</p>
+                        <p class="address-info"><i class="fas fa-map-marker-alt icon-label" title="Address"></i> {patientProfile.address || "N/A"}</p>
                     </div>
                 {/if}
             {:else}
                 <div class="info-grid">
-                    <p><strong>Member ID:</strong> {patientProfile.id || "N/A"}</p>
-                    <p><strong>Age:</strong> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
-                    <p><strong>Gender:</strong> {patientProfile.gender || "N/A"}</p>
-                    <p><strong>Phone:</strong> {patientProfile.phone || "N/A"}</p>
-                    <p><strong>Email:</strong> {patientProfile.email || "N/A"}</p>
-                    <p class="address-info"><strong>Address:</strong> {patientProfile.address || "N/A"}</p>
+                    <p><i class="fas fa-id-card icon-label" title="Member ID"></i> {patientProfile.id || "N/A"}</p>
+                    <p><i class="fas fa-birthday-cake icon-label" title="Age"></i> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
+                    <p><i class="fas fa-{patientProfile.gender === 'male' ? 'mars' : patientProfile.gender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {patientProfile.gender || "N/A"}</p>
+                    <p><i class="fas fa-phone icon-label" title="Phone"></i> {patientProfile.phone || "N/A"}</p>
+                    <p><i class="fas fa-envelope icon-label" title="Email"></i> {patientProfile.email || "N/A"}</p>
+                    <p class="address-info"><i class="fas fa-map-marker-alt icon-label" title="Address"></i> {patientProfile.address || "N/A"}</p>
                 </div>
             {/if}
         </div>
@@ -983,7 +983,7 @@ function toggleEditProfile() {
                     </div>
                     <div class="form-group full-width"> 
                         <label for="home-address">Home Address</label>
-                        <input id="home-address" type="text" bind:value={formHomeAddress} placeholder="Street, Barangay, City, Province" />
+                        <input id="home-address" type="text" bind:value={formHomeAddress} placeholder="Ex. 123 4th Street, Sta. Rita Salcedo Village, Olongapo City, Zambales" />
                     </div>
                 </div>
             </div>
@@ -994,7 +994,7 @@ function toggleEditProfile() {
                 <div class="input-grid">
                     <div class="form-group">
                         <label for="bloodType">Blood Type (Optional)</label>
-                        <input type="text" id="bloodType" bind:value={formBloodType} placeholder="e.g., O+, A-, B+"/>
+                        <input type="text" id="bloodType" bind:value={formBloodType} placeholder="Ex. O+, A-, B+"/>
                     </div>
                     <div class="form-group">
                         <label for="allergies">Allergies</label>
@@ -1548,11 +1548,6 @@ function toggleEditProfile() {
         color: rgba(255, 255, 255, 0.9);
     }
 
-    .patient-info p strong {
-        font-weight: 500;
-        color: var(--white);
-        margin-right: 5px;
-    }
      .patient-info .address-info {
         grid-column: 1 / -1;
     }
@@ -1866,7 +1861,7 @@ function toggleEditProfile() {
             color: #222 !important;
             font-weight: 500;
         }
-        .details-section p, .details-section strong, .details-section .address-info {
+        .details-section p, .details-section .address-info {
             color: #222 !important;
         }
         .info-grid {
@@ -2193,7 +2188,7 @@ function toggleEditProfile() {
             color: #222 !important;
             font-weight: 500;
         }
-        .details-section p, .details-section strong, .details-section .address-info {
+        .details-section p, .details-section .address-info {
             color: #222 !important;
         }
         .info-grid {
@@ -2477,6 +2472,84 @@ function toggleEditProfile() {
         .change-password-btn {
             width: 100%;
             justify-content: center;
+        }
+    }
+
+    /* Icon Label Styles */
+    .icon-label {
+        color: rgba(255, 255, 255, 0.95);
+        margin-right: 10px;
+        font-size: 1.15rem;
+        min-width: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .patient-info .icon-label {
+        color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Mobile details section - icons need to be dark on white background */
+    .details-section .icon-label {
+        color: var(--primary-color);
+        text-shadow: none;
+    }
+
+    .info-grid p {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Member ID Display in Edit Form */
+    .member-id-display {
+        text-align: center;
+        margin-top: 16px;
+        padding: 16px 24px;
+        background: #e3f2fd;
+        border-radius: 12px;
+        border: 2px solid #90caf9;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+    }
+
+    .member-id-label {
+        font-weight: 600;
+        color: #1976d2;
+        font-size: 0.875rem;
+        display: block;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .member-id-value {
+        font-weight: 800;
+        color: #0d47a1;
+        font-size: 1.75rem;
+        letter-spacing: 2px;
+        font-family: 'Courier New', monospace;
+    }
+
+    @media (max-width: 640px) {
+        .icon-label {
+            font-size: 1.05rem;
+            margin-right: 8px;
+            min-width: 20px;
+        }
+        
+        .member-id-display {
+            padding: 8px 12px;
+            margin-top: 10px;
+        }
+
+        .member-id-label {
+            font-size: 0.85rem;
+        }
+
+        .member-id-value {
+            font-size: 1rem;
         }
     }
 

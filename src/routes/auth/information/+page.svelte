@@ -37,7 +37,6 @@
 
     // Use writable stores for search
     const medicineSearch = writable('');
-    const serviceSearch = writable('');
 
     function normalize(text: string): string {
         return text
@@ -65,13 +64,7 @@
             });
         }
     );
-    const filteredServices = derived(
-        [serviceSearch],
-        ([$serviceSearch]) =>
-            ourServices.filter((s: { name: string; description: string; icon: string }) =>
-                s.name.toLowerCase().includes($serviceSearch.toLowerCase())
-            )
-    );
+
 
     // Modal state
     let showModal = false;
@@ -775,23 +768,9 @@
         </div>
     </div>
     <div class="container services-list" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
-        <h2 style="color: #0a3761; font-size: 2rem;">Our Services</h2>
-        <div class="search-wrap">
-            <input
-                type="text"
-                placeholder="Search services"
-                class="search-field"
-                bind:value={$serviceSearch}
-            />
-            <span class="search-icon">
-                <svg width="18" height="18" fill="none" stroke="#0a3761" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-            </span>
-        </div>
+        <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 3.75rem;">Our Services</h2>
         <div class="scroll-list">
-            {#each $filteredServices as svc}
+            {#each ourServices as svc}
                 <div
                     class="list-item"
                     role="button"
