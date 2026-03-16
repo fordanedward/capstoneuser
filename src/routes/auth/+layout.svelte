@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import type { Page } from '@sveltejs/kit';
 	import { browser } from '$app/environment';
 	import { writable } from 'svelte/store';
 	import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
@@ -317,7 +318,7 @@
         }
  
 		// Page change listener (from TemplateComponent)
-		const pageUnsubscribe = page.subscribe((currentPage) => {
+		const pageUnsubscribe = page.subscribe((currentPage: Page) => {
             // Close mobile sidebar on navigation
 			if (isMobile && isSidebarOpen) {
 				closeSidebarMobile();
@@ -542,10 +543,7 @@
 		filter: brightness(0) invert(1);
 	}
  
-	.header-title { /* Optional title styling */
-		font-size: 1.1rem;
-		font-weight: 500;
-	}
+
  
     /* --- Sidebar --- */
 	.sidebar {
@@ -657,11 +655,7 @@
         outline: none;
 	}
  
-	/* Active link styling - requires router integration or manual class */
-	.sidebar-menu a.active {
-		background-color: var(--sidebar-active-bg);
-		font-weight: bold;
-	}
+
  
 	.sidebar-menu a .icon {
 		width: 20px; /* Match OriginalComponent style */
@@ -790,9 +784,7 @@
 			width: 100%;
 		}
  
-		.sidebar.open ~ .content.mobile { /* Apply dimming when sidebar is open */
-			/* filter: brightness(0.7); */
-		}
+
  
 		.close-sidebar-btn {
 			position: absolute;

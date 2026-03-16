@@ -1,46 +1,3 @@
-<script lang="ts" context="module">
-    import { writable, type Writable } from 'svelte/store';
-    
-    export type PopupNotification = {
-        id: string;
-        type: 'chat' | 'appointment' | 'info';
-        title: string;
-        message: string;
-        timestamp: Date;
-        link?: string;
-        icon?: string;
-        read?: boolean;
-        color?: string;
-    };
-    
-    export const popupNotifications: Writable<PopupNotification[]> = writable<PopupNotification[]>([]);
-    
-    function saveToLocalStorage(notifs: PopupNotification[]) {
-        try {
-            localStorage.setItem('popupNotifications', JSON.stringify(notifs));
-        } catch (e) {
-            console.error('Failed to save notifications:', e);
-        }
-    }
-    
-    export function addNotification(notification: Omit<PopupNotification, 'id' | 'timestamp'>) {
-        const newNotification: PopupNotification = {
-            ...notification,
-            id: Date.now().toString() + Math.random(),
-            timestamp: new Date(),
-            read: false
-        };
-        
-        popupNotifications.update(notifs => {
-            const updated = [newNotification, ...notifs].slice(0, 50); // Keep last 50
-            saveToLocalStorage(updated);
-            return updated;
-        });
-        
-        // Note: Auto-hide is now handled by the subscription logic
-    }
-</script>
-
 <script lang="ts">
     import { onMount, onDestroy } from 'svelte';
     import { fly, fade } from 'svelte/transition';
@@ -50,12 +7,14 @@
     import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, orderBy, type Unsubscribe } from 'firebase/firestore';
     import { firebaseConfig } from '$lib/firebaseConfig';
     import { formatRelativeTime } from '$lib/utils/timeFormat';
+    import { popupNotifications, saveToLocalStorage } from '$lib/stores/popupNotifications';
+    import type { PopupNotification } from '$lib/types/notifications';
     
     let notifications: PopupNotification[] = [];
     let isDropdownOpen = false;
     let unreadCount = 0;
     let isLoading = true;
-    let timeoutMap = new Map<string, NodeJS.Timeout>();
+    let timeoutMap = new Map<string, ReturnType<typeof setTimeout>>();
     let processedNotifications = new Set<string>();
     let toastNotifications: PopupNotification[] = [];
     
@@ -97,7 +56,7 @@
         }
     }
     
-    popupNotifications.subscribe(value => {
+    popupNotifications.subscribe((value: PopupNotification[]) => {
         notifications = value;
         unreadCount = value.filter(n => !n.read).length;
         
@@ -120,7 +79,7 @@
                         seenPopupIds.add(notif.id);
                         saveSeenPopupIds(currentUserId);
                         // Force update to remove from toast
-                        popupNotifications.update(n => n);
+                        popupNotifications.update((notifs: PopupNotification[]) => notifs);
                     }
                     timeoutMap.delete(notif.id);
                 }, 5000);
@@ -141,7 +100,7 @@
     });
     
     function pushOrReplace(notif: PopupNotification) {
-        popupNotifications.update(notifs => {
+        popupNotifications.update((notifs: PopupNotification[]) => {
             const idx = notifs.findIndex(n => n.id === notif.id);
             if (idx >= 0) {
                 // Preserve the read status when updating existing notification
@@ -269,7 +228,7 @@
     }
     
     function markAllAsRead() {
-        popupNotifications.update(notifs => {
+        popupNotifications.update((notifs: PopupNotification[]) => {
             const updated = notifs.map(n => ({...n, read: true}));
             saveToLocalStorage(updated);
             return updated;
@@ -286,7 +245,7 @@
     }
     
     function removeNotification(id: string) {
-        popupNotifications.update(notifs => {
+        popupNotifications.update((notifs: PopupNotification[]) => {
             const updated = notifs.filter(n => n.id !== id);
             saveToLocalStorage(updated);
             return updated;
@@ -297,8 +256,8 @@
         try {
             const saved = localStorage.getItem('popupNotifications');
             if (saved) {
-                const parsed = JSON.parse(saved);
-                const loadedNotifications = parsed.map((n: any) => ({
+                const parsed = JSON.parse(saved) as PopupNotification[];
+                const loadedNotifications = parsed.map((n: PopupNotification) => ({
                     ...n,
                     timestamp: new Date(n.timestamp)
                 }));
@@ -347,7 +306,7 @@
         }
         
         // Mark as read
-        popupNotifications.update(notifs => {
+        popupNotifications.update((notifs: PopupNotification[]) => {
             const updated = notifs.map(n => 
                 n.id === notification.id ? {...n, read: true} : n
             );

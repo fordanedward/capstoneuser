@@ -3,11 +3,15 @@
     import type { PageData } from '../information/$types';
 
     import { coveredMedicines as coveredMedicinesData, fetchCoveredMedicines } from '$lib/data/coveredMedicines';
-    let coveredMedicines = coveredMedicinesData;
+
+    type CoveredMedicine = { name: string; info: string; dosage?: string };
+    type ServiceInfo = { name: string; description: string; icon: string };
+
+    let coveredMedicines: CoveredMedicine[] = coveredMedicinesData;
 
     // Load from CSV at runtime (fallback to embedded list on failure)
-    fetchCoveredMedicines().then((list) => { coveredMedicines = list; });
-    let ourServices = [
+    fetchCoveredMedicines().then((list) => { coveredMedicines = list as CoveredMedicine[]; });
+    let ourServices: ServiceInfo[] = [
         { 
             name: "Lab Test", 
             description: "Routine lab testing is a key part of annual health check-ups to assess overall well-being. Our comprehensive lab services include blood tests, urinalysis, and specialized diagnostic testing.",
@@ -51,13 +55,13 @@
     // Use derived stores for filtered lists
     const filteredMedicines = derived(
         [medicineSearch],
-        ([$medicineSearch]) => {
+        ([$medicineSearch]: [string]): CoveredMedicine[] => {
             const normalizedQuery = normalize($medicineSearch);
             if (!normalizedQuery) return coveredMedicines;
 
             const queryTokens = normalizedQuery.split(' ').filter(Boolean);
 
-            return coveredMedicines.filter((m: { name: string; info: string; dosage?: string }) => {
+            return coveredMedicines.filter((m) => {
                 const haystack = normalize(`${m.name} ${m.info} ${m.dosage ?? ''}`);
                 // Match full phrase OR all tokens
                 return haystack.includes(normalizedQuery) || queryTokens.every((tok) => haystack.includes(tok));
@@ -69,16 +73,16 @@
     // Modal state
     let showModal = false;
     let modalType: 'medicine' | 'service' = 'medicine';
-    let selectedMedicine: { name: string; info: string; dosage?: string } | null = null;
-    let selectedService: { name: string; description: string; icon: string } | null = null;
+    let selectedMedicine: CoveredMedicine | null = null;
+    let selectedService: ServiceInfo | null = null;
 
-    function showMedicineInfo(med: { name: string; info: string; dosage?: string }) {
+    function showMedicineInfo(med: CoveredMedicine) {
         selectedMedicine = med;
         modalType = 'medicine';
         showModal = true;
     }
 
-    function showServiceInfo(svc: { name: string; description: string; icon: string }) {
+    function showServiceInfo(svc: ServiceInfo) {
         selectedService = svc;
         modalType = 'service';
         showModal = true;

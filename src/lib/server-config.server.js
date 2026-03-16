@@ -9,4 +9,4 @@ export const serverConfig = {
     stripe: {
         secretKey: dev ? 'sk_test_your_secret_key' : STRIPE_SECRET_KEY
     }
-}; 
+};

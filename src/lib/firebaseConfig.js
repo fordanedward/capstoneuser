@@ -15,10 +15,14 @@ export const firebaseConfig = {
 };
 
 // Initialize Firebase App only in browser
-export let app;
-export let db;
-export let auth;
-export let analytics;
+/** @type {import('firebase/app').FirebaseApp | null} */
+export let app = null;
+/** @type {import('firebase/firestore').Firestore | null} */
+export let db = null;
+/** @type {import('firebase/auth').Auth | null} */
+export let auth = null;
+/** @type {import('firebase/analytics').Analytics | null} */
+export let analytics = null;
 
 if (browser) {
   try {

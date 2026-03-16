@@ -128,6 +128,16 @@
         bloodTransfusionDate?: string;
     };
 
+    type Appointment = {
+        id: string;
+        date: string;
+        time: string;
+        service: string;
+        status?: string;
+        subServices?: string[];
+        remarks?: string;
+    };
+
     let patientProfile: PatientProfile = {
         name: '',
         middleName: '',
@@ -155,7 +165,7 @@
 
     let currentUser: User | null = null;
     let isEditingProfile = false; 
-    let doneAppointments: any[] = [];
+    let doneAppointments: Appointment[] = [];
     let isDropdownOpen = true;
     let showDetails = false;
     let isMobile = false;
@@ -246,11 +256,17 @@ onMount(() => {
                     
                     console.log("Final remarks value for appointment", doc.id, ":", remarksValue);
                     
-                    return {
-                        ...data,
+                    const appointment: Appointment = {
                         id: doc.id,
+                        date: String(data.date ?? ''),
+                        time: String(data.time ?? ''),
+                        service: String(data.service ?? ''),
+                        status: data.status ? String(data.status) : undefined,
+                        subServices: Array.isArray(data.subServices) ? data.subServices : undefined,
                         remarks: remarksValue
                     };
+
+                    return appointment;
                 });
                 console.log("Loaded done appointments: ", doneAppointments);
 
@@ -849,16 +865,13 @@ function toggleEditProfile() {
 {#if isEditingProfile}
     <div class="modal-overlay" 
         role="presentation"
-        on:click={toggleEditProfile}
+        on:click={(e) => e.currentTarget === e.target && toggleEditProfile()}
         on:keydown={(e) => e.key === 'Escape' && toggleEditProfile()}
         tabindex="-1"
     >
     <div class="profile-form-container slide-down" 
         role="dialog"
         aria-label="Edit Member Information"
-        on:click|stopPropagation
-        on:keydown={(e) => e.key === 'Enter' && e.stopPropagation()}
-        tabindex="0"
     >
         <h3 class="form-title">Edit Member Information</h3>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
@@ -2503,34 +2516,6 @@ function toggleEditProfile() {
         gap: 6px;
     }
 
-    /* Member ID Display in Edit Form */
-    .member-id-display {
-        text-align: center;
-        margin-top: 16px;
-        padding: 16px 24px;
-        background: #e3f2fd;
-        border-radius: 12px;
-        border: 2px solid #90caf9;
-        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
-    }
-
-    .member-id-label {
-        font-weight: 600;
-        color: #1976d2;
-        font-size: 0.875rem;
-        display: block;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .member-id-value {
-        font-weight: 800;
-        color: #0d47a1;
-        font-size: 1.75rem;
-        letter-spacing: 2px;
-        font-family: 'Courier New', monospace;
-    }
 
     @media (max-width: 640px) {
         .icon-label {
@@ -2539,18 +2524,6 @@ function toggleEditProfile() {
             min-width: 20px;
         }
         
-        .member-id-display {
-            padding: 8px 12px;
-            margin-top: 10px;
-        }
-
-        .member-id-label {
-            font-size: 0.85rem;
-        }
-
-        .member-id-value {
-            font-size: 1rem;
-        }
     }
 
 </style>

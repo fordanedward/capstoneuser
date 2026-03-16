@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { deactivationAlert, hideDeactivationAlert } from '$lib/stores/deactivation';
+  import { deactivationAlert, hideDeactivationAlert, type DeactivationAlert } from '$lib/stores/deactivation';
   import { fade, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
 
   let show = false;
   let message = '';
 
-  deactivationAlert.subscribe(value => {
+  deactivationAlert.subscribe((value: DeactivationAlert) => {
     show = value.show;
     message = value.message;
   });
