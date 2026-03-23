@@ -26,7 +26,6 @@
 
     // Add new state for profile image
     let profileImage: string = '';
-    let isUploading = false;
 
     // Password change state variables
     let currentPassword = "";
@@ -103,6 +102,10 @@
     let formBloodTransfusionHistory = "";
     let formBloodTransfusionDate = "";
 
+    type MedicalConditions = typeof medicalConditions;
+    type SurgicalHistory = typeof surgicalHistory;
+    type FamilyHistory = typeof familyHistory;
+
     type PatientProfile = {
         name: string;
         middleName?: string;
@@ -119,9 +122,9 @@
         bloodType?: string;
         allergies?: string;
         currentMedications?: string;
-        medicalConditions?: any;
-        surgicalHistory?: any;
-        familyHistory?: any;
+        medicalConditions?: MedicalConditions;
+        surgicalHistory?: SurgicalHistory;
+        familyHistory?: FamilyHistory;
         otherMedicalConditions?: string;
         otherFamilyHistory?: string;
         bloodTransfusionHistory?: string;
@@ -154,9 +157,9 @@
         bloodType: '',
         allergies: '',
         currentMedications: '',
-        medicalConditions: {},
-        surgicalHistory: {},
-        familyHistory: {},
+        medicalConditions: JSON.parse(JSON.stringify(medicalConditions)),
+        surgicalHistory: JSON.parse(JSON.stringify(surgicalHistory)),
+        familyHistory: JSON.parse(JSON.stringify(familyHistory)),
         otherMedicalConditions: '',
         otherFamilyHistory: '',
         bloodTransfusionHistory: '',
@@ -166,11 +169,35 @@
     let currentUser: User | null = null;
     let isEditingProfile = false; 
     let doneAppointments: Appointment[] = [];
-    let isDropdownOpen = true;
     let showDetails = false;
     let isMobile = false;
     let isArchived: boolean = false;
     $: accountStatus = isArchived ? 'Inactive' : 'Active';
+
+    function normalizeGender(value: unknown): string {
+        if (typeof value !== 'string') return '';
+        const normalized = value.trim().toLowerCase();
+        const allowedGenders = ['male', 'female', 'other', 'prefer_not_to_say'];
+        return allowedGenders.includes(normalized) ? normalized : '';
+    }
+
+    function sanitizeOptionalEmail(value: unknown): string {
+        if (typeof value !== 'string') return '';
+        const trimmed = value.trim();
+        if (!trimmed) return '';
+
+        const placeholderValues = ['n/a', 'na', 'none', 'null', '-'];
+        return placeholderValues.includes(trimmed.toLowerCase()) ? '' : trimmed;
+    }
+
+    function formatGenderLabel(value: unknown): string {
+        const normalized = normalizeGender(value);
+        if (!normalized) return 'N/A';
+        if (normalized === 'prefer_not_to_say') return 'Prefer not to say';
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    $: normalizedPatientGender = normalizeGender(patientProfile.gender);
 
 onMount(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -185,6 +212,8 @@ onMount(() => {
 
                 if (patientDoc.exists()) {
                     patientProfile = patientDoc.data() as PatientProfile;
+                    patientProfile.gender = normalizeGender(patientProfile.gender);
+                    patientProfile.email = sanitizeOptionalEmail(patientProfile.email);
                     // Get the customUserId from the users collection
                     const userRef = doc(db, "users", currentUser.uid);
                     const userDoc = await getDoc(userRef);
@@ -194,7 +223,8 @@ onMount(() => {
                         isArchived = Boolean(userData.isArchived ?? userData.archived ?? false);
                     } else {
                         // Fallback: some projects store archive flag on profile
-                        const archivedFlag = (patientDoc.data() as any)?.isArchived ?? (patientDoc.data() as any)?.archived;
+                        const patientData = patientDoc.data() as { isArchived?: boolean; archived?: boolean };
+                        const archivedFlag = patientData.isArchived ?? patientData.archived;
                         isArchived = Boolean(archivedFlag ?? false);
                     }
                     console.log("Loaded patient profile from Firestore: ", patientProfile);
@@ -364,7 +394,7 @@ async function savePatientProfile() {
     };
 
     const missingFields = Object.entries(requiredFields)
-        .filter(([_, value]) => !value)
+        .filter(([, value]) => !value)
         .map(([field]) => field);
 
     if (missingFields.length > 0) {
@@ -405,8 +435,8 @@ async function savePatientProfile() {
             suffix: formSuffix,
             age: formAge,
             birthday: formBirthday, 
-            gender: formGender,
-            email: formEmail,
+            gender: normalizeGender(formGender),
+            email: sanitizeOptionalEmail(formEmail),
             phone: cleanedPhone,
             address: formHomeAddress,
             id: customUserId,
@@ -516,16 +546,19 @@ async function changePassword() {
         confirmNewPassword = "";
         showPasswordSection = false;
         
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Error changing password:", error);
         
         let errorMessage = 'Failed to change password. Please try again.';
+        const errorCode = typeof error === 'object' && error !== null && 'code' in error
+            ? String((error as { code?: unknown }).code)
+            : '';
         
-        if (error.code === 'auth/wrong-password') {
+        if (errorCode === 'auth/wrong-password') {
             errorMessage = 'Current password is incorrect.';
-        } else if (error.code === 'auth/weak-password') {
+        } else if (errorCode === 'auth/weak-password') {
             errorMessage = 'New password is too weak.';
-        } else if (error.code === 'auth/requires-recent-login') {
+        } else if (errorCode === 'auth/requires-recent-login') {
             errorMessage = 'Please log out and log back in before changing your password.';
         }
         
@@ -551,8 +584,8 @@ function toggleEditProfile() {
             formSuffix = patientProfile.suffix || '';
             formAge = patientProfile.age || '';
             formBirthday = patientProfile.birthday || ''; 
-            formGender = patientProfile.gender || '';
-            formEmail = patientProfile.email || '';
+            formGender = normalizeGender(patientProfile.gender);
+            formEmail = sanitizeOptionalEmail(patientProfile.email);
             formPhone = patientProfile.phone || '';
             formHomeAddress = patientProfile.address || '';
             
@@ -712,10 +745,6 @@ function toggleEditProfile() {
     }
 }
 
-    function toggleDropdown(event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement; }) {
-        isDropdownOpen = !isDropdownOpen; 
-    }
-
     async function handleImageUpload(event: Event) {
         const input = event.target as HTMLInputElement;
         if (!input.files || !input.files[0]) return;
@@ -726,7 +755,6 @@ function toggleEditProfile() {
             return;
         }
 
-        isUploading = true;
         try {
             const reader = new FileReader();
             reader.onload = async (e) => {
@@ -757,11 +785,9 @@ function toggleEditProfile() {
                         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
                         profileImage = compressedBase64;
                     }
-                    isUploading = false;
                 };
                 img.onerror = () => {
                     Swal.fire('Error', 'Invalid image file', 'error');
-                    isUploading = false;
                 };
                 img.src = e.target?.result as string;
             };
@@ -769,7 +795,6 @@ function toggleEditProfile() {
         } catch (error) {
             console.error('Error uploading image:', error);
             Swal.fire('Error', 'Failed to upload image', 'error');
-            isUploading = false;
         }
     }
 </script>
@@ -808,7 +833,7 @@ function toggleEditProfile() {
                     <div class="info-grid details-section show">
                         <p><i class="fas fa-id-card icon-label" title="Member ID"></i> {patientProfile.id || "N/A"}</p>
                         <p><i class="fas fa-birthday-cake icon-label" title="Age"></i> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
-                        <p><i class="fas fa-{patientProfile.gender === 'male' ? 'mars' : patientProfile.gender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {patientProfile.gender || "N/A"}</p>
+                        <p><i class="fas fa-{normalizedPatientGender === 'male' ? 'mars' : normalizedPatientGender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {formatGenderLabel(patientProfile.gender)}</p>
                         <p><i class="fas fa-phone icon-label" title="Phone"></i> {patientProfile.phone || "N/A"}</p>
                         <p><i class="fas fa-envelope icon-label" title="Email"></i> {patientProfile.email || "N/A"}</p>
                         <p class="address-info"><i class="fas fa-map-marker-alt icon-label" title="Address"></i> {patientProfile.address || "N/A"}</p>
@@ -818,7 +843,7 @@ function toggleEditProfile() {
                 <div class="info-grid">
                     <p><i class="fas fa-id-card icon-label" title="Member ID"></i> {patientProfile.id || "N/A"}</p>
                     <p><i class="fas fa-birthday-cake icon-label" title="Age"></i> {patientProfile.age != null ? patientProfile.age : "N/A"}</p>
-                    <p><i class="fas fa-{patientProfile.gender === 'male' ? 'mars' : patientProfile.gender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {patientProfile.gender || "N/A"}</p>
+                    <p><i class="fas fa-{normalizedPatientGender === 'male' ? 'mars' : normalizedPatientGender === 'female' ? 'venus' : 'genderless'} icon-label" title="Gender"></i> {formatGenderLabel(patientProfile.gender)}</p>
                     <p><i class="fas fa-phone icon-label" title="Phone"></i> {patientProfile.phone || "N/A"}</p>
                     <p><i class="fas fa-envelope icon-label" title="Email"></i> {patientProfile.email || "N/A"}</p>
                     <p class="address-info"><i class="fas fa-map-marker-alt icon-label" title="Address"></i> {patientProfile.address || "N/A"}</p>
@@ -873,7 +898,15 @@ function toggleEditProfile() {
         role="dialog"
         aria-label="Edit Member Information"
     >
-        <h3 class="form-title">Edit Member Information</h3>
+        <div class="form-header">
+            <div>
+                <h3 class="form-title">Edit Member Information</h3>
+                <p class="form-description">Review and update your personal and medical details below.</p>
+            </div>
+            <button type="button" class="modal-close-btn" on:click={toggleEditProfile} aria-label="Close edit form">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
             <div class="form-image-upload">
                 <div class="profile-image-container">
@@ -992,7 +1025,7 @@ function toggleEditProfile() {
                     </div>
                     <div class="form-group">
                         <label for="email">E-Mail Address</label>
-                        <input id="email" type="email" bind:value={formEmail} placeholder="your.email@example.com" />
+                        <input id="email" type="text" inputmode="email" autocomplete="email" bind:value={formEmail} placeholder="your.email@example.com (optional)" />
                     </div>
                     <div class="form-group full-width"> 
                         <label for="home-address">Home Address</label>
@@ -1618,15 +1651,15 @@ function toggleEditProfile() {
     }
 
     .profile-form-container {
-        background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
-        border: 2px solid var(--medium-gray);
+        background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+        border: 1px solid #d7dee8;
         border-radius: var(--border-radius);
-        padding: 40px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 28px;
+        box-shadow: 0 24px 60px rgba(12, 27, 52, 0.28);
         position: relative;
         max-width: 1100px;
         width: 100%;
-        max-height: 85vh;
+        max-height: 88vh;
         overflow-y: auto;
         margin: auto;
     }
@@ -1652,26 +1685,59 @@ function toggleEditProfile() {
         border-radius: var(--border-radius) var(--border-radius) 0 0;
     }
 
+    .form-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin: 8px 0 24px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #dde5ef;
+    }
+
      .form-title {
         font-size: 1.5rem;
         font-weight: 700;
         color: var(--primary-color);
-        margin-bottom: 24px;
-        margin-top: 8px;
-        padding-bottom: 12px;
-        border-bottom: 3px solid var(--primary-color);
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        margin: 0;
+        line-height: 1.2;
     }
 
-    .form-title::before {
-        content: '✏️';
-        font-size: 1.3rem;
+    .form-description {
+        margin: 8px 0 0;
+        color: #5b6878;
+        font-size: 0.95rem;
+    }
+
+    .modal-close-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        border: 1px solid #d0d9e5;
+        background: #ffffff;
+        color: #365071;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-speed) ease;
+        flex-shrink: 0;
+    }
+
+    .modal-close-btn:hover {
+        background: #f1f5f9;
+        transform: translateY(-1px);
+        color: var(--primary-color);
+        box-shadow: 0 8px 18px rgba(16, 35, 64, 0.15);
     }
 
     .form-section {
-        margin-bottom: 28px;
+        margin-bottom: 18px;
+        background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+        border: 1px solid #dfe6ef;
+        border-radius: 10px;
+        padding: 18px;
+        box-shadow: 0 3px 12px rgba(18, 35, 61, 0.06);
     }
 
     .form-section:last-of-type {
@@ -1681,18 +1747,18 @@ function toggleEditProfile() {
     .form-image-upload {
         display: flex;
         justify-content: center;
-        margin-bottom: 32px;
+        margin-bottom: 18px;
         padding-bottom: 24px;
         border-bottom: 1px solid var(--medium-gray);
     }
 
     .section-subtitle {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 600;
         color: var(--primary-color);
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid var(--medium-gray);
+        margin-bottom: 14px;
+        padding-bottom: 9px;
+        border-bottom: 1px dashed #cdd7e4;
     }
 
     .profile-form .input-grid {
@@ -1718,7 +1784,8 @@ function toggleEditProfile() {
     .profile-form label {
         margin-bottom: 8px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
+        letter-spacing: 0.02em;
         color: var(--text-color);
         display: flex;
         align-items: center;
@@ -1727,25 +1794,24 @@ function toggleEditProfile() {
 
     .profile-form input[type="text"],
     .profile-form input[type="tel"],
-    .profile-form input[type="email"],
     .profile-form input[type="date"],
     .profile-form input[type="number"],
     .profile-form select {
         width: 100%;
         padding: 12px 16px;
-        border: 2px solid var(--input-border-color);
+        border: 1px solid #cfd8e5;
         border-radius: 8px;
         font-size: 1rem;
         transition: all var(--transition-speed) ease;
-        background-color: var(--white);
+        background-color: #ffffff;
         font-family: inherit;
     }
     .profile-form input:focus,
     .profile-form select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 4px rgba(30, 58, 102, 0.15);
+        border-color: #3763a4;
+        box-shadow: 0 0 0 3px rgba(55, 99, 164, 0.18);
         outline: none;
-        transform: translateY(-1px);
+        background-color: #fefefe;
     }
     .profile-form input:hover:not(:disabled),
     .profile-form select:hover:not(:disabled) {
@@ -1770,8 +1836,12 @@ function toggleEditProfile() {
         justify-content: flex-end;
         gap: 12px;
         margin-top: 32px;
-        padding-top: 24px;
-        border-top: 2px solid var(--medium-gray);
+        padding: 16px 0 4px;
+        border-top: 1px solid #dbe3ee;
+        position: sticky;
+        bottom: -1px;
+        background: linear-gradient(180deg, rgba(247, 250, 252, 0.2) 0%, #f7fafc 40%);
+        backdrop-filter: blur(4px);
     }
 
     .save-button, .cancel-button {
@@ -1831,12 +1901,22 @@ function toggleEditProfile() {
             align-items: flex-start;
         }
         .profile-form-container {
-            padding: 24px 20px;
+            padding: 18px 14px;
             max-height: 95vh;
             margin-top: 10px;
         }
+        .form-header {
+            margin: 4px 0 16px;
+        }
         .form-title {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
+        }
+        .form-description {
+            font-size: 0.88rem;
+        }
+        .form-section {
+            padding: 14px;
+            border-radius: 8px;
         }
         .profile-form .input-grid {
             grid-template-columns: 1fr;
@@ -1849,7 +1929,7 @@ function toggleEditProfile() {
             flex-direction: row;
             gap: 10px;
             margin-top: 24px;
-            padding-top: 20px;
+            padding: 12px 0 0;
         }
         .save-button, .cancel-button {
             flex: 1;
@@ -2214,7 +2294,7 @@ function toggleEditProfile() {
     .profile-form textarea {
         width: 100%;
         padding: 12px 16px;
-        border: 2px solid var(--input-border-color);
+        border: 1px solid #cfd8e5;
         border-radius: 8px;
         font-size: 1rem;
         transition: all var(--transition-speed) ease;
@@ -2225,8 +2305,8 @@ function toggleEditProfile() {
     }
 
     .profile-form textarea:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 4px rgba(30, 58, 102, 0.15);
+        border-color: #3763a4;
+        box-shadow: 0 0 0 3px rgba(55, 99, 164, 0.18);
         outline: none;
     }
 
@@ -2243,13 +2323,21 @@ function toggleEditProfile() {
         gap: 10px;
         cursor: pointer;
         padding: 8px 12px;
-        border-radius: 6px;
-        transition: background-color var(--transition-speed) ease;
+        border-radius: 8px;
+        border: 1px solid #dbe4ef;
+        background: #ffffff;
+        transition: all var(--transition-speed) ease;
         user-select: none;
     }
 
     .checkbox-label:hover {
-        background-color: var(--light-gray);
+        background-color: #f8fbff;
+        border-color: #c8d8ea;
+    }
+
+    .checkbox-label input[type="checkbox"]:checked + span {
+        color: #1f4f84;
+        font-weight: 600;
     }
 
     .checkbox-label input[type="checkbox"] {
@@ -2270,7 +2358,8 @@ function toggleEditProfile() {
         overflow-x: auto;
         margin-top: 16px;
         border-radius: 8px;
-        border: 2px solid var(--medium-gray);
+        border: 1px solid #dbe4ef;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
     }
 
     .family-history-table {
@@ -2370,9 +2459,9 @@ function toggleEditProfile() {
     .password-change-content {
         margin-top: 16px;
         padding: 20px;
-        background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+        background: linear-gradient(to bottom, #f8fbff 0%, #ffffff 100%);
         border-radius: 8px;
-        border: 2px solid var(--medium-gray);
+        border: 1px solid #d7e1ee;
     }
 
     .password-info {

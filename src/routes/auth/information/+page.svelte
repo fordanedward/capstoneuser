@@ -1,6 +1,5 @@
 <script lang="ts">
     import { writable, derived } from 'svelte/store';
-    import type { PageData } from '../information/$types';
 
     import { coveredMedicines as coveredMedicinesData, fetchCoveredMedicines } from '$lib/data/coveredMedicines';
 
