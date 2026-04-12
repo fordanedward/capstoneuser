@@ -160,6 +160,13 @@
         overflow-x: hidden;
         padding-right: 0.25rem;
     }
+    .services-subtitle {
+        margin: 0.25rem 0 1rem 0;
+        color: #526277;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        font-weight: 500;
+    }
     h2 {
         font-weight: 800;
     }
@@ -190,6 +197,10 @@
         }
         .scroll-list {
             max-height: 14rem;
+        }
+        .services-subtitle {
+            font-size: 0.9rem;
+            margin-bottom: 0.85rem;
         }
     }
     .container {
@@ -346,6 +357,78 @@
         border: 1px solid #f4c542;
         border-radius: 0.75rem;
         padding: 0.5rem 0.75rem;
+    }
+
+    .section-heading {
+        text-align: center;
+    }
+
+    /* Blood Pressure Prevention */
+    .bp-prevention-section {
+        margin-top: 2rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.5rem;
+        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        padding: 2rem;
+    }
+    .bp-prevention-header {
+        text-align: center;
+        margin-bottom: 1.25rem;
+    }
+    .bp-prevention-title {
+        color: #0a3761;
+        font-size: clamp(1.4rem, 2.2vw, 2rem);
+        margin: 0;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+    .bp-prevention-subtitle {
+        margin: 0.5rem 0 0;
+        color: #526277;
+        font-size: 0.95rem;
+    }
+    .bp-prevention-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+    .bp-tip-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        background: #f9fbfd;
+        padding: 1rem;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .bp-tip-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(10,55,97,0.1);
+    }
+    .bp-tip-icon {
+        width: 3rem;
+        height: 3rem;
+        margin: 0 auto 0.75rem;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0a3761, #0b457e);
+        color: #f4c542;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.45rem;
+        font-weight: 700;
+    }
+    .bp-tip-name {
+        color: #0a3761;
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin: 0 0 0.35rem;
+    }
+    .bp-tip-desc {
+        color: #4b5563;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        margin: 0;
     }
 
     /* Schedule & Hours Section */
@@ -506,6 +589,9 @@
             width: 85px;
             height: 85px;
         }
+        .bp-prevention-grid {
+            grid-template-columns: 1fr 1fr;
+        }
     }
     @media (max-width: 900px) {
         .packages-grid { grid-template-columns: 1fr 1fr; }
@@ -513,6 +599,12 @@
     @media (max-width: 550px) {
         .packages-grid { grid-template-columns: 1fr; }
         .packages-scroll { max-height: none; }
+        .bp-prevention-section {
+            padding: 1.25rem;
+        }
+        .bp-prevention-grid {
+            grid-template-columns: 1fr;
+        }
     }
     /* Modal Styles */
     .modal-backdrop {
@@ -771,7 +863,8 @@
         </div>
     </div>
     <div class="container services-list" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 2px 8px rgba(10,55,97,0.08); padding: 2rem;">
-        <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 3.75rem;">Our Services</h2>
+        <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.25rem;">Our Services</h2>
+        <p class="services-subtitle">Comprehensive care services designed to support prevention, diagnosis, and everyday wellness.</p>
         <div class="scroll-list">
             {#each ourServices as svc}
                 <div
@@ -792,7 +885,7 @@
 </div>
 
 <div class="packages-section">
-    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Diagnostic Laboratory (Packages)</h2>
+    <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Diagnostic Laboratory (Packages)</h2>
     <div class="packages-grid packages-scroll">
         <div class="package-card">
             <div class="package-title">
@@ -857,8 +950,47 @@
     </div>
 </div>
 
+<div class="bp-prevention-section">
+    <div class="bp-prevention-header">
+        <h2 class="bp-prevention-title">How Can You Prevent High Blood Pressure?</h2>
+        <p class="bp-prevention-subtitle">You can help prevent high blood pressure by maintaining a healthy lifestyle.</p>
+    </div>
+    <div class="bp-prevention-grid">
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">R</div>
+            <h3 class="bp-tip-name">Exercise</h3>
+            <p class="bp-tip-desc">Enjoy regular physical activity to improve heart health and blood circulation.</p>
+        </article>
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">N</div>
+            <h3 class="bp-tip-name">Eat a Healthy Diet</h3>
+            <p class="bp-tip-desc">Choose balanced meals that are rich in fruits and vegetables and low in salt.</p>
+        </article>
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">W</div>
+            <h3 class="bp-tip-name">Maintain Healthy Weight</h3>
+            <p class="bp-tip-desc">Keeping a healthy weight lowers strain on your heart and blood vessels.</p>
+        </article>
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">A</div>
+            <h3 class="bp-tip-name">Limit Alcohol</h3>
+            <p class="bp-tip-desc">Drinking too much alcohol can raise your blood pressure over time.</p>
+        </article>
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">S</div>
+            <h3 class="bp-tip-name">Quit Smoking</h3>
+            <p class="bp-tip-desc">Stopping smoking helps protect your blood vessels and overall cardiovascular health.</p>
+        </article>
+        <article class="bp-tip-card">
+            <div class="bp-tip-icon" aria-hidden="true">C</div>
+            <h3 class="bp-tip-name">Manage Stress</h3>
+            <p class="bp-tip-desc">Practice healthy coping habits like rest, breathing, and movement.</p>
+        </article>
+    </div>
+</div>
+
 <div class="schedule-section">
-    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Schedule & Hours</h2>
+    <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Schedule & Hours</h2>
     <div class="schedule-grid">
         <div class="schedule-card">
             <div class="schedule-title">
@@ -912,7 +1044,7 @@
 </div>
 
 <div class="contact-section">
-    <h2 style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact Us</h2>
+    <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact Us</h2>
     <div class="contact-grid">
         <div class="contact-card">
             <div class="contact-logo-container">

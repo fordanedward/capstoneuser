@@ -140,10 +140,11 @@
 
     .about-content h1 {
         font-size: 2.8rem;
-        font-weight: 800;
+        font-weight: 900;
+        text-transform: uppercase;
         color: #0b2d56;
         margin-bottom: 1.2rem;
-        letter-spacing: -1px;
+        letter-spacing: 0.06em;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.08);
         animation: fadeUp 1.2s 0.7s both;
     }
@@ -190,6 +191,106 @@
         color: #f4c542;
         flex-shrink: 0;
         animation: iconPop 1.2s 1.2s both;
+    }
+
+    .why-choose-us {
+        --choose-primary: #0b2d56;
+        --choose-accent: #f4c542;
+        --choose-ink: #10233f;
+        --choose-muted: #4b5c76;
+        --choose-surface: #ffffff;
+        position: relative;
+        padding: 5rem 1.25rem;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 8% 0%, rgba(244, 197, 66, 0.2), transparent 42%),
+            radial-gradient(circle at 92% 100%, rgba(11, 45, 86, 0.14), transparent 48%),
+            linear-gradient(150deg, #f8fbff 0%, #eef4ff 52%, #ffffff 100%);
+    }
+
+    .choose-wrap {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+    }
+
+    .choose-header {
+        text-align: center;
+        max-width: 760px;
+        margin: 0 auto 2.25rem;
+    }
+
+    .choose-header h2 {
+        margin: 0;
+        color: var(--choose-primary);
+        font-size: clamp(1.9rem, 2.8vw, 3rem);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .choose-header p {
+        margin: 0.9rem auto 0;
+        color: var(--choose-muted);
+        line-height: 1.65;
+        font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+    }
+
+    .choose-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .choose-card {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        background: var(--choose-surface);
+        border: 1px solid rgba(11, 45, 86, 0.1);
+        border-radius: 18px;
+        padding: 1.2rem;
+        box-shadow: 0 10px 22px rgba(16, 35, 63, 0.07);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+
+    .choose-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(11, 45, 86, 0.25);
+        box-shadow: 0 16px 30px rgba(16, 35, 63, 0.16);
+    }
+
+    .choose-icon {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        background: linear-gradient(145deg, var(--choose-primary), #144884);
+        box-shadow: 0 10px 18px rgba(11, 45, 86, 0.26);
+    }
+
+    .choose-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .choose-copy h3 {
+        margin: 0;
+        color: var(--choose-ink);
+        font-size: 1.12rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .choose-copy p {
+        margin: 0.45rem 0 0;
+        color: var(--choose-muted);
+        line-height: 1.55;
+        font-size: 0.97rem;
     }
 
     /* Social links below hero subtitle */
@@ -353,6 +454,42 @@
         .about-contact svg {
             width: 1.2em;
             height: 1.2em;
+        }
+
+        .why-choose-us {
+            padding: 3.2rem 0.85rem;
+        }
+
+        .choose-card {
+            padding: 1rem;
+            border-radius: 14px;
+        }
+
+        .choose-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            border-radius: 12px;
+        }
+
+        .choose-copy h3 {
+            font-size: 0.98rem;
+        }
+
+        .choose-copy p {
+            font-size: 0.9rem;
+        }
+    }
+
+    @media (max-width: 1024px) {
+        .choose-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .choose-grid {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -661,6 +798,92 @@
         </div>
     </div>
 </div>
+
+<section class="why-choose-us" aria-labelledby="why-choose-us-title">
+    <div class="choose-wrap">
+        <div class="choose-header">
+            <h2 id="why-choose-us-title">Why Choose Us?</h2>
+            <p>
+                From preventive services to secure digital care tools, PHP combines trusted local providers, modern diagnostics,
+                and member-first support to keep your family healthier.
+            </p>
+        </div>
+
+        <div class="choose-grid">
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v12.5A2.25 2.25 0 0118.75 20H5.25A2.25 2.25 0 013 17.75V5.25zm8 1.5v3.5H7.5a.75.75 0 000 1.5H11v3.5a.75.75 0 001.5 0v-3.5H16a.75.75 0 000-1.5h-3.5v-3.5a.75.75 0 00-1.5 0z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Diagnostic Laboratory</h3>
+                    <p>Complete blood chemistry, hematology, microscopy, serology, and drug testing in one convenient network.</p>
+                </div>
+            </article>
+
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2.25a.75.75 0 01.75.75v1.348c2.292.31 4.19 2.086 4.72 4.383h1.28a.75.75 0 010 1.5h-1.16a5.752 5.752 0 01-5.59 4.5 5.752 5.752 0 01-5.59-4.5H5.25a.75.75 0 010-1.5h1.28c.53-2.297 2.428-4.072 4.72-4.383V3a.75.75 0 01.75-.75zm0 3.5a4.25 4.25 0 100 8.5 4.25 4.25 0 000-8.5zm-3 11.5a.75.75 0 01.75.75v.25A2.25 2.25 0 0012 20.5a2.25 2.25 0 002.25-2.25V18a.75.75 0 011.5 0v.25A3.75 3.75 0 0112 22a3.75 3.75 0 01-3.75-3.75V18a.75.75 0 01.75-.75z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Diagnostic Imaging</h3>
+                    <p>Reliable ultrasound and X-ray services that help identify issues early and support faster treatment decisions.</p>
+                </div>
+            </article>
+
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7.5 3A3.5 3.5 0 004 6.5v11A3.5 3.5 0 007.5 21h9a3.5 3.5 0 003.5-3.5v-11A3.5 3.5 0 0016.5 3h-9zm2 5.25a.75.75 0 01.75-.75h3.5a.75.75 0 010 1.5h-3.5a.75.75 0 01-.75-.75zm0 3.5a.75.75 0 01.75-.75h5a.75.75 0 010 1.5h-5a.75.75 0 01-.75-.75zm0 3.5a.75.75 0 01.75-.75h5a.75.75 0 010 1.5h-5a.75.75 0 01-.75-.75z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Consultation</h3>
+                    <p>Access to physicians who guide preventive care, monitor your health trends, and answer concerns with care.</p>
+                </div>
+            </article>
+
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10.5 2.5a.75.75 0 011.5 0v1.09a7.002 7.002 0 016.41 6.41h1.09a.75.75 0 010 1.5h-1.09a7.002 7.002 0 01-6.41 6.41v1.09a.75.75 0 01-1.5 0v-1.09a7.002 7.002 0 01-6.41-6.41H3a.75.75 0 010-1.5h1.09a7.002 7.002 0 016.41-6.41V2.5zm.75 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zm-.75 3.25a.75.75 0 011.5 0v2h2a.75.75 0 010 1.5h-2v2a.75.75 0 01-1.5 0v-2h-2a.75.75 0 010-1.5h2v-2z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Heart Monitoring</h3>
+                    <p>EKG/ECG support for timely heart checks, helping members and clinicians respond before symptoms worsen.</p>
+                </div>
+            </article>
+
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a8 8 0 018 8v3.2c0 .57.23 1.12.64 1.52l.84.84a1.5 1.5 0 01-1.06 2.56H3.58a1.5 1.5 0 01-1.06-2.56l.84-.84A2.14 2.14 0 004 13.2V10a8 8 0 018-8zm2.5 17.25a2.5 2.5 0 11-5 0h5z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Automated Health Information</h3>
+                    <p>WELLNESS securely manages member records, helping keep healthcare data protected, organized, and accessible.</p>
+                </div>
+            </article>
+
+            <article class="choose-card">
+                <span class="choose-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2.25l7.5 3v6.13c0 4.63-3 8.93-7.5 10.37-4.5-1.44-7.5-5.74-7.5-10.37V5.25l7.5-3zm-1.06 6.44a.75.75 0 10-1.38.6l1.6 3.7a.75.75 0 001.23.23l3.6-4.2a.75.75 0 00-1.14-.97l-2.83 3.3-1.08-2.66z" />
+                    </svg>
+                </span>
+                <div class="choose-copy">
+                    <h3>Trusted Local Care</h3>
+                    <p>Founded by Filipinos for Filipinos, with contracted local providers in Olongapo and member-focused support.</p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
 
 <!-- Locations -->
 <h2 class="locations-title">LOCATION</h2>
