@@ -12,7 +12,7 @@
 </script>
   
 <svelte:head>
-	<title>PHPGMP Member</title>
+	<title>PHPDGMP Member</title>
 </svelte:head>
   
 <main>

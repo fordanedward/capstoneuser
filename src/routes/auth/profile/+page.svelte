@@ -908,6 +908,7 @@ function toggleEditProfile() {
             </button>
         </div>
         <form class="profile-form" on:submit|preventDefault={savePatientProfile}>
+            <div class="profile-form-body">
             <div class="form-image-upload">
                 <div class="profile-image-container">
                     {#if profileImage || patientProfile.profileImage}
@@ -1462,6 +1463,7 @@ function toggleEditProfile() {
                     </div>
                 {/if}
             </div>
+            </div>
             
             <div class="save-button-container">
                 <button type="submit" class="save-button">Save Changes</button>
@@ -1657,10 +1659,12 @@ function toggleEditProfile() {
         padding: 28px;
         box-shadow: 0 24px 60px rgba(12, 27, 52, 0.28);
         position: relative;
+        display: flex;
+        flex-direction: column;
         max-width: 1100px;
         width: 100%;
         max-height: 88vh;
-        overflow-y: auto;
+        overflow: hidden;
         margin: auto;
     }
 
@@ -1738,6 +1742,31 @@ function toggleEditProfile() {
         border-radius: 10px;
         padding: 18px;
         box-shadow: 0 3px 12px rgba(18, 35, 61, 0.06);
+    }
+
+    .profile-form {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .profile-form-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 6px;
+        padding-bottom: 8px;
+    }
+
+    .profile-form-body::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .profile-form-body {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
     .form-section:last-of-type {
@@ -1835,13 +1864,11 @@ function toggleEditProfile() {
         display: flex;
         justify-content: flex-end;
         gap: 12px;
-        margin-top: 32px;
-        padding: 16px 0 4px;
+        margin-top: 18px;
+        padding: 18px 0 4px;
         border-top: 1px solid #dbe3ee;
-        position: sticky;
-        bottom: -1px;
-        background: linear-gradient(180deg, rgba(247, 250, 252, 0.2) 0%, #f7fafc 40%);
-        backdrop-filter: blur(4px);
+        background: #f7fafc;
+        flex-shrink: 0;
     }
 
     .save-button, .cancel-button {
@@ -1905,6 +1932,9 @@ function toggleEditProfile() {
             max-height: 95vh;
             margin-top: 10px;
         }
+        .profile-form-body {
+            padding-right: 0;
+        }
         .form-header {
             margin: 4px 0 16px;
         }
@@ -1928,8 +1958,7 @@ function toggleEditProfile() {
         .save-button-container {
             flex-direction: row;
             gap: 10px;
-            margin-top: 24px;
-            padding: 12px 0 0;
+            padding: 14px 0 0;
         }
         .save-button, .cancel-button {
             flex: 1;
@@ -2260,11 +2289,23 @@ function toggleEditProfile() {
             height: 110px;
             margin-bottom: 10px;
         }
+        .patient-info {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         .patient-info h1 {
             font-size: 1.3rem;
             font-weight: 700;
             margin-bottom: 8px;
             margin-top: 8px;
+            width: 100%;
+        }
+        .status-badge {
+            align-self: center;
+            justify-content: center;
+            margin: 0 auto 14px;
         }
         .toggle-details-btn {
             display: flex;

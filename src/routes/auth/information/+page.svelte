@@ -957,32 +957,32 @@
     </div>
     <div class="bp-prevention-grid">
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">R</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-running"></i></div>
             <h3 class="bp-tip-name">Exercise</h3>
             <p class="bp-tip-desc">Enjoy regular physical activity to improve heart health and blood circulation.</p>
         </article>
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">N</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-apple-alt"></i></div>
             <h3 class="bp-tip-name">Eat a Healthy Diet</h3>
             <p class="bp-tip-desc">Choose balanced meals that are rich in fruits and vegetables and low in salt.</p>
         </article>
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">W</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-weight"></i></div>
             <h3 class="bp-tip-name">Maintain Healthy Weight</h3>
             <p class="bp-tip-desc">Keeping a healthy weight lowers strain on your heart and blood vessels.</p>
         </article>
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">A</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-wine-glass-alt"></i></div>
             <h3 class="bp-tip-name">Limit Alcohol</h3>
             <p class="bp-tip-desc">Drinking too much alcohol can raise your blood pressure over time.</p>
         </article>
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">S</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-smoking-ban"></i></div>
             <h3 class="bp-tip-name">Quit Smoking</h3>
             <p class="bp-tip-desc">Stopping smoking helps protect your blood vessels and overall cardiovascular health.</p>
         </article>
         <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true">C</div>
+            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-brain"></i></div>
             <h3 class="bp-tip-name">Manage Stress</h3>
             <p class="bp-tip-desc">Practice healthy coping habits like rest, breathing, and movement.</p>
         </article>
