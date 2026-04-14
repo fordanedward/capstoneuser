@@ -99,6 +99,44 @@
             closeModal();
         }
     }
+
+    // Mobile carousel controls for blood pressure tips
+    let bpTipIndex = 0;
+    const totalBpTips = 6;
+    let touchStartX = 0;
+    let touchEndX = 0;
+    let dragOffset = 0;
+    let isDragging = false;
+
+    function nextBpTip() {
+        bpTipIndex = (bpTipIndex + 1) % totalBpTips;
+    }
+
+    function prevBpTip() {
+        bpTipIndex = (bpTipIndex - 1 + totalBpTips) % totalBpTips;
+    }
+
+    function handleTouchStart(e: TouchEvent) {
+        touchStartX = e.changedTouches[0].screenX;
+        isDragging = true;
+        dragOffset = 0;
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+        if (!isDragging) return;
+        dragOffset = e.changedTouches[0].screenX - touchStartX;
+    }
+
+    function handleTouchEnd(e: TouchEvent) {
+        isDragging = false;
+        touchEndX = e.changedTouches[0].screenX;
+        dragOffset = 0;
+        const diff = touchStartX - touchEndX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) nextBpTip();
+            else prevBpTip();
+        }
+    }
 </script>
 
 <style>
@@ -297,70 +335,99 @@
     /* Diagnostic Packages */
     .packages-section {
         margin-top: 2rem;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        border: 1px solid #dbe6f4;
         border-radius: 1.5rem;
-        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        box-shadow: 0 10px 28px rgba(10,55,97,0.08);
         padding: 2rem;
     }
     .packages-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1rem;
+        gap: 1.1rem;
     }
     .packages-scroll {
-        max-height: 24rem;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding-right: 0.25rem;
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
     }
     .package-card {
-        border: 1px solid #e2e8f0;
+        border: 1px solid #d6e0ee;
         border-radius: 1rem;
-        padding: 1rem;
+        padding: 1rem 1rem 1.15rem;
         height: 100%;
-        background: #f9fbfd;
+        background: #ffffff;
+        box-shadow: 0 4px 14px rgba(10, 55, 97, 0.06);
+        position: relative;
+    }
+    .package-card::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 5px;
+        border-radius: 1rem 1rem 0 0;
+        background: linear-gradient(90deg, #f4c542 0%, #ffd566 100%);
     }
     .package-title {
         display: flex;
-        align-items: baseline;
+        align-items: flex-start;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
+        gap: 0.75rem;
+        margin-bottom: 0.65rem;
         color: #0a3761;
         font-weight: 800;
-        font-size: 1.15rem;
+        font-size: 1.05rem;
+        line-height: 1.25;
+    }
+    .package-title span:first-child {
+        flex: 1;
+        padding-top: 0.15rem;
     }
     .price-badge {
-        background: #f4c542;
+        background: #ffe6a5;
         color: #0a3761;
         font-weight: 900;
-        border-radius: 0.5rem;
-        padding: 0.25rem 0.5rem;
+        border: 1px solid #f4c542;
+        border-radius: 9999px;
+        padding: 0.25rem 0.65rem;
         white-space: nowrap;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
     }
     .package-list {
         margin: 0;
         padding-left: 1.25rem;
         color: #0a3761;
-        line-height: 1.5;
+        line-height: 1.45;
+        font-weight: 600;
     }
     .packages-notes {
-        margin-top: 1rem;
+        margin-top: 1.25rem;
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.75rem;
         color: #0a3761;
         font-weight: 700;
     }
     .note {
-        background: #fff7e0;
+        background: #fffdfa;
         border: 1px solid #f4c542;
         border-radius: 0.75rem;
-        padding: 0.5rem 0.75rem;
+        padding: 0.55rem 0.85rem;
+        box-shadow: inset 0 0 0 1px rgba(244, 197, 66, 0.18);
     }
 
     .section-heading {
         text-align: center;
+    }
+    .packages-subtitle {
+        text-align: center;
+        color: #526277;
+        font-size: 0.95rem;
+        margin: 0.5rem 0 1.1rem;
+        font-weight: 400;
     }
 
     /* Blood Pressure Prevention */
@@ -396,41 +463,79 @@
     .bp-tip-card {
         border: 1px solid #e2e8f0;
         border-radius: 1rem;
-        background: #f9fbfd;
+        background: #f4f7fb;
         padding: 1rem;
         text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: default;
+        will-change: transform, opacity;
+        overflow: hidden;
+        opacity: 1;
+        transform: translateX(0);
+        transition: transform 0.16s ease-out, box-shadow 0.16s ease-out;
     }
-    .bp-tip-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(10,55,97,0.1);
+    .bp-tip-card:hover,
+    .bp-tip-card:focus-within {
+        transform: translateY(-3px);
+        box-shadow: 0 7px 14px rgba(10,55,97,0.12);
+    }
+    @media (max-width: 550px) {
+        .bp-tip-card:hover,
+        .bp-tip-card:focus-within {
+            transform: none;
+            box-shadow: none;
+        }
     }
     .bp-tip-icon {
-        width: 3rem;
-        height: 3rem;
-        margin: 0 auto 0.75rem;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #0a3761, #0b457e);
-        color: #f4c542;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.45rem;
-        font-weight: 700;
+        width: calc(100% + 2rem);
+        height: 12rem;
+        margin: -1rem -1rem 1.1rem;
+        border-radius: 1rem 1rem 0 0;
+        border: 0;
+        display: block;
+        overflow: hidden;
+        background: #dbe7f5;
+        box-shadow: none;
+    }
+    .bp-tip-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transform: translateZ(0);
+        transition: transform 0.2s ease-out;
+    }
+    .bp-tip-card:hover .bp-tip-icon img,
+    .bp-tip-card:focus-within .bp-tip-icon img {
+        transform: scale(1.06);
     }
     .bp-tip-name {
         color: #0a3761;
-        font-size: 1.05rem;
+        font-size: 1.65rem;
         font-weight: 800;
-        margin: 0 0 0.35rem;
+        margin: 0 0 0.45rem;
     }
     .bp-tip-desc {
-        color: #4b5563;
-        font-size: 0.9rem;
-        line-height: 1.45;
+        color: #0b457e;
+        font-size: 0.95rem;
+        line-height: 1.35;
         margin: 0;
     }
-
+    /* Carousel desktop base — invisible wrappers */
+    .bp-carousel-outer {
+        position: relative;
+    }
+    .carousel-track {
+        display: contents;
+    }
+    .carousel-nav-btn {
+        display: none;
+    }
+    .carousel-dots-row {
+        display: none;
+    }
+    .bp-prevention-grid {
+        touch-action: pan-y;
+    }
     /* Schedule & Hours Section */
     .schedule-section {
         margin-top: 2rem;
@@ -592,18 +697,125 @@
         .bp-prevention-grid {
             grid-template-columns: 1fr 1fr;
         }
+        .bp-tip-name {
+            font-size: 1.4rem;
+        }
+        .bp-tip-icon {
+            height: 10rem;
+        }
     }
     @media (max-width: 900px) {
         .packages-grid { grid-template-columns: 1fr 1fr; }
+        .package-title {
+            font-size: 1rem;
+        }
     }
     @media (max-width: 550px) {
         .packages-grid { grid-template-columns: 1fr; }
+        .packages-section {
+            padding: 1.25rem;
+        }
         .packages-scroll { max-height: none; }
+        .package-title {
+            font-size: 0.98rem;
+        }
+        .price-badge {
+            font-size: 0.9rem;
+        }
         .bp-prevention-section {
             padding: 1.25rem;
         }
+        /* Strip carousel viewport */
         .bp-prevention-grid {
-            grid-template-columns: 1fr;
+            overflow: hidden;
+            display: block;
+            min-height: unset;
+            width: 100%;
+            touch-action: pan-y;
+        }
+        /* The sliding strip — 6 cards wide */
+        .carousel-track {
+            display: flex;
+            width: calc(6 * 100%);
+            transform: translateX(calc(-1 * var(--bp-index, 0) * 100% / 6 + var(--drag-offset, 0px)));
+            transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+        .carousel-track.dragging {
+            transition: none;
+        }
+        /* Each card fills exactly one viewport width */
+        .bp-tip-card {
+            flex: 0 0 calc(100% / 6);
+            width: calc(100% / 6);
+            position: static;
+            opacity: 1;
+            transform: none;
+            box-sizing: border-box;
+            transition: none;
+        }
+        .bp-tip-card:hover,
+        .bp-tip-card:focus-within {
+            transform: none;
+            box-shadow: none;
+        }
+        /* Navigation arrow buttons */
+        .carousel-nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 42%;
+            transform: translateY(-50%);
+            width: 2.1rem;
+            height: 2.1rem;
+            background: rgba(255, 255, 255, 0.93);
+            border: 1px solid #e2e8f0;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 0 2px 8px rgba(10, 55, 97, 0.14);
+            color: #0a3761;
+            padding: 0;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .carousel-nav-btn:active {
+            background: #f4c542;
+            border-color: #e0b030;
+        }
+        .carousel-nav-btn svg {
+            width: 1.1rem;
+            height: 1.1rem;
+        }
+        .prev-btn { left: 0.3rem; }
+        .next-btn { right: 0.3rem; }
+        /* Dot indicators */
+        .carousel-dots-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.42rem;
+            margin-top: 0.9rem;
+        }
+        .carousel-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 9999px;
+            background: #cbd5e1;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.22s ease, width 0.25s ease;
+        }
+        .carousel-dot.active {
+            background: #0a3761;
+            width: 1.3rem;
+        }
+        .bp-tip-name {
+            font-size: 1.2rem;
+        }
+        .bp-tip-icon {
+            height: 9.5rem;
         }
     }
     /* Modal Styles */
@@ -886,67 +1098,80 @@
 
 <div class="packages-section">
     <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Diagnostic Laboratory (Packages)</h2>
+    <p class="packages-subtitle">We offer affordable and reliable diagnostic packages designed for your needs</p>
     <div class="packages-grid packages-scroll">
         <div class="package-card">
             <div class="package-title">
                 <span>Package A</span>
-                <span class="price-badge">₱332</span>
+                <span class="price-badge">₱1,060</span>
             </div>
             <ul class="package-list">
-                <li>FBS</li>
-                <li>Cholesterol</li>
+                <li>Lipid Profile</li>
                 <li>Creatinine</li>
+                <li>FBS</li>
                 <li>SGPT</li>
+                <li>SGOT</li>
             </ul>
         </div>
         <div class="package-card">
             <div class="package-title">
                 <span>Package B</span>
-                <span class="price-badge">₱900</span>
-            </div>
-            <ul class="package-list">
-                <li>FBS</li>
-                <li>Lipid Profile</li>
-                <li>Creatinine</li>
-                <li>Cholesterol</li>
-                <li>SGPT</li>
-                <li>SGOT</li>
-                <li>Urinalysis</li>
-            </ul>
-        </div>
-        <div class="package-card">
-            <div class="package-title">
-                <span>Package C</span>
-                <span class="price-badge">₱1,300</span>
+                <span class="price-badge">₱1,900</span>
             </div>
             <ul class="package-list">
                 <li>FBS</li>
                 <li>Lipid Profile</li>
                 <li>Creatinine</li>
                 <li>BUN</li>
-                <li>SGPT/ALS</li>
-                <li>SGOT/AST</li>
+                <li>BUA</li>
+                <li>SGPT</li>
+                <li>SGOT</li>
                 <li>Urinalysis</li>
                 <li>Fecalysis</li>
-                <li>CBC with Platelet Count</li>
+                <li>CBC w/ Platelet Count</li>
             </ul>
         </div>
         <div class="package-card">
             <div class="package-title">
-                <span>Package D (Child Health)</span>
-                <span class="price-badge">₱380</span>
+                <span>Package C (For Child only)</span>
+                <span class="price-badge">₱614</span>
             </div>
             <ul class="package-list">
                 <li>Urinalysis</li>
                 <li>Fecalysis</li>
-                <li>CBC with Platelet Count</li>
+                <li>CBC w/ Platelet Count</li>
+            </ul>
+        </div>
+        <div class="package-card">
+            <div class="package-title">
+                <span>Liver Function Test Package</span>
+                <span class="price-badge">₱764</span>
+            </div>
+            <ul class="package-list">
+                <li>BUN</li>
+                <li>BUA</li>
+                <li>Creatinine</li>
+                <li>SGOT</li>
+                <li>SGPT</li>
+            </ul>
+        </div>
+        <div class="package-card">
+            <div class="package-title">
+                <span>Kidney Function Test Package</span>
+                <span class="price-badge">₱1,032</span>
+            </div>
+            <ul class="package-list">
+                <li>BUN</li>
+                <li>BUA</li>
+                <li>Creatinine</li>
+                <li>Electrolytes</li>
             </ul>
         </div>
     </div>
     <div class="packages-notes">
         <div class="note">Fasting Hours: FBS and Lipid — 10 to 12 hours</div>
         <div class="note">Open: Monday to Sunday</div>
-        <div class="note">Free Consultation</div>
+        <div class="note">All packages come with a FREE DOCTOR CONSULTATION.</div>
     </div>
 </div>
 
@@ -955,37 +1180,58 @@
         <h2 class="bp-prevention-title">How Can You Prevent High Blood Pressure?</h2>
         <p class="bp-prevention-subtitle">You can help prevent high blood pressure by maintaining a healthy lifestyle.</p>
     </div>
-    <div class="bp-prevention-grid">
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-running"></i></div>
-            <h3 class="bp-tip-name">Exercise</h3>
-            <p class="bp-tip-desc">Enjoy regular physical activity to improve heart health and blood circulation.</p>
-        </article>
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-apple-alt"></i></div>
-            <h3 class="bp-tip-name">Eat a Healthy Diet</h3>
-            <p class="bp-tip-desc">Choose balanced meals that are rich in fruits and vegetables and low in salt.</p>
-        </article>
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-weight"></i></div>
-            <h3 class="bp-tip-name">Maintain Healthy Weight</h3>
-            <p class="bp-tip-desc">Keeping a healthy weight lowers strain on your heart and blood vessels.</p>
-        </article>
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-wine-glass-alt"></i></div>
-            <h3 class="bp-tip-name">Limit Alcohol</h3>
-            <p class="bp-tip-desc">Drinking too much alcohol can raise your blood pressure over time.</p>
-        </article>
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-smoking-ban"></i></div>
-            <h3 class="bp-tip-name">Quit Smoking</h3>
-            <p class="bp-tip-desc">Stopping smoking helps protect your blood vessels and overall cardiovascular health.</p>
-        </article>
-        <article class="bp-tip-card">
-            <div class="bp-tip-icon" aria-hidden="true"><i class="fas fa-brain"></i></div>
-            <h3 class="bp-tip-name">Manage Stress</h3>
-            <p class="bp-tip-desc">Practice healthy coping habits like rest, breathing, and movement.</p>
-        </article>
+    <div class="bp-carousel-outer">
+        <div class="bp-prevention-grid"
+             role="region" aria-label="Blood pressure prevention tips carousel"
+             on:touchstart={handleTouchStart}
+             on:touchmove={handleTouchMove}
+             on:touchend={handleTouchEnd}>
+            <div class="carousel-track"
+                 class:dragging={isDragging}
+                 style="--bp-index: {bpTipIndex}; --drag-offset: {dragOffset}px">
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/exercise.jpg" alt="Exercise" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Exercise</h3>
+                    <p class="bp-tip-desc">Enjoy regular physical activity to improve heart health and blood circulation.</p>
+                </article>
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/healthy%20diet.jpg" alt="Healthy diet" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Eat a Healthy Diet</h3>
+                    <p class="bp-tip-desc">Choose balanced meals that are rich in fruits and vegetables and low in salt.</p>
+                </article>
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/weight.jpg" alt="Maintain healthy weight" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Maintain Healthy Weight</h3>
+                    <p class="bp-tip-desc">Keeping a healthy weight lowers strain on your heart and blood vessels.</p>
+                </article>
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/limit%20alcohol.jpg" alt="Limit alcohol" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Limit Alcohol</h3>
+                    <p class="bp-tip-desc">Drinking too much alcohol can raise your blood pressure over time.</p>
+                </article>
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/quit%20smoking.jpg" alt="Quit smoking" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Quit Smoking</h3>
+                    <p class="bp-tip-desc">Stopping smoking helps protect your blood vessels and overall cardiovascular health.</p>
+                </article>
+                <article class="bp-tip-card">
+                    <div class="bp-tip-icon"><img src="/images/healthy%20habits/manage%20stress.jpeg" alt="Manage stress" loading="lazy" decoding="async" width="640" height="360" /></div>
+                    <h3 class="bp-tip-name">Manage Stress</h3>
+                    <p class="bp-tip-desc">Practice healthy coping habits like rest, breathing, and movement.</p>
+                </article>
+            </div>
+        </div>
+        <button class="carousel-nav-btn prev-btn" on:click={prevBpTip} aria-label="Previous tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
+        </button>
+        <button class="carousel-nav-btn next-btn" on:click={nextBpTip} aria-label="Next tip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"></polyline></svg>
+        </button>
+    </div>
+    <div class="carousel-dots-row">
+        {#each [0,1,2,3,4,5] as i}
+            <button class="carousel-dot" class:active={bpTipIndex === i} on:click={() => bpTipIndex = i} aria-label="Tip {i + 1}"></button>
+        {/each}
     </div>
 </div>
 
