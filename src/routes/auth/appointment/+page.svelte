@@ -4,9 +4,8 @@
   import { scale, fade } from 'svelte/transition';
   import { elasticOut } from 'svelte/easing';
   import {
-    getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, where,
-    updateDoc, getDoc, onSnapshot, runTransaction, initializeFirestore, CACHE_SIZE_UNLIMITED,
-    type QuerySnapshot, type DocumentData, Timestamp // Add Timestamp import
+    getFirestore, collection, getDocs, doc, query, where,
+    updateDoc, getDoc, onSnapshot, runTransaction, Timestamp // Add Timestamp import
   } from "firebase/firestore";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { env } from '$lib/env';
@@ -83,6 +82,9 @@
     refundAmount?: number;
     refundRequestDate?: Timestamp;
     refundProcessedDate?: Timestamp;
+    appointmentReason?: string;
+    reasonForVisit?: string;
+    reasonUpdatedAt?: Timestamp;
   };
 
   // --- Component State ---
@@ -101,7 +103,6 @@
 
   // Additional variables for simplified slot loading (as per notepad instructions)
   let availableSlots: string[] = [];
-  let isLoadingSlots: boolean = false;
 
   let defaultWorkingDays: number[] = [1, 2, 3, 4, 5, 6, 7]; // Default fallback
   let fetchedBookingSlots: string[] = [];
@@ -129,11 +130,14 @@
   let newDate: string = "";
   let newTime: string = "";
   let paymentAmount: number = 500; // Default payment amount
-  let paymentStatus: 'pending' | 'success' | 'failed' | null = null;
 
-  let reasonNotAvailable = false;
-  let reasonSchedulingConflict = false;
-  let reasonOther = false;
+  let reasonEditModal = false;
+  let reasonEditAppointmentId: string | null = null;
+  let reasonEditText = '';
+  let isSavingReason = false;
+  let reasonEditMode: 'appointment' | 'cancellation' = 'appointment';
+
+  let cancellationReason = '';
   let requestRefund = false;
   let refundReason = '';
 
@@ -209,7 +213,7 @@
               day: 'numeric',
               timeZone: 'UTC' // Ensure consistency
           });
-      } catch (e) {
+            } catch {
           return dateString; // Fallback
       }
   }
@@ -417,11 +421,6 @@
   // Helper function to clear cache for a date
   function clearCacheForDate(date: string) {
     slotCache.delete(date);
-  }
-
-  // Clear entire cache (used when critical updates happen)
-  function clearAllCache() {
-    slotCache.clear();
   }
 
   // Helper function to check if a date has available slots (considering time passed for today)
@@ -742,7 +741,6 @@
     if (!selectedDate || !db) return;
     
     availableSlots = [];
-    isLoadingSlots = true;
     
     try {
         const scheduleRef = doc(db, 'dailySchedules', selectedDate);
@@ -756,7 +754,6 @@
             if (scheduleData.isNonWorkingDay === true) {
               console.log(`${selectedDate} is BLOCKED (isNonWorkingDay: true). No appointments allowed.`);
               availableSlots = [];
-              isLoadingSlots = false;
               return;
             } 
             
@@ -801,17 +798,10 @@
     } catch (error) {
         console.error('Error loading available slots:', error);
         availableSlots = [];
-    } finally {
-        isLoadingSlots = false;
     }
   }
 
   async function bookAppointment() {
-      // Get today's date in local timezone
-      const todayLocal = getTodayLocal();
-      const selectedDateObj = new Date(selectedDate + 'T00:00:00');
-      const todayDateObj = new Date(todayLocal + 'T00:00:00');
-
     // Keeping it to make sure there won't be an error regarding invalid date (even though the date picker prevents past dates)
       // if (!selectedDate || selectedDateObj < today) {
           // Swal.fire('Invalid Date', 'You cannot book an appointment on a past date.', 'warning'); return;
@@ -904,15 +894,16 @@
           selectedTime = null;
           await fetchAvailabilityForDate(selectedDate, 'booking');
 
-      } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Error during booking transaction:", error);
+          const errorMessage = error instanceof Error ? error.message : '';
           let title = 'Booking Error';
           let text = 'An issue occurred while booking your appointment. Please try again.';
-          if (error.message === 'Time Slot Unavailable') {
+          if (errorMessage === 'Time Slot Unavailable') {
               title = 'Time Slot Unavailable';
               text = 'Sorry, this time slot was just booked. Please choose a different time.';
               await fetchAvailabilityForDate(selectedDate, 'booking');
-          } else if (error.message === 'Already Booked') {
+          } else if (errorMessage === 'Already Booked') {
                title = 'Already Booked';
                text = 'You already have an appointment scheduled for this date. Please choose another date.';
           }
@@ -920,21 +911,83 @@
       }
   }
 
-  function getSelectedReasons() {
-    const reasons = [];
-    if (reasonNotAvailable) reasons.push('Service is no longer needed');
-    if (reasonSchedulingConflict) reasons.push('Scheduling conflict');
-    if (reasonOther) reasons.push('Other');
-    return reasons;
+  function resetCancellationForm() {
+    cancellationReason = '';
+    requestRefund = false;
+    refundReason = '';
+  }
+
+  function getAppointmentReason(appointment: Partial<Appointment>): string {
+    return (appointment.appointmentReason || appointment.reasonForVisit || '').trim();
   }
 
   // Helper to normalize cancel/decline reason field names coming from different admin apps
-  function getCancelReason(appointment: any) {
+  function getCancelReason(appointment: Partial<Appointment> & { reason?: string; declineReason?: string; adminReason?: string }) {
     return appointment?.cancelReason || appointment?.reason || appointment?.declineReason || appointment?.adminReason || '';
   }
 
   function switchTab(tab: 'upcoming' | 'past') {
     activeTab = tab;
+  }
+
+  function openReasonEditModal(appointmentId: string): void {
+    const appointment = upcomingAppointments.find((item) => item.id === appointmentId);
+    if (!appointment) {
+      Swal.fire('Error', 'Unable to load appointment reason.', 'error');
+      return;
+    }
+
+    reasonEditAppointmentId = appointmentId;
+    const isCancellationFlow = appointment.cancellationStatus === 'requested';
+    reasonEditMode = isCancellationFlow ? 'cancellation' : 'appointment';
+    reasonEditText = isCancellationFlow ? getCancelReason(appointment) : getAppointmentReason(appointment);
+    reasonEditModal = true;
+  }
+
+  async function saveAppointmentReason(): Promise<void> {
+    if (!reasonEditAppointmentId) {
+      Swal.fire('Error', 'No appointment selected.', 'error');
+      return;
+    }
+
+    const trimmedReason = reasonEditText.trim();
+    if (!trimmedReason) {
+      Swal.fire('Reason Required', 'Please provide your updated appointment reason.', 'warning');
+      return;
+    }
+
+    if (!db) {
+      Swal.fire('Error', 'Database connection unavailable. Please refresh the page.', 'error');
+      return;
+    }
+
+    try {
+      isSavingReason = true;
+      const appointmentRef = doc(db, FIRESTORE_APPOINTMENTS_COLLECTION, reasonEditAppointmentId);
+      const reasonUpdateData: Record<string, unknown> = {
+        reasonUpdatedAt: Timestamp.fromDate(new Date())
+      };
+
+      if (reasonEditMode === 'cancellation') {
+        reasonUpdateData.cancelReason = trimmedReason;
+      } else {
+        reasonUpdateData.appointmentReason = trimmedReason;
+        reasonUpdateData.reasonForVisit = trimmedReason;
+      }
+
+      await updateDoc(appointmentRef, reasonUpdateData);
+
+      Swal.fire('Reason Updated', 'Your appointment reason has been updated.', 'success');
+      reasonEditModal = false;
+      reasonEditAppointmentId = null;
+      reasonEditText = '';
+      reasonEditMode = 'appointment';
+    } catch (error) {
+      console.error('Error updating appointment reason:', error);
+      Swal.fire('Error', 'Failed to update appointment reason. Please try again.', 'error');
+    } finally {
+      isSavingReason = false;
+    }
   }
 
   const checkNotificationsState = () => {
@@ -1021,11 +1074,11 @@
       if (!selectedAppointmentId) {
          Swal.fire('Error', 'No appointment selected for cancellation.', 'error'); return;
       }
-      if (getSelectedReasons().length === 0) {
-          Swal.fire('Reason Required', 'Please select a reason for cancellation.', 'warning'); return;
-      }
-      if (requestRefund && !refundReason.trim()) {
-          Swal.fire('Refund Reason Required', 'Please provide a reason for the refund request.', 'warning'); return;
+      const trimmedCancellationReason = cancellationReason.trim();
+      const trimmedRefundReason = refundReason.trim();
+
+      if (!trimmedCancellationReason) {
+        Swal.fire('Reason Required', 'Please provide a brief reason for the cancellation request.', 'warning'); return;
       }
 
       try {
@@ -1037,9 +1090,9 @@
               throw new Error('Appointment not found');
           }
 
-          const updateData: any = {
+            const updateData: Record<string, unknown> = {
               cancellationStatus: 'requested',
-              cancelReason: getSelectedReasons().join(", "),
+        cancelReason: trimmedCancellationReason,
               status: 'cancellationRequested'
           };
 
@@ -1047,7 +1100,7 @@
           if (appointmentData.paymentStatus === 'paid') {
               updateData.paymentStatus = 'refund_pending';
               updateData.refundRequested = requestRefund;
-              updateData.refundReason = requestRefund ? refundReason : null;
+        updateData.refundReason = requestRefund ? (trimmedRefundReason || trimmedCancellationReason) : null;
               if (appointmentData.paymentAmount) {
                   updateData.refundAmount = appointmentData.paymentAmount;
               }
@@ -1062,11 +1115,7 @@
 
           Swal.fire('Cancellation Requested', successMessage, 'success');
           popupModal = false;
-          reasonNotAvailable = false;
-          reasonSchedulingConflict = false;
-          reasonOther = false;
-          requestRefund = false;
-          refundReason = '';
+      resetCancellationForm();
       } catch (e) {
           console.error("Error requesting cancellation: ", e);
           Swal.fire('Error', 'Failed to submit cancellation request. Please try again.', 'error');
@@ -1082,6 +1131,7 @@
       requestRefund = false;
     }
 
+    cancellationReason = '';
     refundReason = '';
     popupModal = true;
   }
@@ -1157,11 +1207,12 @@
           rescheduleModal = false;
            fetchAvailabilityForDate(selectedDate, 'booking'); // Refresh main list
 
-      } catch (error: any) {
-          console.error("Reschedule transaction error:", error?.message || error);
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : '';
+          console.error("Reschedule transaction error:", errorMessage || error);
           let title = 'Reschedule Error';
           let text = 'Unable to submit your reschedule request. Please try again.';
-          if (error.message === 'Reschedule Slot Unavailable') {
+          if (errorMessage === 'Reschedule Slot Unavailable') {
               title = 'Time Slot Unavailable';
               text = 'This time slot is no longer available. Please select another.';
               await fetchAvailabilityForDate(newDate, 'reschedule');
@@ -1226,13 +1277,6 @@
         text: error instanceof Error ? error.message : 'There was an error processing your payment. Please try again.',
       });
     }
-  }
-
-  function openPaymentModal(appointmentId: string) {
-    selectedAppointmentId = appointmentId;
-    paymentAmount = 500; // Use a fixed default value
-    paymentModal = true;
-    paymentStatus = null;
   }
 
   // --- Lifecycle ---
@@ -1904,7 +1948,7 @@
               <div class="space-y-4">
                 <div class="skeleton-header"></div>
                 <div class="skeleton-grid">
-                  {#each Array(6) as _, i}
+                  {#each Array.from({ length: 6 }, (_, i) => i) as i (i)}
                     <div class="skeleton-slot"></div>
                   {/each}
                 </div>
@@ -2021,7 +2065,7 @@
         {:else}
           <div class="appointment-list space-y-3">
                 {#if activeTab === 'upcoming' && upcomingAppointments.length === 0 && isLoadingBookingSlots}
-                    {#each Array(3) as _, i}
+                    {#each Array.from({ length: 3 }, (_, i) => i) as i (i)}
                       <div class="skeleton-appointment-card"></div>
                     {/each}
                 {:else if activeTab === 'upcoming'}
@@ -2047,10 +2091,11 @@
                                             Sub: {appointment.subServices.join(', ')}
                                         </p>
                                    {/if}
+
                                </div>
                             
                                <div class="mt-auto pt-2 border-t border-gray-100">
-                                    <div class="flex justify-between items-center min-h-[50px] mb-2">
+                                 <div class="appointment-footer-row flex justify-between items-center min-h-[50px] mb-2">
                                         <div class="status-badge {appointment.status.toLowerCase().replace(/\s+/g, '-')}-status {appointment.cancellationStatus ? appointment.cancellationStatus.toLowerCase() + '-status' : ''}">
                                             {#if appointment.status === 'Reschedule Requested'}
                                                 <i class="fas fa-exchange-alt mr-1"></i> Reschedule Req.
@@ -2069,6 +2114,9 @@
                                             {/if}
                                         </div>
                                         <div class="action-buttons">
+                                          <button title="Edit Appointment Reason" class="btn-action btn-reason" on:click={() => openReasonEditModal(appointment.id)}>
+                                            <i class="fas fa-pen"></i> <span class="ml-1">Edit Reason</span>
+                                          </button>
                                           {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
                                              <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
                                                <i class="fas fa-edit"></i> <span class="ml-1">Reschedule</span>
@@ -2107,7 +2155,7 @@
                                         </div>
                                     {/if}
                                     
-                                    {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                    {#if appointment.cancellationStatus === 'requested' || appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
                                        <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
                                           <strong>Reason:</strong> {getCancelReason(appointment) || 'N/A'}
                                        </p>
@@ -2143,6 +2191,7 @@
                                             Sub: {appointment.subServices.join(', ')}
                                         </p>
                                      {/if}
+
                                 </div>
                                 <div class="mt-auto pt-2 border-t border-gray-100">
                                     <div class="flex items-center min-h-[50px] mb-2">
@@ -2162,7 +2211,7 @@
                                            {/if}
                                         </div>
                                     </div>
-                                    {#if appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
+                                    {#if appointment.cancellationStatus === 'requested' || appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
                                       <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
                                         <strong>Reason:</strong> {getCancelReason(appointment) || 'No reason'}
                                       </p>
@@ -2234,63 +2283,92 @@
 
   <!-- Cancel Modal -->
   <Modal bind:open={popupModal} size="xs" autoclose={false} class="cancel-modal">
-    <div class="text-center">
-      <ExclamationCircleOutline class="mx-auto mb-4 text-yellow-400 w-12 h-12" />
-      <h3 class="mb-5 text-lg font-normal text-gray-600">Are you sure you want to request cancellation?</h3>
-      <div class="mb-4 text-left px-2">
-        <p class="text-gray-600 font-medium mb-2">Reason for Cancellation (Required):</p>
-        <div class="space-y-1">
-          <label class="flex items-center cursor-pointer">
-            <Checkbox bind:checked={reasonNotAvailable} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"/> Service no longer needed
-          </label>
-          <label class="flex items-center cursor-pointer">
-            <Checkbox bind:checked={reasonSchedulingConflict} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"/> Scheduling conflict
-          </label>
-          <label class="flex items-center cursor-pointer">
-            <Checkbox bind:checked={reasonOther} class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-2"/> Other
-          </label>
+    <div class="cancel-request-modal">
+      <div class="cancel-request-header">
+        <div class="cancel-request-icon-wrap">
+          <ExclamationCircleOutline class="cancel-request-icon" />
         </div>
+        <div>
+          <h3 class="cancel-request-title">Request appointment cancellation</h3>
+          <p class="cancel-request-subtitle">Tell the clinic why you need to cancel. Your request will be reviewed before the schedule is released.</p>
+        </div>
+      </div>
+
+      <div class="cancel-request-body">
+        <label class="cancel-request-field">
+          <span class="cancel-request-label">Cancellation reason</span>
+          <span class="cancel-request-help">Provide enough detail so staff can review the request quickly.</span>
+          <textarea
+            bind:value={cancellationReason}
+            class="cancel-request-textarea"
+            rows="4"
+            maxlength="400"
+            placeholder="Example: I have a schedule conflict tomorrow morning and need to move or cancel this visit."
+          ></textarea>
+          <span class="cancel-request-count">{cancellationReason.trim().length}/400</span>
+        </label>
 
         {#if requestRefund}
-          <div class="mt-4">
-            <p class="text-gray-600 font-medium mb-2">Refund Request Details:</p>
-            <div class="bg-blue-50 p-3 rounded-md mb-3">
-              <p class="text-sm text-blue-700">
-                <i class="fas fa-info-circle mr-1"></i>
-                Since this appointment has been paid, you can request a refund.
-              </p>
+          <div class="cancel-request-refund-card">
+            <div class="cancel-request-refund-title">
+              <i class="fas fa-wallet"></i>
+              <span>Refund request included</span>
             </div>
-            <div class="space-y-2">
-              <label class="block text-sm text-gray-600">
-                Reason for Refund (Required):
-                <textarea
-                  bind:value={refundReason}
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
-                  rows="3"
-                  placeholder="Please explain why you need a refund..."
-                ></textarea>
-              </label>
-            </div>
+            <p class="cancel-request-refund-copy">This appointment is marked as paid. Your cancellation reason will also be used for the refund request. Add extra refund details only if needed.</p>
+            <label class="cancel-request-field">
+              <span class="cancel-request-label">Additional refund details</span>
+              <textarea
+                bind:value={refundReason}
+                class="cancel-request-textarea cancel-request-textarea-secondary"
+                rows="3"
+                maxlength="300"
+                placeholder="Optional: include payment-related details the clinic should know."
+              ></textarea>
+            </label>
           </div>
         {/if}
       </div>
-      <div class="modal-actions">
+
+      <div class="modal-actions cancel-request-actions">
          <Button color="alternative" on:click={() => { 
            popupModal = false; 
-           reasonNotAvailable = false; 
-           reasonSchedulingConflict = false; 
-           reasonOther = false;
-           requestRefund = false;
-           refundReason = '';
+           resetCancellationForm();
          }}>
-             No, Keep Appointment
+             Keep Appointment
          </Button>
-         <Button color="red" on:click={requestCancelAppointment} disabled={!reasonNotAvailable && !reasonSchedulingConflict && !reasonOther || (requestRefund && !refundReason.trim())}>
-             <i class="fas fa-ban mr-2"></i>Yes, Request
+         <Button color="red" on:click={requestCancelAppointment} disabled={!cancellationReason.trim()}>
+             <i class="fas fa-ban mr-2"></i>Submit Request
          </Button>
       </div>
     </div>
   </Modal>
+
+  {#if reasonEditModal}
+  <div class="modal reason-edit-modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-semibold mb-2">{reasonEditMode === 'cancellation' ? 'Edit Cancellation Reason' : 'Edit Appointment Reason'}</h2>
+      <p class="text-sm text-gray-600 mb-4">{reasonEditMode === 'cancellation' ? 'Update your cancellation reason so clinic staff can review your request accurately.' : 'Update the reason so clinic staff can review your latest concern.'}</p>
+      <label for="reason-edit-text" class="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+      <textarea
+        id="reason-edit-text"
+        bind:value={reasonEditText}
+        class="cancel-request-textarea"
+        rows="4"
+        maxlength="300"
+        placeholder="Type your updated reason here."
+      ></textarea>
+      <p class="reason-helper">{reasonEditText.trim().length}/300</p>
+      <div class="modal-actions">
+        <Button color="alternative" on:click={() => { reasonEditModal = false; reasonEditAppointmentId = null; reasonEditText = ''; reasonEditMode = 'appointment'; }}>
+          Cancel
+        </Button>
+        <Button color="blue" on:click={saveAppointmentReason} disabled={!reasonEditText.trim() || isSavingReason}>
+          {isSavingReason ? 'Saving...' : 'Save Reason'}
+        </Button>
+      </div>
+    </div>
+  </div>
+  {/if}
 
   <!-- Payment Modal -->
   {#if paymentModal && selectedAppointmentId}
@@ -2828,6 +2906,18 @@
     opacity: 0.6;
   }
 
+  .reason-input {
+    min-height: 90px;
+    resize: vertical;
+  }
+
+  .reason-helper {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-align: right;
+    margin-top: 0.35rem;
+  }
+
   .sub-services-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -2971,13 +3061,6 @@
       font-size: 0.9rem;
     }
 
-    .appointment-card > div:nth-child(4) > div:first-child {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-      min-height: auto;
-    }
-
     .action-buttons {
       margin-top: 0.75rem;
       gap: 0.5rem;
@@ -2995,7 +3078,7 @@
       justify-content: center;
       align-items: center;
       white-space: nowrap;
-      flex: 0 1 calc(50% - 0.25rem);
+      flex: 0 1 auto;
     }
 
     .tabs-container {
@@ -3044,6 +3127,149 @@
        .modal-content { padding: 1rem; }
    }
   .modal-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+  .cancel-request-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .cancel-request-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    text-align: left;
+  }
+
+  .cancel-request-icon-wrap {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .cancel-request-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #b45309;
+  }
+
+  .cancel-request-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .cancel-request-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #6b7280;
+  }
+
+  .cancel-request-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cancel-request-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    text-align: left;
+  }
+
+  .cancel-request-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .cancel-request-help,
+  .cancel-request-count {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .cancel-request-count {
+    align-self: flex-end;
+  }
+
+  .cancel-request-textarea {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid #d1d5db;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    background: #f9fafb;
+    color: #111827;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+
+  .cancel-request-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    background: #ffffff;
+  }
+
+  .cancel-request-textarea-secondary {
+    background: #ffffff;
+  }
+
+  .cancel-request-refund-card {
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cancel-request-refund-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1d4ed8;
+  }
+
+  .cancel-request-refund-copy {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: #475569;
+  }
+
+  .cancel-request-actions {
+    margin-top: 0.25rem;
+  }
+
+  @media (max-width: 640px) {
+    .cancel-request-header {
+      gap: 0.75rem;
+    }
+
+    .cancel-request-icon-wrap {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .cancel-request-actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+  }
 
   /* Times Passed Modal Styles */
   .times-passed-modal {
@@ -3376,15 +3602,32 @@
   }
   
   @media (max-width: 480px) {
-    .action-buttons {
+    .appointment-footer-row {
       flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      min-height: auto;
+    }
+
+    .status-badge {
+      align-self: flex-start;
+      max-width: 100%;
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0.5rem;
       width: 100%;
+      margin-top: 0;
     }
     
     .btn-action {
       width: 100%;
+      padding: 0.5rem 0.625rem;
+      font-size: 0.8125rem;
       justify-content: center;
+      min-width: 0;
     }
   }
   .btn-action {
@@ -3402,8 +3645,29 @@
   .btn-action i { width: 1em; text-align: center; }
   .btn-reschedule { background-color: #3b82f6; border-color: #2563eb; }
   .btn-reschedule:hover { background-color: #2563eb; }
+  .btn-reason { background-color: #64748b; border-color: #475569; }
+  .btn-reason:hover { background-color: #475569; }
   .btn-cancel { background-color: #ef4444; border-color: #dc2626; }
   .btn-cancel:hover { background-color: #dc2626; }
+
+  .appointment-reason {
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: #4b5563;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .appointment-reason-empty {
+    color: #9ca3af;
+    font-style: italic;
+  }
 
   /* Tabs */
   .tabs-container {
@@ -3539,6 +3803,8 @@
  :global(.dark) .appointment-card .text-gray-500 { color: #6b7280; }
  :global(.dark) .appointment-card .text-gray-400 { color: #9ca3af; }
  :global(.dark) .appointment-card .border-gray-100 { border-color: #4b5563; }
+ :global(.dark) .appointment-reason { color: #cbd5e1; }
+ :global(.dark) .appointment-reason-empty { color: #94a3b8; }
  /* End inner card dark mode */
  :global(.dark) .tab-button { color: #9ca3af; }
  :global(.dark) .tab-button:hover:not(.active-tab) { color: #f9fafb; border-bottom-color: #4b5563; }
