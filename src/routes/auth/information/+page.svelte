@@ -1,5 +1,7 @@
 <script lang="ts">
     import { writable, derived } from 'svelte/store';
+    import { fade, scale } from 'svelte/transition';
+    import { cubicOut } from 'svelte/easing';
 
     import { coveredMedicines as coveredMedicinesData, fetchCoveredMedicines } from '$lib/data/coveredMedicines';
 
@@ -74,14 +76,26 @@
     let modalType: 'medicine' | 'service' = 'medicine';
     let selectedMedicine: CoveredMedicine | null = null;
     let selectedService: ServiceInfo | null = null;
+    let activeListItemKey: string | null = null;
+
+    function triggerItemClickAnimation(key: string) {
+        activeListItemKey = key;
+        setTimeout(() => {
+            if (activeListItemKey === key) {
+                activeListItemKey = null;
+            }
+        }, 260);
+    }
 
     function showMedicineInfo(med: CoveredMedicine) {
+        triggerItemClickAnimation(`medicine-${med.name}`);
         selectedMedicine = med;
         modalType = 'medicine';
         showModal = true;
     }
 
     function showServiceInfo(svc: ServiceInfo) {
+        triggerItemClickAnimation(`service-${svc.name}`);
         selectedService = svc;
         modalType = 'service';
         showModal = true;
@@ -291,6 +305,8 @@
         transition: background 0.2s, transform 0.15s ease, box-shadow 0.15s ease;
         touch-action: manipulation;
         gap: 0.75rem;
+        position: relative;
+        overflow: hidden;
     }
     .list-item:hover {
         background: #0b457e;
@@ -299,6 +315,31 @@
     }
     .list-item:active {
         background: #08406e;
+    }
+    .list-item.clicked {
+        animation: listItemPop 260ms cubic-bezier(0.22, 0.8, 0.3, 1);
+    }
+
+    .list-item::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, rgba(244, 197, 66, 0.22) 0%, rgba(244, 197, 66, 0) 62%);
+        opacity: 0;
+        transform: scale(0.85);
+        transition: opacity 0.2s ease, transform 0.25s ease;
+        pointer-events: none;
+    }
+
+    .list-item.clicked::after {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+
+    @keyframes listItemPop {
+        0% { transform: scale(1); }
+        40% { transform: scale(0.965); }
+        100% { transform: scale(1); }
     }
     .service-icon-img {
         width: 1.75rem;
@@ -825,24 +866,25 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(5, 18, 34, 0.52);
+        backdrop-filter: blur(3px);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1000;
-        animation: fadeIn 0.3s ease-out;
     }
 
     .modal-container {
         background: white;
         border-radius: 16px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 24px 40px rgba(3, 18, 38, 0.24), 0 10px 18px rgba(3, 18, 38, 0.16);
+        border: 1px solid rgba(219, 234, 254, 0.85);
         max-width: 550px;
         width: 90%;
         max-height: 80vh;
         overflow: hidden;
-        animation: slideIn 0.3s ease-out;
         transform: translateY(0);
+        transform-origin: center;
     }
 
     .modal-header {
@@ -949,27 +991,6 @@
         border-left: 4px solid #0a3761;
     }
 
-    /* Animations */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
     /* Mobile responsive styles */
     @media (max-width: 700px) {
         .modal-container {
@@ -1062,6 +1083,7 @@
             {#each $filteredMedicines as med}
                 <div
                     class="list-item"
+                    class:clicked={activeListItemKey === `medicine-${med.name}`}
                     role="button"
                     tabindex="0"
                     aria-label={`Show information for ${med.name}`}
@@ -1081,6 +1103,7 @@
             {#each ourServices as svc}
                 <div
                     class="list-item"
+                    class:clicked={activeListItemKey === `service-${svc.name}`}
                     role="button"
                     tabindex="0"
                     aria-label={`Show information for ${svc.name}`}
@@ -1320,8 +1343,8 @@
 
 <!-- Information Modal -->
 {#if showModal}
-    <div class="modal-backdrop" role="button" tabindex="0" aria-label="Close modal" on:click={handleBackdropClick} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeModal(); } }}>
-        <div class="modal-container" class:show={showModal}>
+    <div class="modal-backdrop" role="button" tabindex="0" aria-label="Close modal" on:click={handleBackdropClick} on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeModal(); } }} transition:fade={{ duration: 170 }}>
+        <div class="modal-container" class:show={showModal} in:scale={{ duration: 260, start: 0.92, easing: cubicOut }} out:scale={{ duration: 150, start: 1 }}>
             <div class="modal-header">
                 <h3 class="modal-title">{modalType === 'medicine' ? 'Medicine Information' : 'Service Information'}</h3>
                 <button class="close-button" on:click={closeModal} aria-label="Close">

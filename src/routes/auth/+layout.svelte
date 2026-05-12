@@ -20,6 +20,8 @@
 	let isMobile = false;
 	let isCollapsed = false; // Desktop collapsed state
 	let isSidebarOpen = false; // Mobile sidebar open state
+	let menuRevealing = false;
+	let navClickPath = '';
  
 	const MOBILE_BREAKPOINT = 768; // Same breakpoint
  
@@ -69,12 +71,18 @@
 		if (!browser || isMobile || !auth) return; // Guard against non-browser, mobile, or uninitialized auth
 		isCollapsed = !isCollapsed;
 		sessionStorage.setItem('isCollapsed', String(isCollapsed)); // Save state
+		if (!isCollapsed) {
+			triggerMenuReveal();
+		}
 	}
  
 	// Toggle mobile sidebar open/closed state
 	function toggleSidebarMobile() {
 		if (!browser || !isMobile || !auth) return; // Guard against non-browser, non-mobile, or uninitialized auth
 		isSidebarOpen = !isSidebarOpen;
+		if (isSidebarOpen) {
+			triggerMenuReveal();
+		}
 	}
  
 	// Close mobile sidebar explicitly
@@ -82,6 +90,20 @@
 		if (isSidebarOpen) {
 			isSidebarOpen = false;
 		}
+	}
+
+	function triggerMenuReveal() {
+		menuRevealing = true;
+		setTimeout(() => {
+			menuRevealing = false;
+		}, 420);
+	}
+
+	function onNavClick(path: string) {
+		navClickPath = path;
+		setTimeout(() => {
+			if (navClickPath === path) navClickPath = '';
+		}, 220);
 	}
 
 	// Check user active status
@@ -393,27 +415,47 @@
 		</div>
  
 		<!-- Sidebar Menu (using OriginalComponent's items) -->
-		<ul class="sidebar-menu">
-			<li>
-				<a href="./information">
+		<ul class="sidebar-menu {menuRevealing ? 'is-revealing' : ''}">
+			<li style="--item-index: 0;">
+				<a
+					href="/auth/information"
+					on:click={() => onNavClick('/auth/information')}
+					class:active={$page.url.pathname === '/auth/information'}
+					class:nav-clicking={navClickPath === '/auth/information'}
+				>
 					<img class="icon" src="/images/dashboard.png" alt="Dashboard Icon" />
 					<span class="text">Information</span>
 				</a>
 			</li>
-			<li>
-				<a href="./profile">
+			<li style="--item-index: 1;">
+				<a
+					href="/auth/profile"
+					on:click={() => onNavClick('/auth/profile')}
+					class:active={$page.url.pathname === '/auth/profile'}
+					class:nav-clicking={navClickPath === '/auth/profile'}
+				>
 					<img class="icon" src="/images/profile1.png" alt="Profile Icon" />
 					<span class="text">Profile</span>
 				</a>
 			</li>
-			<li>
-				<a href="./appointment">
+			<li style="--item-index: 2;">
+				<a
+					href="/auth/appointment"
+					on:click={() => onNavClick('/auth/appointment')}
+					class:active={$page.url.pathname === '/auth/appointment'}
+					class:nav-clicking={navClickPath === '/auth/appointment'}
+				>
 					<img class="icon" src="/images/book.png" alt="Appointment Icon" />
 					<span class="text">Appointment</span>
 				</a>
 			</li>
-			<li>
-				<a href="./chat">
+			<li style="--item-index: 3;">
+				<a
+					href="/auth/chat"
+					on:click={() => onNavClick('/auth/chat')}
+					class:active={$page.url.pathname === '/auth/chat'}
+					class:nav-clicking={navClickPath === '/auth/chat'}
+				>
 					<i class="fas fa-comments icon-fa"></i>
 					<span class="text">Chat</span>
 				</a>
@@ -1001,13 +1043,70 @@
     border-radius: 8px;
     color: var(--sidebar-text-color);
     text-decoration: none;
-    transition: background 0.25s, transform 0.2s;
+	transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+	position: relative;
+	overflow: hidden;
+}
+
+.sidebar-menu li a::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 8px;
+	bottom: 8px;
+	width: 3px;
+	border-radius: 999px;
+	background: #f4c542;
+	opacity: 0;
+	transform: scaleY(0.4);
+	transition: opacity 0.2s ease, transform 0.25s ease;
 }
  
 .sidebar-menu li a:hover {
-    background: linear-gradient(90deg, #1e3a66 60%, #f4c542 100%);
+	background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(244, 197, 66, 0.16) 100%);
     color: #fff;
-    transform: scale(1.04);
+	transform: translateX(4px);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-menu li a.active {
+	background: linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0%, rgba(244, 197, 66, 0.22) 100%);
+	box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-menu li a.active::after,
+.sidebar-menu li a:hover::after {
+	opacity: 1;
+	transform: scaleY(1);
+}
+
+.sidebar-menu li a.nav-clicking {
+	background: linear-gradient(90deg, rgba(244, 197, 66, 0.18) 0%, rgba(255, 255, 255, 0.14) 100%);
+	box-shadow: inset 0 0 0 1px rgba(244, 197, 66, 0.55), 0 6px 14px rgba(0, 0, 0, 0.14);
+}
+
+.sidebar-menu li a:active {
+	background: linear-gradient(90deg, rgba(244, 197, 66, 0.22) 0%, rgba(255, 255, 255, 0.16) 100%);
+	box-shadow: inset 0 0 0 1px rgba(244, 197, 66, 0.65);
+	transform: none;
+}
+
+.sidebar-menu.is-revealing li {
+	animation: navItemReveal 360ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+	animation-delay: calc(var(--item-index, 0) * 60ms);
+}
+
+@keyframes navItemReveal {
+	0% {
+		opacity: 0;
+		transform: translateX(-10px);
+		filter: blur(2px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateX(0);
+		filter: blur(0);
+	}
 }
  
 .sidebar-menu li a .icon {

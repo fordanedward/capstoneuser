@@ -85,6 +85,20 @@
     appointmentReason?: string;
     reasonForVisit?: string;
     reasonUpdatedAt?: Timestamp;
+    completionRemarks?: string;
+    remarks?: string;
+    remark?: string;
+    adminRemarks?: string;
+    notes?: string;
+    comment?: string;
+    comments?: string;
+    description?: string;
+    completedAt?: Timestamp | Date | string | number | null;
+    completionAt?: Timestamp | Date | string | number | null;
+    completedDate?: Timestamp | Date | string | number | null;
+    completedOn?: Timestamp | Date | string | number | null;
+    updatedAt?: Timestamp | Date | string | number | null;
+    finishedAt?: Timestamp | Date | string | number | null;
   };
 
   // --- Component State ---
@@ -136,6 +150,9 @@
   let reasonEditText = '';
   let isSavingReason = false;
   let reasonEditMode: 'appointment' | 'cancellation' = 'appointment';
+  let detailsModal = false;
+  let selectedPastAppointment: Appointment | null = null;
+  let detailsAnimatingId: string | null = null;
 
   let cancellationReason = '';
   let requestRefund = false;
@@ -924,6 +941,32 @@
   // Helper to normalize cancel/decline reason field names coming from different admin apps
   function getCancelReason(appointment: Partial<Appointment> & { reason?: string; declineReason?: string; adminReason?: string }) {
     return appointment?.cancelReason || appointment?.reason || appointment?.declineReason || appointment?.adminReason || '';
+  }
+
+  function getAppointmentRemarks(appointment: Partial<Appointment>): string {
+    return (
+      appointment.completionRemarks ||
+      appointment.remarks ||
+      appointment.remark ||
+      appointment.adminRemarks ||
+      appointment.notes ||
+      appointment.comment ||
+      appointment.comments ||
+      appointment.description ||
+      ''
+    ).toString().trim();
+  }
+
+  function openPastAppointmentDetails(appointment: Appointment): void {
+    detailsAnimatingId = appointment.id;
+    selectedPastAppointment = appointment;
+    detailsModal = true;
+
+    setTimeout(() => {
+      if (detailsAnimatingId === appointment.id) {
+        detailsAnimatingId = null;
+      }
+    }, 260);
   }
 
   function switchTab(tab: 'upcoming' | 'past') {
@@ -2211,6 +2254,16 @@
                                            {/if}
                                         </div>
                                     </div>
+                                    <div class="action-buttons past-actions mb-2">
+                                      <button
+                                        type="button"
+                                        title="View appointment details"
+                                        class="btn-action btn-details {detailsAnimatingId === appointment.id ? 'details-click-pop' : ''}"
+                                        on:click={() => openPastAppointmentDetails(appointment)}
+                                      >
+                                        <i class="fas fa-circle-info"></i> <span class="ml-1">View Details</span>
+                                      </button>
+                                    </div>
                                     {#if appointment.cancellationStatus === 'requested' || appointment.cancellationStatus === 'Approved' || appointment.cancellationStatus === 'decline' || appointment.status === 'Decline'}
                                       <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
                                         <strong>Reason:</strong> {getCancelReason(appointment) || 'No reason'}
@@ -2423,6 +2476,57 @@
       <div class="modal-actions">
         <Button color="blue" on:click={() => { timesPassedModal = false; }} class="w-full times-passed-btn">
           OK
+        </Button>
+      </div>
+    </div>
+  </div>
+  {/if}
+
+  <!-- Past Appointment Details Modal -->
+  {#if detailsModal && selectedPastAppointment}
+  <div class="modal details-modal" transition:fade={{ duration: 160 }}>
+    <div class="modal-content details-modal-content" in:scale={{ duration: 260, start: 0.92, easing: elasticOut }} out:scale={{ duration: 150, start: 1 }}>
+      <div class="details-modal-header">
+        <div class="details-modal-icon" aria-hidden="true">
+          <i class="fas fa-file-medical"></i>
+        </div>
+        <div>
+          <h2 class="details-modal-title">Past Appointment Details</h2>
+          <p class="details-modal-subtitle">Summary from your completed or past visit</p>
+        </div>
+      </div>
+
+      <div class="details-meta-grid">
+        <article class="details-item-card">
+          <p class="details-item-label">Service</p>
+          <p class="details-item-value">{selectedPastAppointment.service}</p>
+        </article>
+        <article class="details-item-card">
+          <p class="details-item-label">Status</p>
+          <p class="details-item-value">
+            <span class="details-status-chip">{selectedPastAppointment.status || 'Unknown'}</span>
+          </p>
+        </article>
+        <article class="details-item-card details-item-wide">
+          <p class="details-item-label">Scheduled Date and Time</p>
+          <p class="details-item-value">{formatDate(selectedPastAppointment.date)} at {selectedPastAppointment.time}</p>
+        </article>
+      </div>
+
+      {#if selectedPastAppointment.subServices.length > 0}
+        <div class="details-section">
+          <p class="details-section-label">Selected Services</p>
+          <p class="details-section-content">{selectedPastAppointment.subServices.join(', ')}</p>
+        </div>
+      {/if}
+
+      <div class="details-section remarks-section">
+        <p class="details-section-label">Encoder/Admin Remarks</p>
+        <p class="details-section-content">{getAppointmentRemarks(selectedPastAppointment) || 'No remarks recorded.'}</p>
+      </div>
+      <div class="modal-actions">
+        <Button color="blue" on:click={() => { detailsModal = false; selectedPastAppointment = null; }}>
+          Close
         </Button>
       </div>
     </div>
@@ -3649,6 +3753,173 @@
   .btn-reason:hover { background-color: #475569; }
   .btn-cancel { background-color: #ef4444; border-color: #dc2626; }
   .btn-cancel:hover { background-color: #dc2626; }
+  .btn-details { background-color: #0ea5e9; border-color: #0284c7; }
+  .btn-details:hover { background-color: #0284c7; }
+  .btn-details:active {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.22);
+  }
+
+  .details-click-pop {
+    animation: detailsClickPop 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @keyframes detailsClickPop {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.35);
+    }
+    50% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 8px rgba(14, 165, 233, 0.15);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+    }
+  }
+
+  .past-actions { justify-content: flex-start; }
+
+  .details-modal .modal-content {
+    max-width: 560px;
+  }
+
+  .details-modal-content {
+    border-radius: 1rem;
+    border: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 18px 48px rgba(30, 58, 102, 0.2);
+    padding: 1.25rem;
+  }
+
+  .details-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    margin-bottom: 1rem;
+  }
+
+  .details-modal-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1d4ed8;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #93c5fd;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .details-modal-title {
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.2;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .details-modal-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.82rem;
+    color: #64748b;
+  }
+
+  .details-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.95rem;
+  }
+
+  .details-item-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    background: #ffffff;
+    padding: 0.75rem 0.875rem;
+    min-width: 0;
+  }
+
+  .details-item-wide {
+    grid-column: 1 / -1;
+  }
+
+  .details-item-label {
+    margin: 0 0 0.25rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+  }
+
+  .details-item-value {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #0f172a;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .details-status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .details-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.8rem;
+    background: #ffffff;
+    padding: 0.75rem 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .details-section-label {
+    margin: 0 0 0.35rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+  }
+
+  .details-section-content {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #0f172a;
+    line-height: 1.45;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .remarks-section {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  }
+
+  @media (max-width: 640px) {
+    .details-modal-content {
+      padding: 1rem;
+    }
+
+    .details-modal-title {
+      font-size: 1.15rem;
+    }
+
+    .details-meta-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 
   .appointment-reason {
     margin-top: 0.35rem;
