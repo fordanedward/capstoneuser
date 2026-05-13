@@ -137,9 +137,70 @@
         time: string;
         service: string;
         status?: string;
+        cancellationStatus?: string;
         subServices?: string[];
         remarks?: string;
     };
+
+    function parseAppointmentDateTime(date: string, time: string): Date | null {
+        if (!date || !time) return null;
+
+        const dateParts = date.split('-').map(Number);
+        if (dateParts.length !== 3 || dateParts.some(Number.isNaN)) return null;
+
+        const [year, month, day] = dateParts;
+        const timeMatch = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!timeMatch) return null;
+
+        const hourRaw = Number(timeMatch[1]);
+        const minute = Number(timeMatch[2]);
+        const period = timeMatch[3].toUpperCase();
+
+        if (Number.isNaN(hourRaw) || Number.isNaN(minute)) return null;
+
+        let hour = hourRaw % 12;
+        if (period === 'PM') hour += 12;
+
+        return new Date(year, month - 1, day, hour, minute, 0, 0);
+    }
+
+    function isPastAppointment(appointment: Appointment): boolean {
+        const doneStatuses = ['completed', 'completed: need follow-up', 'missed'];
+        const status = (appointment.status || '').toLowerCase().trim();
+        if (doneStatuses.includes(status)) return true;
+
+        const appointmentDate = parseAppointmentDateTime(appointment.date, appointment.time);
+        if (!appointmentDate) return false;
+
+        return appointmentDate.getTime() < Date.now();
+    }
+
+    function isActiveUpcomingAppointment(appointment: Appointment): boolean {
+        const status = (appointment.status || '').toLowerCase().trim();
+        const cancellationStatus = (appointment.cancellationStatus || '').toLowerCase().trim();
+
+        const excludedStatuses = ['decline', 'cancelled', 'cancellationrequested', 'completed', 'completed: need follow-up', 'missed'];
+        if (excludedStatuses.includes(status)) return false;
+        if (cancellationStatus === 'approved' || cancellationStatus === 'requested' || cancellationStatus === 'pending') return false;
+
+        const explicitlyUpcomingStatuses = ['accepted', 'confirmed', 'scheduled', 'rescheduled', 'pending'];
+        if (status && !explicitlyUpcomingStatuses.includes(status)) return false;
+
+        const appointmentDate = parseAppointmentDateTime(appointment.date, appointment.time);
+        if (!appointmentDate) return false;
+
+        return appointmentDate.getTime() >= Date.now();
+    }
+
+    function getAppointmentStatusClass(status?: string): string {
+        const normalized = (status || 'pending').toLowerCase().trim();
+
+        if (normalized.includes('complete')) return 'status-completed';
+        if (normalized.includes('accept') || normalized.includes('confirm') || normalized.includes('schedule') || normalized.includes('resched')) return 'status-confirmed';
+        if (normalized.includes('cancel') || normalized.includes('decline') || normalized.includes('missed')) return 'status-cancelled';
+
+        return 'status-pending';
+    }
 
     let patientProfile: PatientProfile = {
         name: '',
@@ -169,6 +230,7 @@
     let currentUser: User | null = null;
     let isEditingProfile = false; 
     let doneAppointments: Appointment[] = [];
+    let upcomingAppointment: Appointment | null = null;
     let showDetails = false;
     let isMobile = false;
     let isArchived: boolean = false;
@@ -195,6 +257,32 @@
         if (!normalized) return 'N/A';
         if (normalized === 'prefer_not_to_say') return 'Prefer not to say';
         return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    }
+
+    function getDefaultFamilyHistory() {
+        return {
+            mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
+            otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
+        };
+    }
+
+    function ensureFamilyHistoryComplete(data: any): typeof familyHistory {
+        const defaults = getDefaultFamilyHistory();
+        if (!data || typeof data !== 'object') return defaults;
+        
+        // Merge data with defaults to ensure all nested properties exist
+        const result = { ...defaults };
+        for (const member in defaults) {
+            if (data[member] && typeof data[member] === 'object') {
+                result[member as keyof typeof defaults] = { ...defaults[member as keyof typeof defaults], ...data[member] };
+            }
+        }
+        return result;
     }
 
     $: normalizedPatientGender = normalizeGender(patientProfile.gender);
@@ -255,11 +343,10 @@ onMount(() => {
                 const appointmentsRef = collection(db, "appointments");
                 const qAppointments = query(
                     appointmentsRef,
-                    where("patientId", "==", currentUser.uid),
-                    where("status", "in", ["Completed", "Completed: Need Follow-up", "Missed"])
+                    where("patientId", "==", currentUser.uid)
                 );
                 const querySnapshot = await getDocs(qAppointments);
-                doneAppointments = querySnapshot.docs.map((doc) => {
+                const allAppointments = querySnapshot.docs.map((doc) => {
                     const data = doc.data();
                     console.log("Appointment data:", data); // Debug log
                     console.log("Checking remarks fields:", {
@@ -292,12 +379,28 @@ onMount(() => {
                         time: String(data.time ?? ''),
                         service: String(data.service ?? ''),
                         status: data.status ? String(data.status) : undefined,
+                        cancellationStatus: data.cancellationStatus ? String(data.cancellationStatus) : undefined,
                         subServices: Array.isArray(data.subServices) ? data.subServices : undefined,
                         remarks: remarksValue
                     };
 
                     return appointment;
                 });
+
+                doneAppointments = allAppointments.filter((appointment) => isPastAppointment(appointment));
+
+                const upcomingAppointments = allAppointments
+                    .filter((appointment) => isActiveUpcomingAppointment(appointment))
+                    .sort((a, b) => {
+                        const dateA = parseAppointmentDateTime(a.date, a.time);
+                        const dateB = parseAppointmentDateTime(b.date, b.time);
+
+                        const timeA = dateA ? dateA.getTime() : Number.POSITIVE_INFINITY;
+                        const timeB = dateB ? dateB.getTime() : Number.POSITIVE_INFINITY;
+                        return timeA - timeB;
+                    });
+
+                upcomingAppointment = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
                 console.log("Loaded done appointments: ", doneAppointments);
 
             } catch (error) {
@@ -320,6 +423,7 @@ onMount(() => {
                 profileImage: ''
             };
             doneAppointments = [];
+            upcomingAppointment = null;
             isArchived = false;
             console.log("User is not logged in.");
         }
@@ -444,13 +548,13 @@ async function savePatientProfile() {
             bloodType: formBloodType,
             allergies: formAllergies,
             currentMedications: formCurrentMedications,
-            medicalConditions: medicalConditions,
-            surgicalHistory: surgicalHistory,
-            familyHistory: familyHistory,
-            otherMedicalConditions: formOtherMedicalConditions,
-            otherFamilyHistory: formOtherFamilyHistory,
-            bloodTransfusionHistory: formBloodTransfusionHistory,
-            bloodTransfusionDate: formBloodTransfusionDate
+            medicalConditions: patientProfile.medicalConditions ?? medicalConditions,
+            surgicalHistory: patientProfile.surgicalHistory ?? surgicalHistory,
+            familyHistory: patientProfile.familyHistory ?? familyHistory,
+            otherMedicalConditions: patientProfile.otherMedicalConditions ?? formOtherMedicalConditions,
+            otherFamilyHistory: patientProfile.otherFamilyHistory ?? formOtherFamilyHistory,
+            bloodTransfusionHistory: patientProfile.bloodTransfusionHistory ?? formBloodTransfusionHistory,
+            bloodTransfusionDate: patientProfile.bloodTransfusionDate ?? formBloodTransfusionDate
         };
 
         console.log("Saving profile data:", profileData);
@@ -572,6 +676,25 @@ async function changePassword() {
 
 function toggleEditProfile() {
     try {
+        // Guard: Ensure user is logged in
+        if (!currentUser) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Not Logged In',
+                text: 'Please log in to edit your profile.'
+            });
+            return;
+        }
+
+        if (!patientProfile) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Profile Not Loaded',
+                text: 'Your profile is loading. Please try again in a moment.'
+            });
+            return;
+        }
+
         isEditingProfile = !isEditingProfile; 
 
         if (isEditingProfile) {
@@ -648,27 +771,11 @@ function toggleEditProfile() {
             if (Array.isArray(familyData)) {
                 // If it's an array from admin registration, store as string for now
                 formOtherFamilyHistory = (patientProfile.otherFamilyHistory || '') + (patientProfile.otherFamilyHistory ? ', ' : '') + familyData.join(', ');
-                familyHistory = {
-                    mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
-                };
+                familyHistory = getDefaultFamilyHistory();
             } else if (familyData && typeof familyData === 'object') {
-                familyHistory = JSON.parse(JSON.stringify(familyData));
+                familyHistory = ensureFamilyHistoryComplete(familyData);
             } else {
-                familyHistory = {
-                    mother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    father: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    sister: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    brother: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    daughter: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    son: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false },
-                    otherRelative: { alcoholAbuse: false, breastCancer: false, ovarianCancer: false, prostateCancer: false, otherCancer: false, diabetes: false, heartDisease: false, highCholesterol: false, hypertension: false, mentalIllness: false }
-                };
+                familyHistory = getDefaultFamilyHistory();
             }
             
             formOtherMedicalConditions = formOtherMedicalConditions || patientProfile.otherMedicalConditions || '';
@@ -854,33 +961,80 @@ function toggleEditProfile() {
 
     <!-- ========== History Section ========== -->
     <div class="history-section">
+        <h2 class="section-title">Upcoming Appointment</h2>
+        {#if upcomingAppointment}
+            <div class="upcoming-grid">
+                <article class="history-card upcoming-card">
+                    <div class="card-header">
+                        <span>Next Visit</span>
+                        <span class="status-pill {getAppointmentStatusClass(upcomingAppointment.status)}">{upcomingAppointment.status || 'Pending'}</span>
+                    </div>
+                    <div class="card-content">
+                        <div class="meta-grid">
+                            <div class="card-meta-item">
+                                <strong>Date & Time</strong>
+                                <span>{upcomingAppointment.date} at {upcomingAppointment.time}</span>
+                            </div>
+                            <div class="card-meta-item">
+                                <strong>Service</strong>
+                                <span>{upcomingAppointment.service}</span>
+                            </div>
+                        </div>
+                        {#if upcomingAppointment.subServices && upcomingAppointment.subServices.length > 0}
+                            <div class="card-meta-item full-width">
+                                <strong>Selected Services</strong>
+                                <span>{upcomingAppointment.subServices.join(', ')}</span>
+                            </div>
+                        {/if}
+                    </div>
+                </article>
+            </div>
+        {:else}
+            <p class="no-data-message">No upcoming appointment.</p>
+        {/if}
+
         <h2 class="section-title">
             Appointment History
         </h2>
         {#if doneAppointments.length === 0}
             <p class="no-data-message">No past visits recorded.</p>
         {:else}
-        <div class="card-container">
+        <div class="history-grid">
             {#each doneAppointments as appointment (appointment.id)}
-                <div class="history-card">
+                <article class="history-card">
                     <div class="card-header">
-                         Appointment Details
+                        <span>Appointment Details</span>
+                        <span class="status-pill {getAppointmentStatusClass(appointment.status)}">{appointment.status || 'Completed'}</span>
                     </div>
                     <div class="card-content">
-                         <p><strong>Date & Time:</strong> {appointment.date} at {appointment.time}</p>
-                         <p><strong>Service:</strong> {appointment.service} <span class="status">({appointment.status})</span></p>
-                         
+                        <div class="meta-grid">
+                            <div class="card-meta-item">
+                                <strong>Date & Time</strong>
+                                <span>{appointment.date} at {appointment.time}</span>
+                            </div>
+                            <div class="card-meta-item">
+                                <strong>Service</strong>
+                                <span>{appointment.service}</span>
+                            </div>
+                        </div>
+
                          {#if appointment.subServices && appointment.subServices.length > 0}
-                            <p><strong>Selected Services:</strong> {appointment.subServices.join(', ')}</p>
+                            <div class="card-meta-item full-width">
+                                <strong>Selected Services</strong>
+                                <span>{appointment.subServices.join(', ')}</span>
+                            </div>
                          {/if}
 
                          {#if appointment.remarks}
-                            <p class="remarks"><strong>Remarks:</strong> {appointment.remarks}</p>
+                            <div class="remarks">
+                                <strong>Remarks</strong>
+                                <p>{appointment.remarks}</p>
+                            </div>
                          {:else}
-                            <p class="no-info"><em>No remarks for this visit.</em></p>
+                            <p class="no-info">No remarks for this visit.</p>
                          {/if}
                     </div>
-                </div>
+                </article>
             {/each}
         </div>
         {/if}
@@ -1055,8 +1209,9 @@ function toggleEditProfile() {
             </div>
             
             <!-- Medical Conditions Section -->
-            <div class="form-section">
+            <div class="form-section admin-readonly-section">
                 <h4 class="section-subtitle">Your Medical Conditions (check all that apply)</h4>
+                <fieldset class="admin-readonly-group" disabled aria-label="Medical conditions (admin only)">
                 <div class="checkbox-grid">
                     <label class="checkbox-label">
                         <input type="checkbox" bind:checked={medicalConditions.anemia}/>
@@ -1127,11 +1282,13 @@ function toggleEditProfile() {
                         <span>Hypertension/high blood pressure</span>
                     </label>
                 </div>
+                </fieldset>
             </div>
             
             <!-- Surgical History Section -->
-            <div class="form-section">
+            <div class="form-section admin-readonly-section">
                 <h4 class="section-subtitle">Surgical History (check all that apply)</h4>
+                <fieldset class="admin-readonly-group" disabled aria-label="Surgical history (admin only)">
                 <div class="checkbox-grid">
                     <label class="checkbox-label">
                         <input type="checkbox" bind:checked={surgicalHistory.appendectomy}/>
@@ -1210,11 +1367,13 @@ function toggleEditProfile() {
                         <span>Weight reduction surgery</span>
                     </label>
                 </div>
+                </fieldset>
             </div>
             
             <!-- Family History Section -->
-            <div class="form-section">
+            <div class="form-section admin-readonly-section">
                 <h4 class="section-subtitle">Family History (check all that apply)</h4>
+                <fieldset class="admin-readonly-group" disabled aria-label="Family history (admin only)">
                 <div class="family-history-table-container">
                     <table class="family-history-table">
                         <thead>
@@ -1327,11 +1486,13 @@ function toggleEditProfile() {
                         </tbody>
                     </table>
                 </div>
+                </fieldset>
             </div>
             
             <!-- Other Medical Information Section -->
-            <div class="form-section">
+            <div class="form-section admin-readonly-section">
                 <h4 class="section-subtitle">Other Medical Information</h4>
+                <fieldset class="admin-readonly-group" disabled aria-label="Other medical information (admin only)">
                 <div class="form-group full-width">
                     <label for="otherMedicalConditions">Other Medical Conditions (specify)</label>
                     <textarea id="otherMedicalConditions" bind:value={formOtherMedicalConditions} placeholder="Specify any other medical conditions" rows="3"></textarea>
@@ -1356,6 +1517,7 @@ function toggleEditProfile() {
                     </div>
                     {/if}
                 </div>
+                </fieldset>
             </div>
             
             <!-- Password Change Section -->
@@ -1993,120 +2155,197 @@ function toggleEditProfile() {
     }
 
     .history-section {
-        margin-top: 32px;
+        margin-top: 36px;
     }
 
     .section-title {
-        font-size: 1.75rem;
+        font-size: 1.6rem;
         font-weight: 700;
         color: var(--primary-color);
-        margin-bottom: 24px;
-        padding-bottom: 12px;
-        border-bottom: 3px solid var(--primary-color);
+        margin-bottom: 18px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #ccd7e6;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
     }
 
     .section-title::before {
-        content: '📋';
-        font-size: 1.5rem;
+        content: '🗓️';
+        font-size: 1.25rem;
     }
 
      .no-data-message {
-        background-color: var(--medium-gray);
-        color: var(--dark-gray);
-        padding: 15px;
-        border-radius: var(--border-radius);
+        background: linear-gradient(180deg, #f6f9fc 0%, #eef3f9 100%);
+        border: 1px dashed #c6d2e2;
+        color: #4f6076;
+        padding: 16px;
+        border-radius: 10px;
         text-align: center;
         font-style: italic;
      }
 
-    .card-container {
+    .upcoming-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        margin-bottom: 24px;
+    }
+
+    .history-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 20px;
+        gap: 18px;
     }
 
     .history-card {
-        background-color: var(--white);
-        border: 2px solid var(--medium-gray);
-        border-radius: var(--border-radius);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        border: 1px solid #d9e4f2;
+        border-radius: 14px;
+        box-shadow: 0 8px 20px rgba(17, 42, 76, 0.08);
         transition: all var(--transition-speed) ease;
         position: relative;
         overflow: hidden;
         display: flex;
         flex-direction: column;
     }
+
+    .upcoming-card {
+        box-shadow: 0 10px 26px rgba(16, 48, 91, 0.12);
+        border-color: #bfd3ef;
+    }
+
      .history-card::before {
         content: "";
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 6px;
+        height: 4px;
         background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     }
 
     .history-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-        border-color: var(--primary-color);
+        transform: translateY(-4px);
+        box-shadow: 0 14px 28px rgba(17, 42, 76, 0.14);
+        border-color: #b1c9ea;
     }
 
     .card-header {
-        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
-        padding: 14px 20px;
+        background: linear-gradient(90deg, #f2f6fc 0%, #e9f0f9 100%);
+        padding: 14px 18px;
         font-weight: 700;
         color: var(--primary-color);
-        border-bottom: 2px solid var(--medium-gray);
-        font-size: 1.15rem;
+        border-bottom: 1px solid #d5e0ef;
+        font-size: 1rem;
         display: flex;
         align-items: center;
-        gap: 8px;
+        justify-content: space-between;
+        gap: 12px;
     }
 
-    .card-header::before {
-        content: '📅';
-        font-size: 1rem;
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: capitalize;
+        border: 1px solid transparent;
+        white-space: nowrap;
+    }
+
+    .status-pill.status-confirmed {
+        background: #e8f8ee;
+        color: #1b7f43;
+        border-color: #bce9cf;
+    }
+
+    .status-pill.status-completed {
+        background: #e7f3ff;
+        color: #175eac;
+        border-color: #bfdbf7;
+    }
+
+    .status-pill.status-cancelled {
+        background: #fdecec;
+        color: #ae2d2d;
+        border-color: #f5bcbc;
+    }
+
+    .status-pill.status-pending {
+        background: #fff7e6;
+        color: #9a6a06;
+        border-color: #f6d58d;
     }
 
     .card-content {
-        padding: 20px;
-        font-size: 1rem;
+        padding: 18px;
+        font-size: 0.98rem;
         color: var(--text-color);
-        line-height: 1.8;
+        line-height: 1.65;
         flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
-    .card-content p {
-        margin-bottom: 12px;
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .card-meta-item {
+        background: #f7faff;
+        border: 1px solid #dfebf8;
+        border-radius: 10px;
+        padding: 10px 12px;
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 4px;
     }
 
-    .card-content strong {
-        font-weight: 600;
-        color: var(--primary-color);
-        margin-right: 6px;
-        min-width: fit-content;
+    .card-meta-item.full-width {
+        margin-top: -2px;
     }
 
-     .card-content .status {
-         font-style: italic;
-         color: var(--dark-gray);
-         font-size: 0.9em;
-     }
+    .card-meta-item strong {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #4e6483;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .card-meta-item span {
+        color: #1f3350;
+        font-weight: 500;
+    }
+
      .card-content .remarks {
          background: linear-gradient(to right, #eef8ff 0%, #f0f9ff 100%);
-         padding: 12px 16px;
-         border-radius: 8px;
+         padding: 12px 14px;
+         border-radius: 10px;
          border-left: 4px solid var(--info-color);
-         margin-top: 12px;
+         margin-top: 2px;
          box-shadow: 0 2px 8px rgba(23, 162, 184, 0.1);
          position: relative;
+     }
+
+     .card-content .remarks strong {
+         display: block;
+         margin-bottom: 4px;
+         color: #0f4b6d;
+         text-transform: uppercase;
+         font-size: 0.78rem;
+         letter-spacing: 0.03em;
+     }
+
+     .card-content .remarks p {
+         margin: 0;
+         color: #1f3f52;
      }
 
      .card-content .remarks::before {
@@ -2122,15 +2361,19 @@ function toggleEditProfile() {
          color: var(--dark-gray);
          font-style: italic;
          font-size: 0.9em;
-         margin-top: 5px;
+         margin-top: 2px;
      }
 
 
 
     @media (max-width: 768px) {
-        .card-container {
+        .history-grid {
             grid-template-columns: 1fr;
-            gap: 16px;
+            gap: 14px;
+        }
+
+        .meta-grid {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -2349,6 +2592,66 @@ function toggleEditProfile() {
         border-color: #3763a4;
         box-shadow: 0 0 0 3px rgba(55, 99, 164, 0.18);
         outline: none;
+    }
+
+    .admin-readonly-section {
+        background: #f4f7fb;
+        border-color: #d6deea;
+    }
+
+    .admin-readonly-group {
+        border: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .admin-readonly-section .section-subtitle::after {
+        content: ' (Admin only)';
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .admin-readonly-section input:disabled,
+    .admin-readonly-section select:disabled,
+    .admin-readonly-section textarea:disabled {
+        background-color: #eef2f7;
+        color: #667085;
+        cursor: not-allowed;
+    }
+
+    .admin-readonly-section .checkbox-label {
+        cursor: not-allowed;
+        background: #f7f9fc;
+    }
+
+    .admin-readonly-section .family-history-table tbody tr:hover {
+        background-color: transparent;
+    }
+
+    /* Highlight checked disabled checkboxes in admin-only sections */
+    .admin-readonly-section .checkbox-label input[type="checkbox"]:checked {
+        accent-color: #059669;
+        background-color: #d1fae5;
+    }
+
+    .admin-readonly-section .checkbox-label input[type="checkbox"]:checked + span {
+        color: #047857;
+        font-weight: 600;
+    }
+
+    .admin-readonly-section .checkbox-label:has(input[type="checkbox"]:checked) {
+        background-color: #ecfdf5;
+        border-color: #6ee7b7;
+    }
+
+    /* Highlight checked disabled checkboxes in family history table */
+    .admin-readonly-section .family-history-table input[type="checkbox"]:checked {
+        accent-color: #059669;
+        background-color: #d1fae5;
+    }
+
+    .admin-readonly-section .family-history-table td:has(input[type="checkbox"]:checked) {
+        background-color: #ecfdf5;
     }
 
     .checkbox-grid {

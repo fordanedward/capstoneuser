@@ -632,7 +632,7 @@
         margin-bottom: 0.25rem;
     }
     
-    /* Contact Us Section */
+    /* Contact/Message Section */
     .contact-section {
         margin-top: 2rem;
         background: #ffffff;
@@ -646,7 +646,7 @@
     }
     .contact-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.5rem;
         margin-top: 1.5rem;
     }
@@ -660,6 +660,10 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         position: relative;
         overflow: hidden;
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     .contact-card::before {
         content: '';
@@ -706,6 +710,11 @@
         height: 50px;
         color: #f4c542;
     }
+    .contact-facebook-icon {
+        width: 50px;
+        height: 50px;
+        color: #1877f2;
+    }
     .contact-type {
         color: #0a3761;
         font-weight: 700;
@@ -721,11 +730,23 @@
         font-family: 'Poppins', sans-serif;
         letter-spacing: 0.01em;
     }
+    .contact-link {
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 1rem;
+        font-family: 'Poppins', sans-serif;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+    .contact-link:hover {
+        color: #1877f2;
+    }
     
     @media (max-width: 900px) {
         .schedule-grid { grid-template-columns: 1fr; }
         .contact-grid { 
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 1.25rem;
         }
         .contact-card {
@@ -859,6 +880,13 @@
             height: 9.5rem;
         }
     }
+
+    @media (max-width: 640px) {
+        .contact-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
     /* Modal Styles */
     .modal-backdrop {
         position: fixed;
@@ -1313,7 +1341,7 @@
 </div>
 
 <div class="contact-section">
-    <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact Us</h2>
+    <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Contact/Message Us</h2>
     <div class="contact-grid">
         <div class="contact-card">
             <div class="contact-logo-container">
@@ -1337,6 +1365,15 @@
             </div>
             <div class="contact-type">Landline</div>
             <div class="contact-number">(047) 222-4441</div>
+        </div>
+        <div class="contact-card">
+            <div class="contact-logo-container">
+                <svg class="contact-facebook-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M22.675 0h-21.35C.597 0 0 .597 0 1.326v21.348C0 23.403.597 24 1.326 24h11.49v-9.294H9.692V11.08h3.124V8.41c0-3.1 1.893-4.787 4.659-4.787 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.764v2.312h3.59l-.467 3.626h-3.123V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .597 23.403 0 22.675 0z" />
+                </svg>
+            </div>
+            <div class="contact-type">Facebook</div>
+            <a class="contact-link" href="https://www.facebook.com/permanentehealthplan" target="_blank" rel="noopener noreferrer">Message us on Facebook</a>
         </div>
     </div>
 </div>
