@@ -580,56 +580,129 @@
     /* Schedule & Hours Section */
     .schedule-section {
         margin-top: 2rem;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 1.5rem;
-        box-shadow: 0 2px 8px rgba(10,55,97,0.08);
+        background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+        border: 1px solid #dbe6f4;
+        border-radius: 1.75rem;
+        box-shadow: 0 18px 36px rgba(10,55,97,0.08);
         padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .schedule-section::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, #f4c542 0%, #0a3761 55%, #3b82f6 100%);
+    }
+    .schedule-section::after {
+        content: '';
+        position: absolute;
+        right: -5rem;
+        top: -4rem;
+        width: 14rem;
+        height: 14rem;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(244, 197, 66, 0.16) 0%, rgba(244, 197, 66, 0) 72%);
+        pointer-events: none;
     }
     .schedule-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1.5rem;
-        margin-top: 1rem;
+        gap: 1.25rem;
+        margin-top: 1.25rem;
+        position: relative;
+        z-index: 1;
     }
     .schedule-card {
-        border: 1px solid #e2e8f0;
-        border-radius: 1rem;
-        padding: 1.5rem;
-        background: #f9fbfd;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #d6e0ee;
+        border-radius: 1.35rem;
+        padding: 1.35rem;
+        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+        box-shadow: 0 8px 20px rgba(10, 55, 97, 0.06);
+        position: relative;
+        overflow: hidden;
+        min-height: 240px;
     }
     .schedule-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(10, 55, 97, 0.1);
+        transform: translateY(-4px);
+        box-shadow: 0 16px 30px rgba(10, 55, 97, 0.12);
+        border-color: #b8cbe5;
+    }
+    .schedule-card::before {
+        content: '';
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, #f4c542 0%, #ffd56f 100%);
     }
     .schedule-title {
         color: #0a3761;
         font-weight: 800;
-        font-size: 1.25rem;
-        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.9rem;
         display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        align-items: flex-start;
+        gap: 0.75rem;
+        line-height: 1.25;
     }
     .schedule-icon {
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 1.55rem;
+        height: 1.55rem;
         color: #f4c542;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+    .schedule-title-text {
+        flex: 1;
     }
     .schedule-content {
-        color: #005b80;
-        line-height: 1.6;
-        font-size: 1rem;
+        color: #0b457e;
+        line-height: 1.55;
+        font-size: 0.98rem;
     }
     .schedule-hours {
-        font-weight: 700;
+        font-weight: 800;
         color: #003d50;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.7rem;
+        font-size: 1.05rem;
     }
     .schedule-details {
         font-weight: 500;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.35rem;
+    }
+    .schedule-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        border-radius: 9999px;
+        padding: 0.45rem 0.8rem;
+        background: #edf5ff;
+        color: #0a3761;
+        font-weight: 700;
+        font-size: 0.86rem;
+        margin-bottom: 0.85rem;
+        border: 1px solid #d8e6f7;
+    }
+    .schedule-pill-dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 9999px;
+        background: #f4c542;
+        box-shadow: 0 0 0 4px rgba(244, 197, 66, 0.16);
+    }
+    .schedule-callout {
+        margin-top: 0.95rem;
+        padding: 0.75rem 0.85rem;
+        border-radius: 0.95rem;
+        background: linear-gradient(135deg, rgba(244, 197, 66, 0.12), rgba(10, 55, 97, 0.05));
+        border: 1px solid rgba(244, 197, 66, 0.28);
+        color: #0a3761;
+        font-weight: 600;
+        font-size: 0.92rem;
     }
     
     /* Contact/Message Section */
@@ -884,6 +957,20 @@
     @media (max-width: 640px) {
         .contact-grid {
             grid-template-columns: 1fr;
+        }
+        .schedule-section {
+            padding: 1.25rem;
+            border-radius: 1.25rem;
+        }
+        .schedule-card {
+            min-height: unset;
+            padding: 1.15rem;
+        }
+        .schedule-title {
+            font-size: 1rem;
+        }
+        .schedule-hours {
+            font-size: 1rem;
         }
     }
 
@@ -1295,12 +1382,13 @@
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12,6 12,12 16,14"></polyline>
                 </svg>
-                Clinic Hours
+                <span class="schedule-title-text">Pharmacy & Clinic Hours</span>
             </div>
             <div class="schedule-content">
-                <div class="schedule-hours">Open Daily</div>
-                <div class="schedule-details">Monday to Sunday</div>
-                <div class="schedule-details">8:00 AM - 2:00 AM</div>
+                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Open window</div>
+                <div class="schedule-hours">Monday to Saturday</div>
+                <div class="schedule-details">8:00 AM - 9:00 PM</div>
+                <div class="schedule-callout">Pharmacy support and clinic services are available throughout the day.</div>
             </div>
         </div>
         
@@ -1313,12 +1401,13 @@
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                     <polyline points="10,9 9,9 8,9"></polyline>
                 </svg>
-                Laboratory Hours
+                <span class="schedule-title-text">Laboratory Hours</span>
             </div>
             <div class="schedule-content">
-                <div class="schedule-hours">Laboratory Services</div>
+                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Diagnostics</div>
+                <div class="schedule-hours">Monday to Saturday</div>
                 <div class="schedule-details">8:00 AM - 5:00 PM</div>
-                <div class="schedule-details">For diagnostic tests</div>
+                <div class="schedule-callout">For laboratory testing and routine diagnostic services.</div>
             </div>
         </div>
         
@@ -1327,14 +1416,13 @@
                 <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                 </svg>
-                Consultation Schedule
+                <span class="schedule-title-text">Consultation Schedule</span>
             </div>
             <div class="schedule-content">
-                <div class="schedule-hours">Internal Medicine</div>
-                <div class="schedule-details">Face-to-face: Mon-Fri</div>
+                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Internal Medicine</div>
+                <div class="schedule-hours">Monday to Friday</div>
                 <div class="schedule-details">8:00 AM - 5:00 PM</div>
-                <div class="schedule-details">Viber Consultation:</div>
-                <div class="schedule-details">Daily (Morning-Night)</div>
+                <div class="schedule-callout">Face-to-face and online coordination available during clinic hours.</div>
             </div>
         </div>
     </div>
