@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount, tick } from 'svelte';
     import { writable, derived } from 'svelte/store';
     import { fade, scale } from 'svelte/transition';
     import { cubicOut } from 'svelte/easing';
@@ -151,6 +152,76 @@
             else prevBpTip();
         }
     }
+
+    // Mobile carousel controls for diagnostic packages
+    let packageSlideIndex = 0;
+    const totalPackageSlides = 5;
+    let packageTouchStartX = 0;
+    let packageTouchEndX = 0;
+    let packageDragOffset = 0;
+    let isPackageDragging = false;
+    let packageViewportHeight = 'auto';
+
+    function nextPackageSlide() {
+        packageSlideIndex = (packageSlideIndex + 1) % totalPackageSlides;
+    }
+
+    function prevPackageSlide() {
+        packageSlideIndex = (packageSlideIndex - 1 + totalPackageSlides) % totalPackageSlides;
+    }
+
+    function handlePackageTouchStart(e: TouchEvent) {
+        packageTouchStartX = e.changedTouches[0].screenX;
+        isPackageDragging = true;
+        packageDragOffset = 0;
+    }
+
+    function handlePackageTouchMove(e: TouchEvent) {
+        if (!isPackageDragging) return;
+        packageDragOffset = e.changedTouches[0].screenX - packageTouchStartX;
+    }
+
+    function handlePackageTouchEnd(e: TouchEvent) {
+        isPackageDragging = false;
+        packageTouchEndX = e.changedTouches[0].screenX;
+        packageDragOffset = 0;
+        const diff = packageTouchStartX - packageTouchEndX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) nextPackageSlide();
+            else prevPackageSlide();
+        }
+    }
+
+    async function syncPackageViewportHeight() {
+        await tick();
+        if (typeof window === 'undefined' || window.innerWidth > 550) {
+            packageViewportHeight = 'auto';
+            return;
+        }
+
+        const card = document.querySelector(
+            `.packages-carousel-track .package-card:nth-child(${packageSlideIndex + 1})`
+        ) as HTMLElement | null;
+
+        if (card) {
+            packageViewportHeight = `${card.offsetHeight}px`;
+        }
+    }
+
+    $: if (typeof packageSlideIndex === 'number') {
+        void syncPackageViewportHeight();
+    }
+
+    onMount(() => {
+        void syncPackageViewportHeight();
+
+        const onResize = () => {
+            void syncPackageViewportHeight();
+        };
+
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    });
 </script>
 
 <style>
@@ -387,6 +458,18 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 1.1rem;
     }
+    .packages-carousel-outer {
+        position: relative;
+    }
+    .packages-carousel-track {
+        display: contents;
+    }
+    .packages-carousel-nav-btn {
+        display: none;
+    }
+    .packages-dots-row {
+        display: none;
+    }
     .packages-scroll {
         max-height: none;
         overflow: visible;
@@ -458,6 +541,22 @@
         border-radius: 0.75rem;
         padding: 0.55rem 0.85rem;
         box-shadow: inset 0 0 0 1px rgba(244, 197, 66, 0.18);
+    }
+
+    @media (min-width: 901px) {
+        .packages-notes {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, max-content));
+            justify-content: center;
+            align-items: start;
+            gap: 0.75rem;
+            margin-inline: auto;
+        }
+
+        .packages-notes .note:last-child {
+            grid-column: 1 / -1;
+            justify-self: center;
+        }
     }
 
     .section-heading {
@@ -857,6 +956,82 @@
         .price-badge {
             font-size: 0.9rem;
         }
+        .packages-carousel-grid {
+            overflow: hidden;
+            display: block;
+            width: 100%;
+            height: var(--pkg-active-height, auto);
+            transition: height 0.22s ease;
+            touch-action: pan-y;
+        }
+        .packages-carousel-track {
+            display: flex;
+            align-items: flex-start;
+            width: calc(5 * 100%);
+            transform: translateX(calc(-1 * var(--pkg-index, 0) * 100% / 5 + var(--pkg-drag-offset, 0px)));
+            transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+        .packages-carousel-track.dragging {
+            transition: none;
+        }
+        .packages-carousel-grid .package-card {
+            flex: 0 0 calc(100% / 5);
+            width: calc(100% / 5);
+            box-sizing: border-box;
+            height: auto;
+            min-height: 0;
+        }
+        .packages-carousel-nav-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 42%;
+            transform: translateY(-50%);
+            width: 2.1rem;
+            height: 2.1rem;
+            background: rgba(255, 255, 255, 0.93);
+            border: 1px solid #e2e8f0;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 0 2px 8px rgba(10, 55, 97, 0.14);
+            color: #0a3761;
+            padding: 0;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .packages-carousel-nav-btn:active {
+            background: #f4c542;
+            border-color: #e0b030;
+        }
+        .packages-carousel-nav-btn svg {
+            width: 1.1rem;
+            height: 1.1rem;
+        }
+        .packages-prev-btn { left: 0.3rem; }
+        .packages-next-btn { right: 0.3rem; }
+        .packages-dots-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.42rem;
+            margin-top: 0.9rem;
+        }
+        .packages-carousel-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 9999px;
+            background: #cbd5e1;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.22s ease, width 0.25s ease;
+        }
+        .packages-carousel-dot.active {
+            background: #0a3761;
+            width: 1.3rem;
+        }
         .bp-prevention-section {
             padding: 1.25rem;
         }
@@ -1237,75 +1412,104 @@
 <div class="packages-section">
     <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Diagnostic Laboratory (Packages)</h2>
     <p class="packages-subtitle">We offer affordable and reliable diagnostic packages designed for your needs</p>
-    <div class="packages-grid packages-scroll">
-        <div class="package-card">
-            <div class="package-title">
-                <span>Package A</span>
-                <span class="price-badge">₱1,060</span>
+
+    <div class="packages-carousel-outer">
+        <div class="packages-grid packages-scroll packages-carousel-grid"
+             style="--pkg-active-height: {packageViewportHeight}"
+             role="region"
+             aria-label="Diagnostic laboratory packages carousel"
+             on:touchstart={handlePackageTouchStart}
+             on:touchmove={handlePackageTouchMove}
+             on:touchend={handlePackageTouchEnd}>
+            <div
+                class="packages-carousel-track"
+                class:dragging={isPackageDragging}
+                style="--pkg-index: {packageSlideIndex}; --pkg-drag-offset: {packageDragOffset}px"
+            >
+                <div class="package-card">
+                    <div class="package-title">
+                        <span>Package A</span>
+                        <span class="price-badge">₱1,060</span>
+                    </div>
+                    <ul class="package-list">
+                        <li>Lipid Profile</li>
+                        <li>Creatinine</li>
+                        <li>FBS</li>
+                        <li>SGPT</li>
+                        <li>SGOT</li>
+                    </ul>
+                </div>
+                <div class="package-card">
+                    <div class="package-title">
+                        <span>Package B</span>
+                        <span class="price-badge">₱1,900</span>
+                    </div>
+                    <ul class="package-list">
+                        <li>FBS</li>
+                        <li>Lipid Profile</li>
+                        <li>Creatinine</li>
+                        <li>BUN</li>
+                        <li>BUA</li>
+                        <li>SGPT</li>
+                        <li>SGOT</li>
+                        <li>Urinalysis</li>
+                        <li>Fecalysis</li>
+                        <li>CBC w/ Platelet Count</li>
+                    </ul>
+                </div>
+                <div class="package-card">
+                    <div class="package-title">
+                        <span>Package C (For Child only)</span>
+                        <span class="price-badge">₱614</span>
+                    </div>
+                    <ul class="package-list">
+                        <li>Urinalysis</li>
+                        <li>Fecalysis</li>
+                        <li>CBC w/ Platelet Count</li>
+                    </ul>
+                </div>
+                <div class="package-card">
+                    <div class="package-title">
+                        <span>Liver Function Test Package</span>
+                        <span class="price-badge">₱764</span>
+                    </div>
+                    <ul class="package-list">
+                        <li>BUN</li>
+                        <li>BUA</li>
+                        <li>Creatinine</li>
+                        <li>SGOT</li>
+                        <li>SGPT</li>
+                    </ul>
+                </div>
+                <div class="package-card">
+                    <div class="package-title">
+                        <span>Kidney Function Test Package</span>
+                        <span class="price-badge">₱1,032</span>
+                    </div>
+                    <ul class="package-list">
+                        <li>BUN</li>
+                        <li>BUA</li>
+                        <li>Creatinine</li>
+                        <li>Electrolytes</li>
+                    </ul>
+                </div>
             </div>
-            <ul class="package-list">
-                <li>Lipid Profile</li>
-                <li>Creatinine</li>
-                <li>FBS</li>
-                <li>SGPT</li>
-                <li>SGOT</li>
-            </ul>
         </div>
-        <div class="package-card">
-            <div class="package-title">
-                <span>Package B</span>
-                <span class="price-badge">₱1,900</span>
-            </div>
-            <ul class="package-list">
-                <li>FBS</li>
-                <li>Lipid Profile</li>
-                <li>Creatinine</li>
-                <li>BUN</li>
-                <li>BUA</li>
-                <li>SGPT</li>
-                <li>SGOT</li>
-                <li>Urinalysis</li>
-                <li>Fecalysis</li>
-                <li>CBC w/ Platelet Count</li>
-            </ul>
-        </div>
-        <div class="package-card">
-            <div class="package-title">
-                <span>Package C (For Child only)</span>
-                <span class="price-badge">₱614</span>
-            </div>
-            <ul class="package-list">
-                <li>Urinalysis</li>
-                <li>Fecalysis</li>
-                <li>CBC w/ Platelet Count</li>
-            </ul>
-        </div>
-        <div class="package-card">
-            <div class="package-title">
-                <span>Liver Function Test Package</span>
-                <span class="price-badge">₱764</span>
-            </div>
-            <ul class="package-list">
-                <li>BUN</li>
-                <li>BUA</li>
-                <li>Creatinine</li>
-                <li>SGOT</li>
-                <li>SGPT</li>
-            </ul>
-        </div>
-        <div class="package-card">
-            <div class="package-title">
-                <span>Kidney Function Test Package</span>
-                <span class="price-badge">₱1,032</span>
-            </div>
-            <ul class="package-list">
-                <li>BUN</li>
-                <li>BUA</li>
-                <li>Creatinine</li>
-                <li>Electrolytes</li>
-            </ul>
-        </div>
+
+        <button class="packages-carousel-nav-btn packages-prev-btn" on:click={prevPackageSlide} aria-label="Previous package">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
+        </button>
+        <button class="packages-carousel-nav-btn packages-next-btn" on:click={nextPackageSlide} aria-label="Next package">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"></polyline></svg>
+        </button>
     </div>
+
+    <div class="packages-dots-row">
+        {#each [0,1,2,3,4] as i}
+            <button class="packages-carousel-dot" class:active={packageSlideIndex === i} on:click={() => packageSlideIndex = i} aria-label="Package {i + 1}"></button>
+        {/each}
+    </div>
+
     <div class="packages-notes">
         <div class="note">Fasting Hours: FBS and Lipid — 10 to 12 hours</div>
         <div class="note">Open: Monday to Sunday</div>

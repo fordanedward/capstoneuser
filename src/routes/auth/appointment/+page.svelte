@@ -5,7 +5,7 @@
   import { elasticOut } from 'svelte/easing';
   import {
     getFirestore, collection, getDocs, doc, query, where,
-    updateDoc, getDoc, onSnapshot, runTransaction, Timestamp // Add Timestamp import
+    updateDoc, getDoc, onSnapshot, runTransaction, Timestamp, addDoc, serverTimestamp, setDoc
   } from "firebase/firestore";
   import { initializeApp, getApps, getApp } from "firebase/app";
   import { env } from '$lib/env';
@@ -17,6 +17,7 @@
   import { loadStripe } from '@stripe/stripe-js';
   import { browser } from '$app/environment';
   import { debounce } from '$lib/utils/debounce';
+  import { addNotification } from '$lib/stores/popupNotifications';
   import {
     ALL_POSSIBLE_MORNING_SLOTS,
     ALL_POSSIBLE_AFTERNOON_SLOTS,
@@ -908,6 +909,14 @@
               text: `Your appointment request for ${selectedDate} at ${selectedTime} has been submitted. Please wait for confirmation.`,
           });
 
+          // Send automatic confirmation message to chat
+          await sendAppointmentConfirmationMessage({
+              date: selectedDate,
+              time: selectedTime,
+              service: selectedService,
+              subServices: selectedSubServices || []
+          });
+
           selectedTime = null;
           await fetchAvailabilityForDate(selectedDate, 'booking');
 
@@ -926,6 +935,95 @@
           }
           Swal.fire({ icon: 'error', title: title, text: text });
       }
+  }
+
+  async function sendAppointmentConfirmationMessage(appointmentData: {
+    date: string;
+    time: string;
+    service: string;
+    subServices: string[];
+  }) {
+    if (!patientId || !db) return;
+
+    try {
+      // Get user document to get display name
+      const userRef = doc(db, 'users', patientId);
+      let userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // Try patientProfiles collection
+        const profileRef = doc(db, 'patientProfiles', patientId);
+        userDoc = await getDoc(profileRef);
+      }
+
+      const memberName = userDoc.exists() 
+        ? (userDoc.data()?.displayName || 
+           (userDoc.data()?.name && userDoc.data()?.lastName ? `${userDoc.data().name} ${userDoc.data().lastName}`.trim() : null) ||
+           'Member')
+        : 'Member';
+
+      // Format appointment details for the message
+      const subServicesText = appointmentData.subServices.length > 0 
+        ? appointmentData.subServices.join(', ')
+        : 'None specified';
+
+      const confirmationMessage = `📋 **Appointment Confirmation**\n\n` +
+        `Your appointment request has been submitted successfully!\n\n` +
+        `**Appointment Details:**\n` +
+        `📅 Date: ${appointmentData.date}\n` +
+        `⏰ Time: ${appointmentData.time}\n` +
+        `🏥 Service: ${appointmentData.service}\n` +
+        `📝 Sub-services: ${subServicesText}\n\n` +
+        `**Status:** ⏳ Pending Approval\n` +
+        `Your appointment is waiting for staff/admin approval. You will receive a notification once it's confirmed.`;
+
+      // Get or create chat document
+      const chatRef = doc(db, 'chats', patientId);
+      const chatSnap = await getDoc(chatRef);
+
+      if (!chatSnap.exists()) {
+        // Create chat document if it doesn't exist
+        await setDoc(chatRef, {
+          memberId: patientId,
+          memberName: memberName,
+          createdAt: serverTimestamp(),
+          lastMessage: confirmationMessage,
+          lastMessageTime: serverTimestamp(),
+          unreadCount: 0
+        });
+      }
+
+      // Add the confirmation message to chat
+      const messagesRef = collection(db, 'chats', patientId, 'messages');
+      await addDoc(messagesRef, {
+        senderId: 'system',
+        senderName: 'System',
+        senderRole: 'admin',
+        message: confirmationMessage,
+        timestamp: serverTimestamp(),
+        read: false,
+        isAutomaticConfirmation: true
+      });
+
+      // Update chat's last message
+      await updateDoc(chatRef, {
+        lastMessage: confirmationMessage,
+        lastMessageTime: serverTimestamp()
+      });
+
+      // Show popup notification
+      addNotification({
+        type: 'appointment',
+        title: '✅ Appointment Confirmation Sent',
+        message: `Your appointment request for ${appointmentData.date} at ${appointmentData.time} has been sent. Check your chat for details and wait for admin approval.`,
+        icon: 'fas fa-check-circle',
+        color: 'success'
+      });
+
+    } catch (error) {
+      console.error('Error sending appointment confirmation message:', error);
+      // Don't show error to user as appointment was already created successfully
+    }
   }
 
   function resetCancellationForm() {
