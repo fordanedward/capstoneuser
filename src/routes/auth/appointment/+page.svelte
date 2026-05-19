@@ -74,6 +74,8 @@
     status: "pending" | "Decline"| "Missed"  | "confirmed" | "Completed" | "cancelled" | "Accepted" | "Reschedule Requested" | "Rescheduled" |"Scheduled" |"Completed: Need Follow-up" |"cancellationRequested" | "";
     requestedDate?: string;
     requestedTime?: string;
+    rescheduleReason?: string;
+    rescheduleRequestReason?: string;
     createdAt?: Date;
     paymentStatus?: 'paid' | 'unpaid' | 'refund_pending' | 'refunded' | null;
     paymentDate?: string;
@@ -144,6 +146,7 @@
   let currentAppointment: Appointment | null = null;
   let newDate: string = "";
   let newTime: string = "";
+  let rescheduleReason = '';
   let paymentAmount: number = 500; // Default payment amount
 
   let reasonEditModal = false;
@@ -1032,13 +1035,13 @@
     refundReason = '';
   }
 
-  function getAppointmentReason(appointment: Partial<Appointment>): string {
-    return (appointment.appointmentReason || appointment.reasonForVisit || '').trim();
-  }
-
   // Helper to normalize cancel/decline reason field names coming from different admin apps
   function getCancelReason(appointment: Partial<Appointment> & { reason?: string; declineReason?: string; adminReason?: string }) {
     return appointment?.cancelReason || appointment?.reason || appointment?.declineReason || appointment?.adminReason || '';
+  }
+
+  function getRescheduleReason(appointment: Partial<Appointment>): string {
+    return (appointment.rescheduleReason || appointment.rescheduleRequestReason || '').toString().trim();
   }
 
   function getAppointmentRemarks(appointment: Partial<Appointment>): string {
@@ -1069,20 +1072,6 @@
 
   function switchTab(tab: 'upcoming' | 'past') {
     activeTab = tab;
-  }
-
-  function openReasonEditModal(appointmentId: string): void {
-    const appointment = upcomingAppointments.find((item) => item.id === appointmentId);
-    if (!appointment) {
-      Swal.fire('Error', 'Unable to load appointment reason.', 'error');
-      return;
-    }
-
-    reasonEditAppointmentId = appointmentId;
-    const isCancellationFlow = appointment.cancellationStatus === 'requested';
-    reasonEditMode = isCancellationFlow ? 'cancellation' : 'appointment';
-    reasonEditText = isCancellationFlow ? getCancelReason(appointment) : getAppointmentReason(appointment);
-    reasonEditModal = true;
   }
 
   async function saveAppointmentReason(): Promise<void> {
@@ -1283,6 +1272,7 @@
           selectedAppointmentId = appointmentId;
           newDate = currentAppointment.date;
           newTime = "";
+        rescheduleReason = getRescheduleReason(currentAppointment);
           fetchAvailabilityForDate(newDate, 'reschedule');
           rescheduleModal = true;
       } else {
@@ -1298,6 +1288,11 @@
       }
       if (!newDate || !newTime) {
           Swal.fire("Incomplete Details", "Please select a new date and time.", "warning"); return;
+      }
+      const trimmedRescheduleReason = rescheduleReason.trim();
+      if (!trimmedRescheduleReason) {
+        Swal.fire('Reason Required', 'Please tell us why you need to reschedule this appointment.', 'warning');
+        return;
       }
       if (currentAppointment.date === newDate && currentAppointment.time === newTime) {
           Swal.fire("No Change", "Please choose a different date or time from your current schedule.", "warning"); return;
@@ -1336,6 +1331,9 @@
                   status: "Reschedule Requested",
                   requestedDate: newDate,
                   requestedTime: newTime,
+                  rescheduleReason: trimmedRescheduleReason,
+                  rescheduleRequestReason: trimmedRescheduleReason,
+                  reasonUpdatedAt: Timestamp.fromDate(new Date()),
                   cancellationStatus: '',
               });
           });
@@ -1346,6 +1344,7 @@
               text: `Request to reschedule to ${formatDate(newDate)} at ${newTime} submitted. Please wait for approval.`,
           });
           rescheduleModal = false;
+            rescheduleReason = '';
            fetchAvailabilityForDate(selectedDate, 'booking'); // Refresh main list
 
         } catch (error: unknown) {
@@ -2255,9 +2254,6 @@
                                             {/if}
                                         </div>
                                         <div class="action-buttons">
-                                          <button title="Edit Appointment Reason" class="btn-action btn-reason" on:click={() => openReasonEditModal(appointment.id)}>
-                                            <i class="fas fa-pen"></i> <span class="ml-1">Edit Reason</span>
-                                          </button>
                                           {#if (appointment.status === 'Accepted' || appointment.status === 'pending' || appointment.status === 'confirmed') && appointment.cancellationStatus !== 'requested' && appointment.cancellationStatus !== 'Approved'}
                                              <button title="Reschedule Appointment" class="btn-action btn-reschedule" on:click={() => openRescheduleModal(appointment.id)}>
                                                <i class="fas fa-edit"></i> <span class="ml-1">Reschedule</span>
@@ -2389,17 +2385,33 @@
   {#if rescheduleModal && currentAppointment}
   <div class="modal reschedule-modal">
     <div class="modal-content">
-      <h2 class="text-xl font-semibold mb-4">Request Reschedule</h2>
-      <p class="text-sm mb-4">Current: <strong>{formatDate(currentAppointment.date)}</strong> at <strong>{currentAppointment.time}</strong></p>
-
-      <div class="space-y-4">
-          <div>
-            <label for="newDate" class="block text-sm font-medium text-gray-700 mb-1">Select New Date:</label>
-            <input type="date" id="newDate" min={getMinDate()} bind:value={newDate} disabled={isLoadingRescheduleSlots} class="block w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"/>
+      <div class="cancel-request-modal reschedule-request-modal">
+        <div class="cancel-request-header">
+          <div class="cancel-request-icon-wrap reschedule-icon-wrap">
+            <i class="fas fa-calendar-check fa-fw cancel-request-icon reschedule-main-icon"></i>
+            <span class="reschedule-icon-accent">
+              <i class="fas fa-exchange-alt fa-fw"></i>
+            </span>
           </div>
-
           <div>
-            <label for="newTime" class="block text-sm font-medium text-gray-700 mb-1">Select New Time:</label>
+            <h3 class="cancel-request-title">Request Reschedule</h3>
+            <p class="cancel-request-subtitle">Provide your preferred new schedule and a reason. You can submit this whether your appointment is approved or still pending.</p>
+          </div>
+        </div>
+
+        <div class="reschedule-current-card">
+          <p class="reschedule-current-title">Current Appointment</p>
+          <p class="reschedule-current-value">{formatDate(currentAppointment.date)} at {currentAppointment.time}</p>
+        </div>
+
+        <div class="cancel-request-body">
+          <label for="newDate" class="cancel-request-field">
+            <span class="cancel-request-label">Select New Date</span>
+            <input type="date" id="newDate" min={getMinDate()} bind:value={newDate} disabled={isLoadingRescheduleSlots} class="form-input"/>
+          </label>
+
+          <label for="newTime" class="cancel-request-field">
+            <span class="cancel-request-label">Select New Time</span>
             {#if isLoadingRescheduleSlots}
                 <div class="p-2 text-sm text-blue-600 bg-blue-50 rounded-md"><i class="fas fa-spinner fa-spin mr-1"></i>Loading times...</div>
             {:else if rescheduleSlotsError}
@@ -2409,7 +2421,7 @@
             {:else if fetchedRescheduleSlots.length === 0}
                 <div class="p-2 text-sm text-orange-700 bg-orange-100 rounded-md border border-orange-200">This is a non-working day. Please pick a different date.</div>
             {:else}
-                <select id="newTime" bind:value={newTime} disabled={isLoadingRescheduleSlots || !isRescheduleDateWorking || fetchedRescheduleSlots.length === 0} class="block w-full border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                <select id="newTime" bind:value={newTime} disabled={isLoadingRescheduleSlots || !isRescheduleDateWorking || fetchedRescheduleSlots.length === 0} class="form-input">
                     <option value="" disabled selected>Select a time</option>
                     {#each fetchedRescheduleSlots as slot (slot)}
                        {@const hasPassed = newDate === new Date().toISOString().split('T')[0] && isTimePassed(slot)}
@@ -2417,14 +2429,28 @@
                     {/each}
                 </select>
             {/if}
-          </div>
+          </label>
+
+          <label class="cancel-request-field">
+            <span class="cancel-request-label">Why are you requesting a new schedule?</span>
+            <span class="cancel-request-help">This is required so clinic staff can review your request quickly.</span>
+            <textarea
+              bind:value={rescheduleReason}
+              class="cancel-request-textarea cancel-request-textarea-secondary"
+              rows="4"
+              maxlength="400"
+              placeholder="Example: I have a work conflict on the original date and need to move my appointment to another day."
+            ></textarea>
+            <span class="cancel-request-count">{rescheduleReason.trim().length}/400</span>
+          </label>
+        </div>
       </div>
 
       <div class="modal-actions">
-          <Button color="alternative" on:click={() => { rescheduleModal = false; rescheduleSlotsError=null; fetchedRescheduleSlots=[]; isRescheduleDateWorking=false; }}>
+          <Button color="alternative" on:click={() => { rescheduleModal = false; rescheduleSlotsError=null; fetchedRescheduleSlots=[]; isRescheduleDateWorking=false; rescheduleReason = ''; }}>
               Cancel
           </Button>
-          <Button color="blue" on:click={rescheduleAppointment} disabled={isLoadingRescheduleSlots || !newTime || !newDate || (newDate === currentAppointment.date && newTime === currentAppointment.time)}>
+          <Button color="blue" on:click={rescheduleAppointment} disabled={isLoadingRescheduleSlots || !newTime || !newDate || !rescheduleReason.trim() || (newDate === currentAppointment.date && newTime === currentAppointment.time)}>
              <i class="fas fa-exchange-alt mr-2"></i> Request Reschedule
           </Button>
       </div>
@@ -3455,6 +3481,74 @@
 
   .cancel-request-actions {
     margin-top: 0.25rem;
+  }
+
+  .reschedule-request-modal {
+    gap: 1rem;
+  }
+
+  .reschedule-icon-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #facc15;
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.28);
+  }
+
+  .reschedule-main-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1.2rem;
+    height: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+    color: #b45309;
+    font-size: 1.1rem;
+  }
+
+  .reschedule-icon-accent {
+    position: absolute;
+    right: -0.2rem;
+    bottom: -0.2rem;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 9999px;
+    background: #2563eb;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.58rem;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+    border: 2px solid #ffffff;
+  }
+
+  .reschedule-current-card {
+    border: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+    border-radius: 0.875rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .reschedule-current-title {
+    margin: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #1e40af;
+    font-weight: 700;
+  }
+
+  .reschedule-current-value {
+    margin: 0.2rem 0 0;
+    font-size: 0.95rem;
+    color: #1f2937;
+    font-weight: 600;
   }
 
   @media (max-width: 640px) {
