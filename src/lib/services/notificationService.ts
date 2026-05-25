@@ -136,10 +136,12 @@ export function initializeNotificationListeners(
                     playNotificationSound();
                 }
                 else if (data.status === 'Rescheduled') {
+                    const approvedDate = data.date || data.requestedDate;
+                    const approvedTime = data.time || data.requestedTime;
                     onNotification({
                         type: 'appointment',
                         title: 'Appointment Rescheduled 📅',
-                        message: `Your appointment has been rescheduled to ${data.date} at ${data.time}.`,
+                        message: `Your appointment has been rescheduled to ${approvedDate} at ${approvedTime}.`,
                         link: '/auth/appointment',
                         icon: 'fas fa-calendar-alt'
                     });

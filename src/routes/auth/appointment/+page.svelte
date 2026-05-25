@@ -1044,6 +1044,20 @@
     return (appointment.rescheduleReason || appointment.rescheduleRequestReason || '').toString().trim();
   }
 
+  function withEffectiveRescheduledSchedule(appointment: Appointment): Appointment {
+    const isRescheduled = (appointment.status || '').toLowerCase() === 'rescheduled';
+    // For approved reschedules, `date/time` should be the source of truth.
+    // Use requested fields only as a fallback when official fields are missing.
+    if (isRescheduled && (!appointment.date || !appointment.time) && appointment.requestedDate && appointment.requestedTime) {
+      return {
+        ...appointment,
+        date: appointment.requestedDate,
+        time: appointment.requestedTime
+      };
+    }
+    return appointment;
+  }
+
   function getAppointmentRemarks(appointment: Partial<Appointment>): string {
     return (
       appointment.completionRemarks ||
@@ -1153,8 +1167,8 @@
                 pastAppointments = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data() as Omit<Appointment, 'id'>;
-                    const appointmentDate = data.date;
-                  const appointmentWithId: Appointment = { ...data, id: doc.id };
+                    const appointmentWithId: Appointment = withEffectiveRescheduledSchedule({ ...data, id: doc.id });
+                    const appointmentDate = appointmentWithId.date;
 
                     // Check if appointment should be in past based on status
                     const isCompletedStatus = ['Completed', 'Completed: Need Follow-up', 'Missed'].includes(appointmentWithId.status);
@@ -2296,6 +2310,12 @@
                                        <p class="reason-paragraph {appointment.cancellationStatus === 'decline' || appointment.status === 'Decline' ? 'text-red-600' : 'text-gray-500'}" title={getCancelReason(appointment)}>
                                           <strong>Reason:</strong> {getCancelReason(appointment) || 'N/A'}
                                        </p>
+                                    {/if}
+
+                                    {#if appointment.status === 'Reschedule Requested' && appointment.requestedDate && appointment.requestedTime}
+                                      <p class="reason-paragraph text-purple-700" title={`Requested: ${appointment.requestedDate} ${appointment.requestedTime}`}>
+                                        <strong>Requested:</strong> {formatDate(appointment.requestedDate)} at {appointment.requestedTime}
+                                      </p>
                                     {/if}
                                </div>
                             </div>

@@ -135,6 +135,8 @@
         id: string;
         date: string;
         time: string;
+        requestedDate?: string;
+        requestedTime?: string;
         service: string;
         status?: string;
         cancellationStatus?: string;
@@ -165,9 +167,13 @@
     }
 
     function isPastAppointment(appointment: Appointment): boolean {
-        const doneStatuses = ['completed', 'completed: need follow-up', 'missed'];
+        const doneStatuses = ['completed', 'completed: need follow-up', 'missed', 'cancelled', 'decline', 'declined'];
         const status = (appointment.status || '').toLowerCase().trim();
         if (doneStatuses.includes(status)) return true;
+
+        // Also treat any appointment whose cancellationStatus is approved as done
+        const cancellationStatus = (appointment.cancellationStatus || '').toLowerCase().trim();
+        if (cancellationStatus === 'approved') return true;
 
         const appointmentDate = parseAppointmentDateTime(appointment.date, appointment.time);
         if (!appointmentDate) return false;
@@ -183,7 +189,7 @@
         if (excludedStatuses.includes(status)) return false;
         if (cancellationStatus === 'approved' || cancellationStatus === 'requested' || cancellationStatus === 'pending') return false;
 
-        const explicitlyUpcomingStatuses = ['accepted', 'confirmed', 'scheduled', 'rescheduled', 'pending'];
+        const explicitlyUpcomingStatuses = ['accepted', 'confirmed', 'scheduled', 'rescheduled', 'reschedule requested', 'pending'];
         if (status && !explicitlyUpcomingStatuses.includes(status)) return false;
 
         const appointmentDate = parseAppointmentDateTime(appointment.date, appointment.time);
@@ -200,6 +206,15 @@
         if (normalized.includes('cancel') || normalized.includes('decline') || normalized.includes('missed')) return 'status-cancelled';
 
         return 'status-pending';
+    }
+
+    function scrollHistoryCarousel(direction: number) {
+        if (!historyCarousel) return;
+
+        historyCarousel.scrollBy({
+            left: direction * Math.max(historyCarousel.clientWidth * 0.85, 320),
+            behavior: 'smooth'
+        });
     }
 
     let patientProfile: PatientProfile = {
@@ -234,7 +249,99 @@
     let showDetails = false;
     let isMobile = false;
     let isArchived: boolean = false;
+    let historyCarousel: HTMLDivElement | null = null;
     $: accountStatus = isArchived ? 'Inactive' : 'Active';
+
+    // ── History search / filter / expand state ──────────────────────────────
+    let historySearchQuery = "";
+    let historyFilter = "all";
+    let expandedRemarks = new Set<string>();
+
+    function toggleRemarks(id: string) {
+        const next = new Set(expandedRemarks);
+        if (next.has(id)) { next.delete(id); } else { next.add(id); }
+        expandedRemarks = next;
+    }
+
+    function getServiceIcon(service: string): string {
+        const s = (service || '').toLowerCase();
+        if (s.includes('lab') || s.includes('blood') || s.includes('urine') || s.includes('test')) return 'fa-vials';
+        if (s.includes('imag') || s.includes('x-ray') || s.includes('xray') || s.includes('mri') || s.includes('ct') || s.includes('ultrasound') || s.includes('scan')) return 'fa-x-ray';
+        if (s.includes('consult') || s.includes('check') || s.includes('visit') || s.includes('follow')) return 'fa-stethoscope';
+        if (s.includes('dental') || s.includes('tooth') || s.includes('oral')) return 'fa-tooth';
+        if (s.includes('eye') || s.includes('ophthal') || s.includes('vision')) return 'fa-eye';
+        if (s.includes('cardio') || s.includes('heart') || s.includes('echo')) return 'fa-heartbeat';
+        if (s.includes('surgery') || s.includes('surgical') || s.includes('operation')) return 'fa-syringe';
+        return 'fa-calendar-check';
+    }
+
+    function getServiceColorClass(service: string): string {
+        const s = (service || '').toLowerCase();
+        if (s.includes('lab') || s.includes('blood') || s.includes('urine') || s.includes('test')) return 'svc-lab';
+        if (s.includes('imag') || s.includes('x-ray') || s.includes('xray') || s.includes('mri') || s.includes('ct') || s.includes('ultrasound') || s.includes('scan')) return 'svc-imaging';
+        if (s.includes('consult') || s.includes('check') || s.includes('visit') || s.includes('follow')) return 'svc-consult';
+        if (s.includes('cardio') || s.includes('heart')) return 'svc-cardio';
+        return 'svc-default';
+    }
+
+    function formatAppointmentDate(dateStr: string): string {
+        if (!dateStr) return 'N/A';
+        try {
+            const parts = dateStr.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) return dateStr;
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        } catch { return dateStr; }
+    }
+
+    function getTimelineSteps(appointment: Appointment): { label: string; done: boolean; active: boolean }[] {
+        const status = (appointment.status || '').toLowerCase().trim();
+        const steps = [
+            { label: 'Requested', done: true, active: false },
+            { label: 'Approved', done: false, active: false },
+            { label: 'Completed', done: false, active: false }
+        ];
+        if (['accepted', 'confirmed', 'scheduled', 'rescheduled', 'reschedule requested'].some(s => status.includes(s))) {
+            steps[1].done = true; steps[1].active = true;
+        } else if (status.includes('complet')) {
+            steps[1].done = true; steps[2].done = true; steps[2].active = true;
+        } else if (['cancel', 'decline', 'missed'].some(s => status.includes(s))) {
+            // only first step done
+        } else {
+            steps[0].active = true; // pending
+        }
+        return steps;
+    }
+
+    $: filteredDoneAppointments = [...doneAppointments]
+        .sort((a, b) => {
+            const da = parseAppointmentDateTime(a.date, a.time);
+            const db2 = parseAppointmentDateTime(b.date, b.time);
+            return (db2?.getTime() ?? 0) - (da?.getTime() ?? 0);
+        })
+        .filter((apt) => {
+            const status = (apt.status || '').toLowerCase().trim();
+            const service = (apt.service || '').toLowerCase();
+            const matchesFilter = (() => {
+                if (historyFilter === 'all') return true;
+                if (historyFilter === 'completed') return status.includes('complet');
+                if (historyFilter === 'pending') return status === 'pending' || status === '';
+                if (historyFilter === 'cancelled') return ['cancel', 'decline', 'missed'].some(s => status.includes(s));
+                if (historyFilter === 'laboratory') return service.includes('lab') || service.includes('blood') || service.includes('urine') || service.includes('test');
+                if (historyFilter === 'imaging') return service.includes('imag') || service.includes('x-ray') || service.includes('xray') || service.includes('mri') || service.includes('ct') || service.includes('ultrasound') || service.includes('scan');
+                return true;
+            })();
+            if (!matchesFilter) return false;
+            if (!historySearchQuery.trim()) return true;
+            const q = historySearchQuery.toLowerCase();
+            return (
+                apt.service?.toLowerCase().includes(q) ||
+                apt.date?.toLowerCase().includes(q) ||
+                apt.status?.toLowerCase().includes(q) ||
+                apt.subServices?.some(s => s.toLowerCase().includes(q)) ||
+                apt.remarks?.toLowerCase().includes(q)
+            ) ?? false;
+        });
 
     function normalizeGender(value: unknown): string {
         if (typeof value !== 'string') return '';
@@ -372,13 +479,20 @@ onMount(() => {
                                        '';
                     
                     console.log("Final remarks value for appointment", doc.id, ":", remarksValue);
-                    
+                    const rawStatus = data.status ? String(data.status) : '';
+                    const normalizedStatus = rawStatus.toLowerCase().trim();
+                    const requestedDate = String(data.requestedDate ?? '');
+                    const requestedTime = String(data.requestedTime ?? '');
+                    const useApprovedRescheduledSchedule = normalizedStatus === 'rescheduled' && (!data.date || !data.time) && !!requestedDate && !!requestedTime;
+
                     const appointment: Appointment = {
                         id: doc.id,
-                        date: String(data.date ?? ''),
-                        time: String(data.time ?? ''),
+                        date: useApprovedRescheduledSchedule ? requestedDate : String(data.date ?? ''),
+                        time: useApprovedRescheduledSchedule ? requestedTime : String(data.time ?? ''),
+                        requestedDate: requestedDate || undefined,
+                        requestedTime: requestedTime || undefined,
                         service: String(data.service ?? ''),
-                        status: data.status ? String(data.status) : undefined,
+                        status: rawStatus || undefined,
                         cancellationStatus: data.cancellationStatus ? String(data.cancellationStatus) : undefined,
                         subServices: Array.isArray(data.subServices) ? data.subServices : undefined,
                         remarks: remarksValue
@@ -959,84 +1073,181 @@ function toggleEditProfile() {
         </div>
     </div>
 
-    <!-- ========== History Section ========== -->
-    <div class="history-section">
-        <h2 class="section-title">Upcoming Appointment</h2>
+    <!-- ========== Upcoming Appointment ========== -->
+    <div class="upcoming-section">
+        <div class="upcoming-section-header">
+            <div class="hist-header-left">
+                <i class="fas fa-calendar-alt hist-title-icon" aria-hidden="true"></i>
+                <h2 class="hist-title">Next Appointment</h2>
+            </div>
+        </div>
         {#if upcomingAppointment}
-            <div class="upcoming-grid">
-                <article class="history-card upcoming-card">
-                    <div class="card-header">
-                        <span>Next Visit</span>
+            <article class="upcoming-card-new">
+                <div class="upcoming-card-left">
+                    <div class="upcoming-svc-icon {getServiceColorClass(upcomingAppointment.service)}" aria-hidden="true">
+                        <i class="fas {getServiceIcon(upcomingAppointment.service)}"></i>
+                    </div>
+                    <div>
+                        <p class="upcoming-svc-name">{upcomingAppointment.service || 'Appointment'}</p>
                         <span class="status-pill {getAppointmentStatusClass(upcomingAppointment.status)}">{upcomingAppointment.status || 'Pending'}</span>
                     </div>
-                    <div class="card-content">
-                        <div class="meta-grid">
-                            <div class="card-meta-item">
-                                <strong>Date & Time</strong>
-                                <span>{upcomingAppointment.date} at {upcomingAppointment.time}</span>
-                            </div>
-                            <div class="card-meta-item">
-                                <strong>Service</strong>
-                                <span>{upcomingAppointment.service}</span>
-                            </div>
-                        </div>
-                        {#if upcomingAppointment.subServices && upcomingAppointment.subServices.length > 0}
-                            <div class="card-meta-item full-width">
-                                <strong>Selected Services</strong>
-                                <span>{upcomingAppointment.subServices.join(', ')}</span>
-                            </div>
-                        {/if}
+                </div>
+                <div class="upcoming-card-right">
+                    <div class="upcoming-meta-item">
+                        <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                        <span>{formatAppointmentDate(upcomingAppointment.date)}</span>
                     </div>
-                </article>
+                    <div class="upcoming-meta-item">
+                        <i class="fas fa-clock" aria-hidden="true"></i>
+                        <span>{upcomingAppointment.time || 'N/A'}</span>
+                    </div>
+                    {#if upcomingAppointment.subServices && upcomingAppointment.subServices.length > 0}
+                        <div class="upcoming-meta-item upcoming-meta-services">
+                            <i class="fas fa-list-ul" aria-hidden="true"></i>
+                            <span>{upcomingAppointment.subServices.join(' · ')}</span>
+                        </div>
+                    {/if}
+                </div>
+            </article>
+        {:else}
+            <div class="hist-empty">
+                <i class="fas fa-calendar-plus hist-empty-icon" aria-hidden="true"></i>
+                <p>No upcoming appointment scheduled.</p>
             </div>
-        {:else}
-            <p class="no-data-message">No upcoming appointment.</p>
         {/if}
+    </div>
 
-        <h2 class="section-title">
-            Appointment History
-        </h2>
-        {#if doneAppointments.length === 0}
-            <p class="no-data-message">No past visits recorded.</p>
-        {:else}
-        <div class="history-grid">
-            {#each doneAppointments as appointment (appointment.id)}
-                <article class="history-card">
-                    <div class="card-header">
-                        <span>Appointment Details</span>
-                        <span class="status-pill {getAppointmentStatusClass(appointment.status)}">{appointment.status || 'Completed'}</span>
-                    </div>
-                    <div class="card-content">
-                        <div class="meta-grid">
-                            <div class="card-meta-item">
-                                <strong>Date & Time</strong>
-                                <span>{appointment.date} at {appointment.time}</span>
-                            </div>
-                            <div class="card-meta-item">
-                                <strong>Service</strong>
-                                <span>{appointment.service}</span>
-                            </div>
-                        </div>
+    <!-- ========== Appointment History ========== -->
+    <div class="hist-section">
+        <!-- Header row -->
+        <div class="hist-header">
+            <div class="hist-header-left">
+                <i class="fas fa-calendar-alt hist-title-icon" aria-hidden="true"></i>
+                <h2 class="hist-title">Appointment History</h2>
+            </div>
+            <div class="hist-search-wrapper">
+                <i class="fas fa-search hist-search-icon" aria-hidden="true"></i>
+                <input
+                    type="search"
+                    class="hist-search-input"
+                    placeholder="Search appointment..."
+                    bind:value={historySearchQuery}
+                    aria-label="Search appointments"
+                />
+            </div>
+        </div>
 
-                         {#if appointment.subServices && appointment.subServices.length > 0}
-                            <div class="card-meta-item full-width">
-                                <strong>Selected Services</strong>
-                                <span>{appointment.subServices.join(', ')}</span>
-                            </div>
-                         {/if}
-
-                         {#if appointment.remarks}
-                            <div class="remarks">
-                                <strong>Remarks</strong>
-                                <p>{appointment.remarks}</p>
-                            </div>
-                         {:else}
-                            <p class="no-info">No remarks for this visit.</p>
-                         {/if}
-                    </div>
-                </article>
+        <!-- Filter pills -->
+        <div class="hist-filters" role="group" aria-label="Filter appointments">
+            {#each [
+                { key: 'all',        label: 'All',        icon: 'fa-layer-group' },
+                { key: 'completed',  label: 'Completed',  icon: 'fa-check-circle' },
+                { key: 'pending',    label: 'Pending',    icon: 'fa-hourglass-half' },
+                { key: 'cancelled',  label: 'Cancelled',  icon: 'fa-times-circle' }
+            ] as pill}
+                <button
+                    type="button"
+                    class="filter-pill {historyFilter === pill.key ? 'filter-pill--active' : ''}"
+                    on:click={() => historyFilter = pill.key}
+                    aria-pressed={historyFilter === pill.key}
+                >
+                    <i class="fas {pill.icon}" aria-hidden="true"></i>
+                    {pill.label}
+                </button>
             {/each}
         </div>
+
+        <!-- Timeline -->
+        {#if filteredDoneAppointments.length === 0}
+            <div class="hist-empty">
+                <i class="fas fa-calendar-times hist-empty-icon" aria-hidden="true"></i>
+                <p>{doneAppointments.length === 0 ? 'No past visits recorded.' : 'No appointments match your search.'}</p>
+            </div>
+        {:else}
+            <div class="tl-list" role="list">
+                {#each filteredDoneAppointments as apt (apt.id)}
+                    <div class="tl-item" role="listitem">
+                        <!-- Dot + vertical line -->
+                        <div class="tl-spine" aria-hidden="true">
+                            <div class="tl-dot tl-dot--{getAppointmentStatusClass(apt.status)}"></div>
+                            <div class="tl-vline"></div>
+                        </div>
+
+                        <!-- Card -->
+                        <article class="tl-card">
+                            <!-- Card top: icon + title + status -->
+                            <div class="tl-card-top">
+                                <div class="tl-svc-icon {getServiceColorClass(apt.service)}" aria-hidden="true">
+                                    <i class="fas {getServiceIcon(apt.service)}"></i>
+                                </div>
+                                <div class="tl-card-info">
+                                    <div class="tl-title-row">
+                                        <span class="tl-svc-name">{apt.service || 'Appointment'}</span>
+                                        <span class="status-pill {getAppointmentStatusClass(apt.status)}">{apt.status || 'Completed'}</span>
+                                    </div>
+                                    <div class="tl-chips-row">
+                                        <span class="tl-chip">
+                                            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                                            {formatAppointmentDate(apt.date)}
+                                        </span>
+                                        <span class="tl-chip">
+                                            <i class="fas fa-clock" aria-hidden="true"></i>
+                                            {apt.time || 'N/A'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sub-services -->
+                            {#if apt.subServices && apt.subServices.length > 0}
+                                <div class="tl-subservices">
+                                    <span class="tl-sub-label">Selected Services</span>
+                                    <div class="tl-sub-chips">
+                                        {#each apt.subServices as sub}
+                                            <span class="tl-sub-chip">{sub}</span>
+                                        {/each}
+                                    </div>
+                                </div>
+                            {/if}
+
+                            <!-- Progress steps: Requested → Approved → Completed -->
+                            <div class="tl-steps" aria-label="Appointment progress">
+                                {#each getTimelineSteps(apt) as step, i}
+                                    <div class="tl-step {step.done ? 'tl-step--done' : ''} {step.active ? 'tl-step--active' : ''}">
+                                        <div class="tl-step-node" aria-hidden="true"></div>
+                                        {#if i < 2}
+                                            <div class="tl-step-bar {step.done ? 'tl-step-bar--done' : ''}" aria-hidden="true"></div>
+                                        {/if}
+                                        <span class="tl-step-label">{step.label}</span>
+                                    </div>
+                                {/each}
+                            </div>
+
+                            <!-- Remarks with Read More -->
+                            {#if apt.remarks}
+                                <div class="tl-remarks">
+                                    <p class="tl-remarks-label">
+                                        <i class="fas fa-comment-medical" aria-hidden="true"></i>
+                                        Doctor's Remarks
+                                    </p>
+                                    <div class="tl-remarks-body {expandedRemarks.has(apt.id) ? 'tl-remarks--expanded' : 'tl-remarks--collapsed'}">
+                                        {apt.remarks}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="tl-readmore-btn"
+                                        on:click={() => toggleRemarks(apt.id)}
+                                        aria-expanded={expandedRemarks.has(apt.id)}
+                                    >
+                                        {expandedRemarks.has(apt.id) ? 'Show Less' : 'Read More'}
+                                        <i class="fas {expandedRemarks.has(apt.id) ? 'fa-chevron-up' : 'fa-chevron-down'}" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            {/if}
+                        </article>
+                    </div>
+                {/each}
+            </div>
         {/if}
     </div>
 </div>
@@ -2154,95 +2365,7 @@ function toggleEditProfile() {
         }
     }
 
-    .history-section {
-        margin-top: 36px;
-    }
-
-    .section-title {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-bottom: 18px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #ccd7e6;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .section-title::before {
-        content: '🗓️';
-        font-size: 1.25rem;
-    }
-
-     .no-data-message {
-        background: linear-gradient(180deg, #f6f9fc 0%, #eef3f9 100%);
-        border: 1px dashed #c6d2e2;
-        color: #4f6076;
-        padding: 16px;
-        border-radius: 10px;
-        text-align: center;
-        font-style: italic;
-     }
-
-    .upcoming-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        margin-bottom: 24px;
-    }
-
-    .history-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 18px;
-    }
-
-    .history-card {
-        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
-        border: 1px solid #d9e4f2;
-        border-radius: 14px;
-        box-shadow: 0 8px 20px rgba(17, 42, 76, 0.08);
-        transition: all var(--transition-speed) ease;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .upcoming-card {
-        box-shadow: 0 10px 26px rgba(16, 48, 91, 0.12);
-        border-color: #bfd3ef;
-    }
-
-     .history-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    }
-
-    .history-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 14px 28px rgba(17, 42, 76, 0.14);
-        border-color: #b1c9ea;
-    }
-
-    .card-header {
-        background: linear-gradient(90deg, #f2f6fc 0%, #e9f0f9 100%);
-        padding: 14px 18px;
-        font-weight: 700;
-        color: var(--primary-color);
-        border-bottom: 1px solid #d5e0ef;
-        font-size: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-
+    /* base status pill – colours now set per-status in timeline CSS block */
     .status-pill {
         display: inline-flex;
         align-items: center;
@@ -2256,122 +2379,9 @@ function toggleEditProfile() {
         white-space: nowrap;
     }
 
-    .status-pill.status-confirmed {
-        background: #e8f8ee;
-        color: #1b7f43;
-        border-color: #bce9cf;
-    }
-
-    .status-pill.status-completed {
-        background: #e7f3ff;
-        color: #175eac;
-        border-color: #bfdbf7;
-    }
-
-    .status-pill.status-cancelled {
-        background: #fdecec;
-        color: #ae2d2d;
-        border-color: #f5bcbc;
-    }
-
-    .status-pill.status-pending {
-        background: #fff7e6;
-        color: #9a6a06;
-        border-color: #f6d58d;
-    }
-
-    .card-content {
-        padding: 18px;
-        font-size: 0.98rem;
-        color: var(--text-color);
-        line-height: 1.65;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .meta-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    .card-meta-item {
-        background: #f7faff;
-        border: 1px solid #dfebf8;
-        border-radius: 10px;
-        padding: 10px 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .card-meta-item.full-width {
-        margin-top: -2px;
-    }
-
-    .card-meta-item strong {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #4e6483;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-    }
-
-    .card-meta-item span {
-        color: #1f3350;
-        font-weight: 500;
-    }
-
-     .card-content .remarks {
-         background: linear-gradient(to right, #eef8ff 0%, #f0f9ff 100%);
-         padding: 12px 14px;
-         border-radius: 10px;
-         border-left: 4px solid var(--info-color);
-         margin-top: 2px;
-         box-shadow: 0 2px 8px rgba(23, 162, 184, 0.1);
-         position: relative;
-     }
-
-     .card-content .remarks strong {
-         display: block;
-         margin-bottom: 4px;
-         color: #0f4b6d;
-         text-transform: uppercase;
-         font-size: 0.78rem;
-         letter-spacing: 0.03em;
-     }
-
-     .card-content .remarks p {
-         margin: 0;
-         color: #1f3f52;
-     }
-
-     .card-content .remarks::before {
-         content: '💬';
-         position: absolute;
-         top: 12px;
-         right: 16px;
-         font-size: 1.2rem;
-         opacity: 0.5;
-     }
-
-     .card-content .no-info {
-         color: var(--dark-gray);
-         font-style: italic;
-         font-size: 0.9em;
-         margin-top: 2px;
-     }
-
 
 
     @media (max-width: 768px) {
-        .history-grid {
-            grid-template-columns: 1fr;
-            gap: 14px;
-        }
-
         .meta-grid {
             grid-template-columns: 1fr;
         }
@@ -2957,6 +2967,611 @@ function toggleEditProfile() {
             min-width: 20px;
         }
         
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       UPCOMING APPOINTMENT – redesigned
+    ═══════════════════════════════════════════════════════════════ */
+    .upcoming-section {
+        margin: 28px 0 0;
+    }
+
+    .upcoming-section-header {
+        margin-bottom: 12px;
+    }
+
+    .upcoming-card-new {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+        background: linear-gradient(135deg, #eef4ff 0%, #f0f9ff 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 16px;
+        padding: 20px 24px;
+        box-shadow: 0 4px 16px rgba(30, 58, 102, 0.08);
+        transition: box-shadow var(--transition-speed) ease, transform var(--transition-speed) ease;
+    }
+
+    .upcoming-card-new:hover {
+        box-shadow: 0 8px 24px rgba(30, 58, 102, 0.14);
+        transform: translateY(-2px);
+    }
+
+    .upcoming-card-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+        flex-shrink: 0;
+    }
+
+    .upcoming-svc-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .upcoming-svc-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        display: block;
+        margin-bottom: 6px;
+    }
+
+    .upcoming-card-right {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        flex: 1;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    .upcoming-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.92rem;
+        color: #374151;
+        background: rgba(255,255,255,0.8);
+        border: 1px solid #dbeafe;
+        border-radius: 8px;
+        padding: 6px 12px;
+        white-space: nowrap;
+    }
+
+    .upcoming-meta-item i {
+        color: var(--primary-color);
+        font-size: 0.88rem;
+    }
+
+    .upcoming-meta-services {
+        white-space: normal;
+        max-width: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       APPOINTMENT HISTORY – new section
+    ═══════════════════════════════════════════════════════════════ */
+    .hist-section {
+        margin-top: 36px;
+    }
+
+    .hist-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .hist-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .hist-title-icon {
+        color: var(--primary-color);
+        font-size: 1.35rem;
+    }
+
+    .hist-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin: 0;
+    }
+
+    /* Search */
+    .hist-search-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .hist-search-icon {
+        position: absolute;
+        left: 13px;
+        color: #94a3b8;
+        font-size: 0.9rem;
+        pointer-events: none;
+    }
+
+    .hist-search-input {
+        padding: 9px 16px 9px 36px;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        font-size: 0.93rem;
+        background: #ffffff;
+        color: #1e293b;
+        outline: none;
+        width: 240px;
+        transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        font-family: inherit;
+    }
+
+    .hist-search-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Filter pills */
+    .hist-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 0.84rem;
+        font-weight: 600;
+        border: 1.5px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        letter-spacing: 0.01em;
+    }
+
+    .filter-pill i {
+        font-size: 0.8rem;
+    }
+
+    .filter-pill:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background: #eef2ff;
+    }
+
+    .filter-pill--active {
+        background: var(--primary-color) !important;
+        color: #ffffff !important;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 2px 8px rgba(30, 58, 102, 0.25);
+    }
+
+    /* Empty state */
+    .hist-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 52px 20px;
+        color: #94a3b8;
+        text-align: center;
+    }
+
+    .hist-empty-icon {
+        font-size: 2.8rem;
+        opacity: 0.45;
+    }
+
+    .hist-empty p {
+        font-size: 1rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       VERTICAL TIMELINE
+    ═══════════════════════════════════════════════════════════════ */
+    .tl-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .tl-item {
+        display: flex;
+        gap: 16px;
+        position: relative;
+    }
+
+    /* Left column: dot + vertical line */
+    .tl-spine {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 20px;
+        flex-shrink: 0;
+        padding-top: 14px;
+    }
+
+    .tl-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2.5px solid;
+        flex-shrink: 0;
+        z-index: 1;
+    }
+
+    .tl-dot--status-completed  { background: #dbeafe; border-color: #3b82f6; }
+    .tl-dot--status-confirmed  { background: #dcfce7; border-color: #22c55e; }
+    .tl-dot--status-cancelled  { background: #fee2e2; border-color: #ef4444; }
+    .tl-dot--status-pending    { background: #fef9c3; border-color: #eab308; }
+
+    .tl-vline {
+        width: 2px;
+        flex: 1;
+        background: linear-gradient(to bottom, #cbd5e1 0%, transparent 100%);
+        margin-top: 4px;
+        min-height: 32px;
+    }
+
+    .tl-item:last-child .tl-vline {
+        display: none;
+    }
+
+    /* Card */
+    .tl-card {
+        flex: 1;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 18px 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+        transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+        min-width: 0;
+    }
+
+    .tl-card:hover {
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+        transform: translateY(-2px);
+        border-color: #bfdbfe;
+    }
+
+    /* Card top */
+    .tl-card-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+
+    .tl-svc-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    /* Service icon colour themes */
+    .svc-lab      { background: #eff6ff; color: #2563eb; }
+    .svc-imaging  { background: #f0fdf4; color: #16a34a; }
+    .svc-consult  { background: #fdf4ff; color: #9333ea; }
+    .svc-cardio   { background: #fff1f2; color: #e11d48; }
+    .svc-default  { background: #f8fafc; color: #475569; }
+
+    .tl-card-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .tl-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+
+    .tl-svc-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0f172a;
+        word-break: break-word;
+    }
+
+    .tl-chips-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .tl-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.82rem;
+        color: #475569;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 4px 10px;
+        white-space: nowrap;
+    }
+
+    .tl-chip i {
+        color: var(--primary-color);
+        font-size: 0.78rem;
+    }
+
+    /* Sub-services */
+    .tl-subservices {
+        margin-bottom: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed #e2e8f0;
+    }
+
+    .tl-sub-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 7px;
+    }
+
+    .tl-sub-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .tl-sub-chip {
+        font-size: 0.82rem;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-weight: 500;
+    }
+
+    /* Progress steps */
+    .tl-steps {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .tl-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        flex: 1;
+    }
+
+    .tl-step-node {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        border: 2px solid #94a3b8;
+        z-index: 1;
+        transition: all 0.25s ease;
+        flex-shrink: 0;
+    }
+
+    .tl-step--done .tl-step-node,
+    .tl-step--active .tl-step-node {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(30, 58, 102, 0.18);
+    }
+
+    .tl-step--active .tl-step-node {
+        background: #3b82f6;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+
+    .tl-step-bar {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: #cbd5e1;
+        z-index: 0;
+        transition: background 0.25s ease;
+    }
+
+    .tl-step-bar--done {
+        background: var(--primary-color);
+    }
+
+    .tl-step-label {
+        margin-top: 6px;
+        font-size: 0.73rem;
+        font-weight: 600;
+        color: #94a3b8;
+        text-align: center;
+        white-space: nowrap;
+        line-height: 1.3;
+    }
+
+    .tl-step--done .tl-step-label,
+    .tl-step--active .tl-step-label {
+        color: var(--primary-color);
+    }
+
+    .tl-step--active .tl-step-label {
+        color: #3b82f6;
+    }
+
+    /* Remarks */
+    .tl-remarks {
+        padding-top: 12px;
+        border-top: 1px dashed #e2e8f0;
+    }
+
+    .tl-remarks-label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .tl-remarks-label i {
+        color: var(--primary-color);
+    }
+
+    .tl-remarks-body {
+        font-size: 0.92rem;
+        color: #374151;
+        line-height: 1.65;
+        overflow: hidden;
+        transition: max-height 0.35s ease;
+    }
+
+    .tl-remarks--collapsed {
+        max-height: 4.8em; /* ~3 lines */
+        -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    }
+
+    .tl-remarks--expanded {
+        max-height: 1000px;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .tl-readmore-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        margin-top: 6px;
+        background: none;
+        border: none;
+        color: #3b82f6;
+        font-size: 0.83rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 2px 0;
+        transition: color 0.2s ease;
+    }
+
+    .tl-readmore-btn:hover {
+        color: #1d4ed8;
+    }
+
+    /* Status pills – shared reuse */
+    .status-pill.status-completed { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .status-pill.status-confirmed { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-pill.status-cancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .status-pill.status-pending   { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        .hist-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .hist-search-input {
+            width: 100%;
+        }
+
+        .hist-search-wrapper {
+            width: 100%;
+        }
+
+        .upcoming-card-new {
+            flex-direction: column;
+        }
+
+        .upcoming-card-right {
+            justify-content: flex-start;
+        }
+
+        .tl-title-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .tl-steps {
+            padding: 10px 10px;
+        }
+
+        .tl-step-label {
+            font-size: 0.68rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .hist-filters {
+            gap: 6px;
+        }
+
+        .filter-pill {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .tl-card {
+            padding: 14px 14px;
+        }
+
+        .tl-svc-icon, .upcoming-svc-icon {
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+            border-radius: 10px;
+        }
+
+        .tl-spine {
+            width: 14px;
+        }
+
+        .tl-dot {
+            width: 11px;
+            height: 11px;
+        }
     }
 
 </style>
