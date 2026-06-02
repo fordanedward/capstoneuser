@@ -121,7 +121,7 @@
   // Additional variables for simplified slot loading (as per notepad instructions)
   let availableSlots: string[] = [];
 
-  let defaultWorkingDays: number[] = [1, 2, 3, 4, 5, 6, 7]; // Default fallback
+  let defaultWorkingDays: number[] = [1, 2, 3, 4, 5, 6]; // Default fallback: Monday-Saturday
   let fetchedBookingSlots: string[] = [];
   let isBookingDateWorking: boolean = false;
   let isLoadingBookingSlots: boolean = true;
@@ -211,6 +211,18 @@
     return `${year}-${month}-${day}`;
   }
 
+  function getDayOfWeekUtc(dateStr: string): number {
+    return new Date(dateStr + 'T00:00:00Z').getUTCDay();
+  }
+
+  function isSundayDate(dateStr: string): boolean {
+    return getDayOfWeekUtc(dateStr) === 0;
+  }
+
+  function isDefaultWorkingDay(dayOfWeek: number): boolean {
+    return dayOfWeek !== 0 && defaultWorkingDays.includes(dayOfWeek);
+  }
+
   function isTimePassed(time: string): boolean {
     const currentTime = new Date();
     const [slotTime, period] = time.split(' ');
@@ -249,7 +261,11 @@
 
   // Helper to check if a date is working or non-working
   async function checkDayWorkingStatus(dateStr: string): Promise<boolean> {
-    if (!db) return true; // Default to working if DB not available
+    if (isSundayDate(dateStr)) return false;
+
+    if (!db) {
+      return isDefaultWorkingDay(getDayOfWeekUtc(dateStr));
+    }
 
     try {
       const scheduleRef = doc(db, FIRESTORE_DAILY_SCHEDULES_COLLECTION, dateStr);
@@ -272,15 +288,13 @@
           isWorkingDay = true;
         } else {
           // No explicit flag - fall back to default working days
-          const dateObj = new Date(dateStr + 'T00:00:00Z');
-          const dayOfWeek = dateObj.getUTCDay();
-          isWorkingDay = defaultWorkingDays.includes(dayOfWeek);
+          const dayOfWeek = getDayOfWeekUtc(dateStr);
+          isWorkingDay = isDefaultWorkingDay(dayOfWeek);
         }
       } else {
         // No document exists - use default working days
-        const dateObj = new Date(dateStr + 'T00:00:00Z');
-        const dayOfWeek = dateObj.getUTCDay();
-        isWorkingDay = defaultWorkingDays.includes(dayOfWeek);
+        const dayOfWeek = getDayOfWeekUtc(dateStr);
+        isWorkingDay = isDefaultWorkingDay(dayOfWeek);
       }
 
       return isWorkingDay;
@@ -373,10 +387,9 @@
     try {
         const docSnap = await getDoc(defaultsRef);
         if (docSnap.exists() && Array.isArray(docSnap.data().defaultWorkingDays)) {
-            defaultWorkingDays = docSnap.data().defaultWorkingDays;
+          defaultWorkingDays = docSnap.data().defaultWorkingDays.filter((day: number) => day !== 0 && day !== 7);
         } else {
-            // Use 0-6 (Sun-Sat) so weekends are included by default
-            defaultWorkingDays = [0, 1, 2, 3, 4, 5, 6];
+            defaultWorkingDays = [1, 2, 3, 4, 5, 6];
         }
     } catch (error) {
         console.error("Error loading default working days:", error);
@@ -447,6 +460,7 @@
   // Helper function to check if a date has available slots (considering time passed for today)
   async function hasAvailableSlots(date: string): Promise<boolean> {
     if (!db || !date) return false;
+    if (isSundayDate(date)) return false;
     
     // Check cache first
     const cached = slotCache.get(date);
@@ -485,9 +499,8 @@
           isWorking = true;
         } else {
           // No explicit override flag - fall back to default working days
-          const dateObj = new Date(date + 'T00:00:00Z');
-          const dayOfWeek = dateObj.getUTCDay();
-          isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+          const dayOfWeek = getDayOfWeekUtc(date);
+          isWorking = isDefaultWorkingDay(dayOfWeek);
         }
         
         // Only set slots if it's a working day
@@ -499,10 +512,9 @@
         }
         // If not working, slots remain empty array
       } else {
-        const dateObj = new Date(date + 'T00:00:00Z');
-        const dayOfWeek = dateObj.getUTCDay();
+        const dayOfWeek = getDayOfWeekUtc(date);
         // Only a working day if it's in the default working days
-        isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        isWorking = isDefaultWorkingDay(dayOfWeek);
         if (isWorking) {
           slots = ALL_POSSIBLE_SLOTS;
         }
@@ -593,6 +605,23 @@
 
     console.log(`fetchAvailabilityForDate called for ${date} (${target})`);
 
+    if (isSundayDate(date)) {
+      clearCacheForDate(date);
+      if (target === 'booking') {
+        isLoadingBookingSlots = false;
+        fetchedBookingSlots = [];
+        isBookingDateWorking = false;
+        bookingSlotsError = null;
+        selectedTime = null;
+      } else {
+        isLoadingRescheduleSlots = false;
+        fetchedRescheduleSlots = [];
+        isRescheduleDateWorking = false;
+        rescheduleSlotsError = null;
+      }
+      return;
+    }
+
     // Check cache first
     const cached = slotCache.get(date);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -653,9 +682,8 @@
               console.log(`${date} marked as WORKING (isWorkingDay: true)`);
             } else {
               // No explicit override flag - fall back to default working days
-              const dateObj = new Date(date + 'T00:00:00Z');
-              const dayOfWeek = dateObj.getUTCDay();
-              isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+              const dayOfWeek = getDayOfWeekUtc(date);
+              isWorking = isDefaultWorkingDay(dayOfWeek);
               console.log(`${date} using defaults: day ${dayOfWeek}, isWorking: ${isWorking}`);
             }
             
@@ -668,10 +696,9 @@
             }
             // If not working, slots remain empty array
         } else {
-            const dateObj = new Date(date + 'T00:00:00Z');
-            const dayOfWeek = dateObj.getUTCDay();
+          const dayOfWeek = getDayOfWeekUtc(date);
             // Only a working day if it's in the default working days
-            isWorking = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+            isWorking = isDefaultWorkingDay(dayOfWeek);
             if (isWorking) {
                 slots = ALL_POSSIBLE_SLOTS;
             }
@@ -762,6 +789,10 @@
     if (!selectedDate || !db) return;
     
     availableSlots = [];
+
+    if (isSundayDate(selectedDate)) {
+      return;
+    }
     
     try {
         const scheduleRef = doc(db, 'dailySchedules', selectedDate);
@@ -813,8 +844,15 @@
             
             console.log(`Available slots for ${selectedDate}:`, availableSlots);
         } else {
-            console.log(`No schedule defined for ${selectedDate}, using all possible slots`);
-            availableSlots = ALL_POSSIBLE_SLOTS;
+            const dayOfWeek = getDayOfWeekUtc(selectedDate);
+
+            if (isDefaultWorkingDay(dayOfWeek)) {
+              console.log(`No schedule defined for ${selectedDate}, using all possible slots`);
+              availableSlots = ALL_POSSIBLE_SLOTS;
+            } else {
+              console.log(`${selectedDate} is closed by default weekly schedule.`);
+              availableSlots = [];
+            }
         }
     } catch (error) {
         console.error('Error loading available slots:', error);
@@ -1562,6 +1600,24 @@
       }
       return;
     }
+
+    if (isSundayDate(date)) {
+      isBookingDateWorking = false;
+      fetchedBookingSlots = [];
+      selectedTime = null;
+
+      await Swal.fire({
+        icon: 'info',
+        title: 'Closed on Sundays',
+        text: 'Appointments are only available from Monday to Saturday. Please choose a different date.',
+      });
+
+      const result = await findNextAvailableDate(date);
+      if (result.date && result.date !== date) {
+        selectedDate = result.date;
+      }
+      return;
+    }
     
     // Check if date is a non-working day
     try {
@@ -1595,28 +1651,32 @@
           console.log(`${date} is explicitly marked as WORKING (isWorkingDay: true)`);
         } else {
           // No explicit flag - fall back to default working days
-          const dateObj = new Date(date + 'T00:00:00Z');
-          const dayOfWeek = dateObj.getUTCDay();
-          isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+          const dayOfWeek = getDayOfWeekUtc(date);
+          isWorkingDay = isDefaultWorkingDay(dayOfWeek);
           console.log(`${date} using default logic: day ${dayOfWeek}, isWorking: ${isWorkingDay}`);
         }
       } else {
         // No document exists - use default working days
-        const dateObj = new Date(date + 'T00:00:00Z');
-        const dayOfWeek = dateObj.getUTCDay();
-        isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        const dayOfWeek = getDayOfWeekUtc(date);
+        isWorkingDay = isDefaultWorkingDay(dayOfWeek);
       }
       
       if (!isWorkingDay) {
         // Explicitly set state to non-working
         isBookingDateWorking = false;
         fetchedBookingSlots = [];
+        selectedTime = null;
         
-        Swal.fire({
+        await Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
           text: `${formatDate(date)} is a non-working day. Please pick a different date.`,
         });
+
+        const result = await findNextAvailableDate(date);
+        if (result.date && result.date !== date) {
+          selectedDate = result.date;
+        }
         return;
       }
     } catch (error) {
@@ -1786,6 +1846,25 @@
       }
       return;
     }
+
+    if (isSundayDate(date)) {
+      isRescheduleDateWorking = false;
+      fetchedRescheduleSlots = [];
+
+      await Swal.fire({
+        icon: 'info',
+        title: 'Closed on Sundays',
+        text: 'Appointments can only be rescheduled from Monday to Saturday.',
+      });
+
+      const result = await findNextAvailableDate(date);
+      if (result.date && result.date !== date) {
+        newDate = result.date;
+      } else if (currentAppointment) {
+        newDate = currentAppointment.date;
+      }
+      return;
+    }
     
     // Check if date is a non-working day
     try {
@@ -1809,15 +1888,13 @@
           isWorkingDay = true;
         } else {
           // No explicit flag - fall back to default working days
-          const dateObj = new Date(date + 'T00:00:00Z');
-          const dayOfWeek = dateObj.getUTCDay();
-          isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+          const dayOfWeek = getDayOfWeekUtc(date);
+          isWorkingDay = isDefaultWorkingDay(dayOfWeek);
         }
       } else {
         // No document exists - use default working days
-        const dateObj = new Date(date + 'T00:00:00Z');
-        const dayOfWeek = dateObj.getUTCDay();
-        isWorkingDay = defaultWorkingDays.includes(dayOfWeek) || dayOfWeek === 0 || dayOfWeek === 6;
+        const dayOfWeek = getDayOfWeekUtc(date);
+        isWorkingDay = isDefaultWorkingDay(dayOfWeek);
       }
       
       if (!isWorkingDay) {
@@ -1825,11 +1902,18 @@
         isRescheduleDateWorking = false;
         fetchedRescheduleSlots = [];
         
-        Swal.fire({
+        await Swal.fire({
           icon: 'info',
           title: 'Non-Working Day',
           text: `${formatDate(date)} is a non-working day set by the admin. Please pick a different date.`,
         });
+
+        const result = await findNextAvailableDate(date);
+        if (result.date && result.date !== date) {
+          newDate = result.date;
+        } else if (currentAppointment) {
+          newDate = currentAppointment.date;
+        }
         return;
       }
     } catch (error) {
@@ -2004,8 +2088,9 @@
       <div class="weekly-calendar-grid">
         {#each currentWeekDays as day (day.date)}
           <div 
-            class="day-card {day.isWorking ? 'working-day' : 'non-working-day'} {day.isToday ? 'today' : ''}"
+            class="day-card {day.isWorking ? 'working-day' : 'non-working-day'} {day.isToday ? 'today' : ''} {day.dayName === 'Sunday' ? 'sunday-closed' : ''}"
             title="{day.dayName}, {day.date} - {day.isWorking ? 'Working Day' : 'Non-Working Day'}"
+            aria-disabled={day.dayName === 'Sunday'}
           >
             <div class="day-info">
               <div class="day-name-short">{day.dayName.substring(0, 3)}</div>
@@ -2015,7 +2100,7 @@
               {#if day.isWorking}
                 <i class="fas fa-check-circle"></i>
               {:else}
-                <i class="fas fa-ban"></i>
+                <i class="fas fa-times-circle"></i>
               {/if}
             </div>
             {#if day.isToday}
@@ -2859,6 +2944,11 @@
 
   .day-card.today.non-working-day {
     background: linear-gradient(135deg, #fee2e2 0%, #f0f9ff 100%);
+  }
+
+  .day-card.sunday-closed {
+    pointer-events: none;
+    cursor: not-allowed;
   }
 
   .day-info {
