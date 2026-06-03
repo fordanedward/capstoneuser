@@ -1603,7 +1603,7 @@ function toggleEditProfile() {
             <!-- Family History Section -->
             <div class="form-section admin-readonly-section">
                 <h4 class="section-subtitle">Family History (check all that apply)</h4>
-                <fieldset class="admin-readonly-group" disabled aria-label="Family history (admin only)">
+                <div class="admin-readonly-group family-history-readonly-wrap" role="group" aria-label="Family history (admin only)" aria-disabled="true">
                 <div class="family-history-table-container">
                     <table class="family-history-table">
                         <thead>
@@ -1716,7 +1716,7 @@ function toggleEditProfile() {
                         </tbody>
                     </table>
                 </div>
-                </fieldset>
+                </div>
             </div>
             
             <!-- Other Medical Information Section -->
@@ -2672,12 +2672,16 @@ function toggleEditProfile() {
         padding: 0;
     }
 
-    .admin-readonly-group:disabled .family-history-table-container {
+    .family-history-readonly-wrap {
+        min-width: 0;
+    }
+
+    .admin-readonly-section .family-history-table-container {
         pointer-events: auto;
         touch-action: pan-x pan-y;
     }
 
-    .admin-readonly-group:disabled .family-history-table input[type="checkbox"] {
+    .admin-readonly-section .family-history-table input[type="checkbox"] {
         pointer-events: none;
     }
 
