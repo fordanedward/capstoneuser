@@ -1,7 +1,7 @@
 <script lang="ts">
     // @ts-nocheck
     import Swal from 'sweetalert2'; 
-    import { Label, Input, Button as FlowbiteButton, Toast } from 'flowbite-svelte'; 
+    import { Label, Input, Toast } from 'flowbite-svelte'; 
     import {
         CheckOutline,
         CloseOutline,
@@ -12,11 +12,12 @@
         getAuth,
         signInWithEmailAndPassword,
         signInAnonymously,
-        signOut
+        signOut,
+        type User
     } from 'firebase/auth';
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
-    import { getFirestore, doc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from "firebase/firestore";
+    import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
 
@@ -35,25 +36,29 @@
     let toastVisibleFB: boolean = false;
     let toastMessageFB: string = '';
     let toastTypeFB: ToastTypeFB = 'info';
-    let toastDurationFB: number = 3000;
     let toastTimeoutIdFB: number | null = null;
+
+    type UserDocData = {
+        role?: string;
+        status?: string;
+        isArchived?: boolean;
+        archived?: boolean;
+        displayName?: string;
+        name?: string;
+        lastName?: string;
+        email?: string;
+    };
+
+    type PatientProfileData = {
+        name?: string;
+        middleName?: string;
+        lastName?: string;
+        suffix?: string;
+        phone?: string;
+    };
 
     let isLoggingIn = false;
     let isPageLoaded = false;
-
-    function showAppToast(message: string, type: ToastTypeFB = 'info', duration: number = 3000) {
-        toastMessageFB = message;
-        toastTypeFB = type;
-        toastVisibleFB = true;
-        toastDurationFB = duration;
-        if (toastTimeoutIdFB !== null) clearTimeout(toastTimeoutIdFB);
-        if (duration > 0) {
-            toastTimeoutIdFB = window.setTimeout(() => {
-                toastVisibleFB = false;
-                toastTimeoutIdFB = null;
-            }, duration);
-        }
-    }
 
     onMount(() => {
         if (typeof localStorage !== 'undefined' && localStorage.getItem('rememberMe') === 'true') {
@@ -102,12 +107,12 @@
         }, 100);
     });
 
-    async function processSuccessfulLogin(user: any, providerId: string) {
+    async function processSuccessfulLogin(user: User, providerId: string) {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
+            const userData = userDocSnap.data() as UserDocData;
 
             // Prevent login if admin marked the account as inactive/archived
             const isArchivedFlag = Boolean(userData.isArchived ?? userData.archived ?? false);
@@ -159,10 +164,28 @@
                 lastLoginAt: new Date().toISOString()
             }, { merge: true });
 
+            const profileDocRef = doc(db, 'patientProfiles', user.uid);
+            const profileDocSnap = await getDoc(profileDocRef);
+            const profileData = profileDocSnap.exists() ? (profileDocSnap.data() as PatientProfileData) : null;
+
+            const profileFullName = [
+                profileData?.name,
+                profileData?.middleName,
+                profileData?.lastName,
+                profileData?.suffix
+            ].filter(Boolean).join(' ').trim();
+
+            const fallbackUserName = [userData.name, userData.lastName].filter(Boolean).join(' ').trim();
+            const normalizedDisplayName = String(userData.displayName || '').trim();
+            const welcomeName = profileFullName
+                || (normalizedDisplayName && normalizedDisplayName.toLowerCase() !== 'test user' ? normalizedDisplayName : '')
+                || fallbackUserName
+                || user.email;
+
             Swal.fire({
                 icon: 'success',
                 title: 'Login Successful',
-                text: `Welcome, ${userData.displayName || user.email}`,
+                text: `Welcome, ${welcomeName}`,
                 showConfirmButton: false,
                 timer: 2000,
                 customClass: { popup: 'swal-custom' }
@@ -240,11 +263,12 @@
                         const userRef = doc(db, 'users', profileUid);
                         const userSnap = await getDoc(userRef);
                         if (userSnap.exists()) {
-                            const u = userSnap.data() as any;
+                            const u = userSnap.data() as UserDocData;
                             if (u && typeof u.email === 'string' && u.email) {
                                 resolvedEmail = String(u.email);
                             } else {
-                                const phoneRaw = String((profileDoc.data() as any).phone || '');
+                                const profileDocData = profileDoc.data() as PatientProfileData;
+                                const phoneRaw = String(profileDocData.phone || '');
                                 const cleanedPhone = phoneRaw.replace(/\D/g, '');
                                 if (cleanedPhone) {
                                     resolvedEmail = `${cleanedPhone}@noemail.local`;
@@ -307,7 +331,8 @@
                         const profileRef = doc(db, 'patientProfiles', userDoc.id);
                         const profileSnap = await getDoc(profileRef);
                         if (profileSnap.exists()) {
-                            const phoneRaw = String((profileSnap.data() as any).phone || '');
+                            const profileData = profileSnap.data() as PatientProfileData;
+                            const phoneRaw = String(profileData.phone || '');
                             const cleanedPhone = phoneRaw.replace(/\D/g, '');
                             if (cleanedPhone) {
                                 resolvedEmail = `${cleanedPhone}@noemail.local`;
@@ -341,12 +366,13 @@
         try {
             const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail!, password);
             await processSuccessfulLogin(userCredential.user, 'password');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error during login:', error);
             let errorMessage = 'An error occurred. Please try again.';
-            if (error.code) {
+            const authError = error as { code?: string };
+            if (authError.code) {
                 const looksLikeEmail = /.+@.+\..+/.test(identifier.trim());
-                switch (error.code) {
+                switch (authError.code) {
                     case 'auth/invalid-credential':
                     case 'auth/user-not-found':
                     case 'auth/wrong-password':

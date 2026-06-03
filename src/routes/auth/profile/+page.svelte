@@ -208,15 +208,6 @@
         return 'status-pending';
     }
 
-    function scrollHistoryCarousel(direction: number) {
-        if (!historyCarousel) return;
-
-        historyCarousel.scrollBy({
-            left: direction * Math.max(historyCarousel.clientWidth * 0.85, 320),
-            behavior: 'smooth'
-        });
-    }
-
     let patientProfile: PatientProfile = {
         name: '',
         middleName: '',
@@ -249,7 +240,6 @@
     let showDetails = false;
     let isMobile = false;
     let isArchived: boolean = false;
-    let historyCarousel: HTMLDivElement | null = null;
     $: accountStatus = isArchived ? 'Inactive' : 'Active';
 
     // ── History search / filter / expand state ──────────────────────────────
@@ -378,15 +368,21 @@
         };
     }
 
-    function ensureFamilyHistoryComplete(data: any): typeof familyHistory {
+    function ensureFamilyHistoryComplete(data: unknown): typeof familyHistory {
         const defaults = getDefaultFamilyHistory();
         if (!data || typeof data !== 'object') return defaults;
+
+        const familyHistoryData = data as Record<string, unknown>;
         
         // Merge data with defaults to ensure all nested properties exist
         const result = { ...defaults };
         for (const member in defaults) {
-            if (data[member] && typeof data[member] === 'object') {
-                result[member as keyof typeof defaults] = { ...defaults[member as keyof typeof defaults], ...data[member] };
+            const memberData = familyHistoryData[member];
+            if (memberData && typeof memberData === 'object') {
+                result[member as keyof typeof defaults] = {
+                    ...defaults[member as keyof typeof defaults],
+                    ...(memberData as Record<string, boolean>)
+                };
             }
         }
         return result;
@@ -2014,6 +2010,7 @@ function toggleEditProfile() {
         padding: 20px;
         animation: fadeIn 0.3s ease-out;
         overflow-y: auto;
+        overflow-x: hidden;
     }
 
     @keyframes fadeIn {
@@ -2128,8 +2125,9 @@ function toggleEditProfile() {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         padding-right: 6px;
-        padding-bottom: 8px;
+        padding-bottom: 20px;
     }
 
     .profile-form-body::-webkit-scrollbar {
@@ -2299,6 +2297,7 @@ function toggleEditProfile() {
         .modal-overlay {
             padding: 10px;
             align-items: flex-start;
+            overscroll-behavior-x: none;
         }
         .profile-form-container {
             padding: 18px 14px;
@@ -2306,7 +2305,9 @@ function toggleEditProfile() {
             margin-top: 10px;
         }
         .profile-form-body {
+            overflow-x: hidden;
             padding-right: 0;
+            padding-bottom: 96px;
         }
         .form-header {
             margin: 4px 0 16px;
@@ -2332,6 +2333,10 @@ function toggleEditProfile() {
             flex-direction: row;
             gap: 10px;
             padding: 14px 0 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            margin-top: 8px;
         }
         .save-button, .cancel-button {
             flex: 1;
@@ -2362,6 +2367,35 @@ function toggleEditProfile() {
         .info-grid {
             grid-template-columns: 1fr;
             gap: 6px;
+        }
+
+        .family-history-table-container {
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            overscroll-behavior-x: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .family-history-table {
+            width: max-content;
+            min-width: 980px;
+        }
+
+        .family-history-table th,
+        .family-history-table td,
+        .family-member-label {
+            position: static;
+        }
+
+        .family-member-label {
+            min-width: 128px;
+            background: var(--white);
+        }
+
+        .checkbox-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 10px;
         }
     }
 
@@ -2709,17 +2743,25 @@ function toggleEditProfile() {
     }
 
     .family-history-table-container {
-        overflow-x: auto;
+        overflow: auto;
+        width: 100%;
         margin-top: 16px;
         border-radius: 8px;
         border: 1px solid #dbe4ef;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+        max-width: 100%;
+        max-height: min(46vh, 420px);
+        background: var(--white);
+        position: relative;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        touch-action: auto;
     }
 
     .family-history-table {
-        width: 100%;
+        width: max-content;
         border-collapse: collapse;
-        min-width: 800px;
+        min-width: 980px;
         background-color: var(--white);
     }
 
@@ -2735,12 +2777,18 @@ function toggleEditProfile() {
         color: var(--primary-color);
         border: 1px solid var(--medium-gray);
         line-height: 1.3;
+        min-width: 80px;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
     }
 
     .family-history-table td {
         padding: 10px 8px;
         text-align: center;
         border: 1px solid var(--medium-gray);
+        min-width: 80px;
     }
 
     .family-history-table tbody tr:hover {
@@ -2753,6 +2801,10 @@ function toggleEditProfile() {
         text-align: left !important;
         padding-left: 16px !important;
         min-width: 120px;
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--white);
     }
 
     .family-history-table input[type="checkbox"] {
@@ -2764,12 +2816,37 @@ function toggleEditProfile() {
 
     @media (max-width: 768px) {
         .checkbox-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 8px;
+        }
+
+        .checkbox-label {
+            padding: 8px 10px;
+            align-items: flex-start;
+            min-height: 56px;
+        }
+
+        .checkbox-label span {
+            font-size: 0.78rem;
+            line-height: 1.25;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+        }
+
+        .family-history-table-container {
+            max-height: min(40vh, 340px);
+            margin-top: 12px;
         }
 
         .family-history-table {
             font-size: 0.85rem;
+            min-width: 900px;
         }
 
         .family-history-table th,
