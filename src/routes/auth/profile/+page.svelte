@@ -2393,11 +2393,14 @@ function toggleEditProfile() {
         }
 
         .family-history-table-container {
+            display: block;
+            max-width: 100%;
             max-height: none;
             overflow-x: auto;
             overflow-y: hidden;
             overscroll-behavior-x: contain;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
         }
 
         .family-history-table {
@@ -2405,14 +2408,11 @@ function toggleEditProfile() {
             min-width: 980px;
         }
 
-        .family-history-table th,
-        .family-history-table td,
-        .family-member-label {
-            position: static;
-        }
-
         .family-member-label {
             min-width: 128px;
+            position: sticky;
+            left: 0;
+            z-index: 2;
             background: var(--white);
         }
 
@@ -2672,6 +2672,15 @@ function toggleEditProfile() {
         padding: 0;
     }
 
+    .admin-readonly-group:disabled .family-history-table-container {
+        pointer-events: auto;
+        touch-action: pan-x pan-y;
+    }
+
+    .admin-readonly-group:disabled .family-history-table input[type="checkbox"] {
+        pointer-events: none;
+    }
+
     .admin-readonly-section .section-subtitle::after {
         content: ' (Admin only)';
         color: #6b7280;
@@ -2783,13 +2792,14 @@ function toggleEditProfile() {
 
     .family-history-table {
         width: max-content;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         min-width: 980px;
         background-color: var(--white);
     }
 
     .family-history-table thead {
-        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
+        background: var(--light-gray);
     }
 
     .family-history-table th {
@@ -2804,7 +2814,13 @@ function toggleEditProfile() {
         position: sticky;
         top: 0;
         z-index: 3;
-        background: linear-gradient(to right, var(--light-gray) 0%, #e3e7eb 100%);
+        background: var(--light-gray);
+        box-sizing: border-box;
+    }
+
+    .family-history-table th:first-child {
+        left: 0;
+        z-index: 4;
     }
 
     .family-history-table td {
@@ -2812,6 +2828,7 @@ function toggleEditProfile() {
         text-align: center;
         border: 1px solid var(--medium-gray);
         min-width: 80px;
+        box-sizing: border-box;
     }
 
     .family-history-table tbody tr:hover {
@@ -2826,8 +2843,9 @@ function toggleEditProfile() {
         min-width: 120px;
         position: sticky;
         left: 0;
-        z-index: 2;
+        z-index: 3;
         background: var(--white);
+        white-space: nowrap;
     }
 
     .family-history-table input[type="checkbox"] {
@@ -2865,6 +2883,8 @@ function toggleEditProfile() {
         .family-history-table-container {
             max-height: min(40vh, 340px);
             margin-top: 12px;
+            overflow-x: auto;
+            overflow-y: auto;
         }
 
         .family-history-table {
