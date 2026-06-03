@@ -10,3 +10,25 @@ declare module '$lib/firebaseConfig' {
     export const auth: Auth | null;
     export const analytics: Analytics | null;
 }
+
+declare module 'svelte' {
+    export function onMount(fn: () => void | (() => void) | Promise<void | (() => void)>): void;
+}
+
+declare module 'svelte/transition' {
+    export type EasingFunction = (t: number) => number;
+    export type TransitionConfig = {
+        delay?: number;
+        duration?: number;
+        easing?: EasingFunction;
+        css?: (t: number, u: number) => string;
+        tick?: (t: number, u: number) => void;
+    };
+
+    export function fade(node: Element, params?: Record<string, unknown>): TransitionConfig;
+    export function scale(node: Element, params?: Record<string, unknown>): TransitionConfig;
+}
+
+declare module 'svelte/easing' {
+    export function elasticOut(t: number): number;
+}

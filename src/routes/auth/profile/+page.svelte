@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { getFirestore, setDoc, doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
     import { firebaseConfig } from "$lib/firebaseConfig";
     import { initializeApp, getApps, getApp } from "firebase/app";
@@ -144,6 +143,20 @@
         remarks?: string;
     };
 
+    type HistoryFilter = 'all' | 'completed' | 'pending' | 'cancelled' | 'laboratory' | 'imaging';
+
+    type HistoryFilterPill = {
+        key: HistoryFilter;
+        label: string;
+        icon: string;
+    };
+
+    type TimelineStep = {
+        label: string;
+        done: boolean;
+        active: boolean;
+    };
+
     function parseAppointmentDateTime(date: string, time: string): Date | null {
         if (!date || !time) return null;
 
@@ -244,8 +257,16 @@
 
     // ── History search / filter / expand state ──────────────────────────────
     let historySearchQuery = "";
-    let historyFilter = "all";
+    let historyFilter: HistoryFilter = 'all';
     let expandedRemarks = new Set<string>();
+    let filteredDoneAppointments: Appointment[] = [];
+
+    const historyFilterPills: HistoryFilterPill[] = [
+        { key: 'all', label: 'All', icon: 'fa-layer-group' },
+        { key: 'completed', label: 'Completed', icon: 'fa-check-circle' },
+        { key: 'pending', label: 'Pending', icon: 'fa-hourglass-half' },
+        { key: 'cancelled', label: 'Cancelled', icon: 'fa-times-circle' }
+    ];
 
     function toggleRemarks(id: string) {
         const next = new Set(expandedRemarks);
@@ -284,9 +305,9 @@
         } catch { return dateStr; }
     }
 
-    function getTimelineSteps(appointment: Appointment): { label: string; done: boolean; active: boolean }[] {
+    function getTimelineSteps(appointment: Appointment): TimelineStep[] {
         const status = (appointment.status || '').toLowerCase().trim();
-        const steps = [
+        const steps: TimelineStep[] = [
             { label: 'Requested', done: true, active: false },
             { label: 'Approved', done: false, active: false },
             { label: 'Completed', done: false, active: false }
@@ -390,166 +411,170 @@
 
     $: normalizedPatientGender = normalizeGender(patientProfile.gender);
 
-onMount(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUser  = user;
-            console.log("User  is logged in: ", currentUser );
+    function initializeProfilePage(node: HTMLElement) {
+        void node;
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser  = user;
+                console.log("User  is logged in: ", currentUser );
 
-            try {
-                // Fetch user profile from Firestore
-                const patientRef = doc(db, "patientProfiles", currentUser .uid);
-                const patientDoc = await getDoc(patientRef);
+                try {
+                    // Fetch user profile from Firestore
+                    const patientRef = doc(db, "patientProfiles", currentUser .uid);
+                    const patientDoc = await getDoc(patientRef);
 
-                if (patientDoc.exists()) {
-                    patientProfile = patientDoc.data() as PatientProfile;
-                    patientProfile.gender = normalizeGender(patientProfile.gender);
-                    patientProfile.email = sanitizeOptionalEmail(patientProfile.email);
-                    // Get the customUserId from the users collection
-                    const userRef = doc(db, "users", currentUser.uid);
-                    const userDoc = await getDoc(userRef);
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        patientProfile.id = userData.customUserId || "N/A";
-                        isArchived = Boolean(userData.isArchived ?? userData.archived ?? false);
+                    if (patientDoc.exists()) {
+                        patientProfile = patientDoc.data() as PatientProfile;
+                        patientProfile.gender = normalizeGender(patientProfile.gender);
+                        patientProfile.email = sanitizeOptionalEmail(patientProfile.email);
+                        // Get the customUserId from the users collection
+                        const userRef = doc(db, "users", currentUser.uid);
+                        const userDoc = await getDoc(userRef);
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            patientProfile.id = userData.customUserId || "N/A";
+                            isArchived = Boolean(userData.isArchived ?? userData.archived ?? false);
+                        } else {
+                            // Fallback: some projects store archive flag on profile
+                            const patientData = patientDoc.data() as { isArchived?: boolean; archived?: boolean };
+                            const archivedFlag = patientData.isArchived ?? patientData.archived;
+                            isArchived = Boolean(archivedFlag ?? false);
+                        }
+                        console.log("Loaded patient profile from Firestore: ", patientProfile);
                     } else {
-                        // Fallback: some projects store archive flag on profile
-                        const patientData = patientDoc.data() as { isArchived?: boolean; archived?: boolean };
-                        const archivedFlag = patientData.isArchived ?? patientData.archived;
-                        isArchived = Boolean(archivedFlag ?? false);
+                        console.log("No profile found for this user. Using default values.");
+                        // Get the customUserId from the users collection
+                        const userRef = doc(db, "users", currentUser.uid);
+                        const userDoc = await getDoc(userRef);
+                        const customUserId = userDoc.exists() ? userDoc.data().customUserId : "N/A";
+                        isArchived = userDoc.exists() ? Boolean(userDoc.data().isArchived ?? userDoc.data().archived ?? false) : false;
+                        
+                        patientProfile = {
+                            name: '',
+                            middleName: '',
+                            lastName: '',
+                            suffix: '',
+                            id: customUserId,
+                            age: '',
+                            gender: '',
+                            email: '',
+                            phone: '',
+                            address: '',
+                            birthday: '',
+                            profileImage: ''
+                        };
                     }
-                    console.log("Loaded patient profile from Firestore: ", patientProfile);
-                } else {
-                    console.log("No profile found for this user. Using default values.");
-                    // Get the customUserId from the users collection
-                    const userRef = doc(db, "users", currentUser.uid);
-                    const userDoc = await getDoc(userRef);
-                    const customUserId = userDoc.exists() ? userDoc.data().customUserId : "N/A";
-                    isArchived = userDoc.exists() ? Boolean(userDoc.data().isArchived ?? userDoc.data().archived ?? false) : false;
-                    
-                    patientProfile = {
-                        name: '',
-                        middleName: '',
-                        lastName: '',
-                        suffix: '',
-                        id: customUserId,
-                        age: '',
-                        gender: '',
-                        email: '',
-                        phone: '',
-                        address: '',
-                        birthday: '',
-                        profileImage: ''
-                    };
+
+                    const appointmentsRef = collection(db, "appointments");
+                    const qAppointments = query(
+                        appointmentsRef,
+                        where("patientId", "==", currentUser.uid)
+                    );
+                    const querySnapshot = await getDocs(qAppointments);
+                    const allAppointments = querySnapshot.docs.map((doc) => {
+                        const data = doc.data();
+                        console.log("Appointment data:", data); // Debug log
+                        console.log("Checking remarks fields:", {
+                            remarks: data.remarks,
+                            remark: data.remark,
+                            adminRemarks: data.adminRemarks,
+                            notes: data.notes,
+                            comment: data.comment,
+                            comments: data.comments,
+                            description: data.description,
+                            completionRemarks: data.completionRemarks
+                        });
+                        
+                        // Try all possible field names for remarks
+                        const remarksValue = data.completionRemarks ||
+                                           data.remarks || 
+                                           data.remark || 
+                                           data.adminRemarks || 
+                                           data.notes || 
+                                           data.comment || 
+                                           data.comments || 
+                                           data.description || 
+                                           '';
+                        
+                        console.log("Final remarks value for appointment", doc.id, ":", remarksValue);
+                        const rawStatus = data.status ? String(data.status) : '';
+                        const normalizedStatus = rawStatus.toLowerCase().trim();
+                        const requestedDate = String(data.requestedDate ?? '');
+                        const requestedTime = String(data.requestedTime ?? '');
+                        const useApprovedRescheduledSchedule = normalizedStatus === 'rescheduled' && (!data.date || !data.time) && !!requestedDate && !!requestedTime;
+
+                        const appointment: Appointment = {
+                            id: doc.id,
+                            date: useApprovedRescheduledSchedule ? requestedDate : String(data.date ?? ''),
+                            time: useApprovedRescheduledSchedule ? requestedTime : String(data.time ?? ''),
+                            requestedDate: requestedDate || undefined,
+                            requestedTime: requestedTime || undefined,
+                            service: String(data.service ?? ''),
+                            status: rawStatus || undefined,
+                            cancellationStatus: data.cancellationStatus ? String(data.cancellationStatus) : undefined,
+                            subServices: Array.isArray(data.subServices) ? data.subServices : undefined,
+                            remarks: remarksValue
+                        };
+
+                        return appointment;
+                    });
+
+                    doneAppointments = allAppointments.filter((appointment) => isPastAppointment(appointment));
+
+                    const upcomingAppointments = allAppointments
+                        .filter((appointment) => isActiveUpcomingAppointment(appointment))
+                        .sort((a, b) => {
+                            const dateA = parseAppointmentDateTime(a.date, a.time);
+                            const dateB = parseAppointmentDateTime(b.date, b.time);
+
+                            const timeA = dateA ? dateA.getTime() : Number.POSITIVE_INFINITY;
+                            const timeB = dateB ? dateB.getTime() : Number.POSITIVE_INFINITY;
+                            return timeA - timeB;
+                        });
+
+                    upcomingAppointment = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
+                    console.log("Loaded done appointments: ", doneAppointments);
+
+                } catch (error) {
+                    console.error("Error loading data: ", error);
                 }
-
-                const appointmentsRef = collection(db, "appointments");
-                const qAppointments = query(
-                    appointmentsRef,
-                    where("patientId", "==", currentUser.uid)
-                );
-                const querySnapshot = await getDocs(qAppointments);
-                const allAppointments = querySnapshot.docs.map((doc) => {
-                    const data = doc.data();
-                    console.log("Appointment data:", data); // Debug log
-                    console.log("Checking remarks fields:", {
-                        remarks: data.remarks,
-                        remark: data.remark,
-                        adminRemarks: data.adminRemarks,
-                        notes: data.notes,
-                        comment: data.comment,
-                        comments: data.comments,
-                        description: data.description,
-                        completionRemarks: data.completionRemarks
-                    });
-                    
-                    // Try all possible field names for remarks
-                    const remarksValue = data.completionRemarks ||
-                                       data.remarks || 
-                                       data.remark || 
-                                       data.adminRemarks || 
-                                       data.notes || 
-                                       data.comment || 
-                                       data.comments || 
-                                       data.description || 
-                                       '';
-                    
-                    console.log("Final remarks value for appointment", doc.id, ":", remarksValue);
-                    const rawStatus = data.status ? String(data.status) : '';
-                    const normalizedStatus = rawStatus.toLowerCase().trim();
-                    const requestedDate = String(data.requestedDate ?? '');
-                    const requestedTime = String(data.requestedTime ?? '');
-                    const useApprovedRescheduledSchedule = normalizedStatus === 'rescheduled' && (!data.date || !data.time) && !!requestedDate && !!requestedTime;
-
-                    const appointment: Appointment = {
-                        id: doc.id,
-                        date: useApprovedRescheduledSchedule ? requestedDate : String(data.date ?? ''),
-                        time: useApprovedRescheduledSchedule ? requestedTime : String(data.time ?? ''),
-                        requestedDate: requestedDate || undefined,
-                        requestedTime: requestedTime || undefined,
-                        service: String(data.service ?? ''),
-                        status: rawStatus || undefined,
-                        cancellationStatus: data.cancellationStatus ? String(data.cancellationStatus) : undefined,
-                        subServices: Array.isArray(data.subServices) ? data.subServices : undefined,
-                        remarks: remarksValue
-                    };
-
-                    return appointment;
-                });
-
-                doneAppointments = allAppointments.filter((appointment) => isPastAppointment(appointment));
-
-                const upcomingAppointments = allAppointments
-                    .filter((appointment) => isActiveUpcomingAppointment(appointment))
-                    .sort((a, b) => {
-                        const dateA = parseAppointmentDateTime(a.date, a.time);
-                        const dateB = parseAppointmentDateTime(b.date, b.time);
-
-                        const timeA = dateA ? dateA.getTime() : Number.POSITIVE_INFINITY;
-                        const timeB = dateB ? dateB.getTime() : Number.POSITIVE_INFINITY;
-                        return timeA - timeB;
-                    });
-
-                upcomingAppointment = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
-                console.log("Loaded done appointments: ", doneAppointments);
-
-            } catch (error) {
-                console.error("Error loading data: ", error);
+            } else {
+                currentUser = null;
+                patientProfile = {
+                    name: '',
+                    middleName: '',
+                    lastName: '',
+                    suffix: '',
+                    id: '',
+                    age: '',
+                    gender: '',
+                    email: '',
+                    phone: '',
+                    address: '',
+                    birthday: '',
+                    profileImage: ''
+                };
+                doneAppointments = [];
+                upcomingAppointment = null;
+                isArchived = false;
+                console.log("User is not logged in.");
             }
-        } else {
-            currentUser = null;
-            patientProfile = {
-                name: '',
-                middleName: '',
-                lastName: '',
-                suffix: '',
-                id: '',
-                age: '',
-                gender: '',
-                email: '',
-                phone: '',
-                address: '',
-                birthday: '',
-                profileImage: ''
-            };
-            doneAppointments = [];
-            upcomingAppointment = null;
-            isArchived = false;
-            console.log("User is not logged in.");
-        }
-    });
+        });
 
-    const checkMobile = () => {
-        isMobile = window.innerWidth <= 640;
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+        const checkMobile = () => {
+            isMobile = window.innerWidth <= 640;
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
 
-    return () => {
-        unsubscribe();
-        window.removeEventListener('resize', checkMobile);
-    };
-});
+        return {
+            destroy() {
+                unsubscribe();
+                window.removeEventListener('resize', checkMobile);
+            }
+        };
+    }
+
 function calculateAge(birthday: string) {
         const birthDate = new Date(birthday);
         const today = new Date();
@@ -1015,7 +1040,7 @@ function toggleEditProfile() {
         }
     }
 </script>
-<div class="main-container">
+<div class="main-container" use:initializeProfilePage>
     <div class="patient-card">
         <div class="profile-image-container">
             {#if patientProfile.profileImage}
@@ -1135,20 +1160,16 @@ function toggleEditProfile() {
 
         <!-- Filter pills -->
         <div class="hist-filters" role="group" aria-label="Filter appointments">
-            {#each [
-                { key: 'all',        label: 'All',        icon: 'fa-layer-group' },
-                { key: 'completed',  label: 'Completed',  icon: 'fa-check-circle' },
-                { key: 'pending',    label: 'Pending',    icon: 'fa-hourglass-half' },
-                { key: 'cancelled',  label: 'Cancelled',  icon: 'fa-times-circle' }
-            ] as pill}
+            {#each historyFilterPills as pill, pillIndex (pillIndex)}
+                {@const typedPill = pill as HistoryFilterPill}
                 <button
                     type="button"
-                    class="filter-pill {historyFilter === pill.key ? 'filter-pill--active' : ''}"
-                    on:click={() => historyFilter = pill.key}
-                    aria-pressed={historyFilter === pill.key}
+                    class="filter-pill {historyFilter === typedPill.key ? 'filter-pill--active' : ''}"
+                    on:click={() => historyFilter = typedPill.key}
+                    aria-pressed={historyFilter === typedPill.key}
                 >
-                    <i class="fas {pill.icon}" aria-hidden="true"></i>
-                    {pill.label}
+                    <i class="fas {typedPill.icon}" aria-hidden="true"></i>
+                    {typedPill.label}
                 </button>
             {/each}
         </div>
@@ -1161,11 +1182,12 @@ function toggleEditProfile() {
             </div>
         {:else}
             <div class="tl-list" role="list">
-                {#each filteredDoneAppointments as apt (apt.id)}
+                {#each filteredDoneAppointments as apt, aptIndex (aptIndex)}
+                    {@const typedApt = apt as Appointment}
                     <div class="tl-item" role="listitem">
                         <!-- Dot + vertical line -->
                         <div class="tl-spine" aria-hidden="true">
-                            <div class="tl-dot tl-dot--{getAppointmentStatusClass(apt.status)}"></div>
+                            <div class="tl-dot tl-dot--{getAppointmentStatusClass(typedApt.status)}"></div>
                             <div class="tl-vline"></div>
                         </div>
 
@@ -1173,33 +1195,33 @@ function toggleEditProfile() {
                         <article class="tl-card">
                             <!-- Card top: icon + title + status -->
                             <div class="tl-card-top">
-                                <div class="tl-svc-icon {getServiceColorClass(apt.service)}" aria-hidden="true">
-                                    <i class="fas {getServiceIcon(apt.service)}"></i>
+                                <div class="tl-svc-icon {getServiceColorClass(typedApt.service)}" aria-hidden="true">
+                                    <i class="fas {getServiceIcon(typedApt.service)}"></i>
                                 </div>
                                 <div class="tl-card-info">
                                     <div class="tl-title-row">
-                                        <span class="tl-svc-name">{apt.service || 'Appointment'}</span>
-                                        <span class="status-pill {getAppointmentStatusClass(apt.status)}">{apt.status || 'Completed'}</span>
+                                        <span class="tl-svc-name">{typedApt.service || 'Appointment'}</span>
+                                        <span class="status-pill {getAppointmentStatusClass(typedApt.status)}">{typedApt.status || 'Completed'}</span>
                                     </div>
                                     <div class="tl-chips-row">
                                         <span class="tl-chip">
                                             <i class="fas fa-calendar-day" aria-hidden="true"></i>
-                                            {formatAppointmentDate(apt.date)}
+                                            {formatAppointmentDate(typedApt.date)}
                                         </span>
                                         <span class="tl-chip">
                                             <i class="fas fa-clock" aria-hidden="true"></i>
-                                            {apt.time || 'N/A'}
+                                            {typedApt.time || 'N/A'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Sub-services -->
-                            {#if apt.subServices && apt.subServices.length > 0}
+                            {#if typedApt.subServices && typedApt.subServices.length > 0}
                                 <div class="tl-subservices">
                                     <span class="tl-sub-label">Selected Services</span>
                                     <div class="tl-sub-chips">
-                                        {#each apt.subServices as sub}
+                                        {#each typedApt.subServices ?? [] as sub}
                                             <span class="tl-sub-chip">{sub}</span>
                                         {/each}
                                     </div>
@@ -1208,35 +1230,36 @@ function toggleEditProfile() {
 
                             <!-- Progress steps: Requested → Approved → Completed -->
                             <div class="tl-steps" aria-label="Appointment progress">
-                                {#each getTimelineSteps(apt) as step, i}
-                                    <div class="tl-step {step.done ? 'tl-step--done' : ''} {step.active ? 'tl-step--active' : ''}">
+                                {#each getTimelineSteps(typedApt) as step, i}
+                                    {@const typedStep = step as TimelineStep}
+                                    <div class="tl-step {typedStep.done ? 'tl-step--done' : ''} {typedStep.active ? 'tl-step--active' : ''}">
                                         <div class="tl-step-node" aria-hidden="true"></div>
                                         {#if i < 2}
-                                            <div class="tl-step-bar {step.done ? 'tl-step-bar--done' : ''}" aria-hidden="true"></div>
+                                            <div class="tl-step-bar {typedStep.done ? 'tl-step-bar--done' : ''}" aria-hidden="true"></div>
                                         {/if}
-                                        <span class="tl-step-label">{step.label}</span>
+                                        <span class="tl-step-label">{typedStep.label}</span>
                                     </div>
                                 {/each}
                             </div>
 
                             <!-- Remarks with Read More -->
-                            {#if apt.remarks}
+                            {#if typedApt.remarks}
                                 <div class="tl-remarks">
                                     <p class="tl-remarks-label">
                                         <i class="fas fa-comment-medical" aria-hidden="true"></i>
                                         Doctor's Remarks
                                     </p>
-                                    <div class="tl-remarks-body {expandedRemarks.has(apt.id) ? 'tl-remarks--expanded' : 'tl-remarks--collapsed'}">
-                                        {apt.remarks}
+                                    <div class="tl-remarks-body {expandedRemarks.has(typedApt.id) ? 'tl-remarks--expanded' : 'tl-remarks--collapsed'}">
+                                        {typedApt.remarks}
                                     </div>
                                     <button
                                         type="button"
                                         class="tl-readmore-btn"
-                                        on:click={() => toggleRemarks(apt.id)}
-                                        aria-expanded={expandedRemarks.has(apt.id)}
+                                        on:click={() => toggleRemarks(typedApt.id)}
+                                        aria-expanded={expandedRemarks.has(typedApt.id)}
                                     >
-                                        {expandedRemarks.has(apt.id) ? 'Show Less' : 'Read More'}
-                                        <i class="fas {expandedRemarks.has(apt.id) ? 'fa-chevron-up' : 'fa-chevron-down'}" aria-hidden="true"></i>
+                                        {expandedRemarks.has(typedApt.id) ? 'Show Less' : 'Read More'}
+                                        <i class="fas {expandedRemarks.has(typedApt.id) ? 'fa-chevron-up' : 'fa-chevron-down'}" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             {/if}

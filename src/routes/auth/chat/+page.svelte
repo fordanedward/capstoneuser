@@ -16,8 +16,7 @@
         updateDoc,
         getDoc,
         setDoc,
-        type Unsubscribe,
-        Timestamp
+        type Unsubscribe
     } from 'firebase/firestore';
     import Swal from 'sweetalert2';
     import '@fortawesome/fontawesome-free/css/all.css';
@@ -34,10 +33,16 @@
         read: boolean;
     };
 
+    type UserDocData = {
+        displayName?: string;
+        name?: string;
+        lastName?: string;
+    };
+
     let auth: ReturnType<typeof getAuth> | null = null;
     let db: ReturnType<typeof getFirestore> | null = null;
     let user: User | null = null;
-    let userDoc: any = null;
+    let userDoc: UserDocData | null = null;
 
     let messages: Message[] = [];
     let messageInput = '';
@@ -45,24 +50,10 @@
     let isSending = false;
     let messagesUnsub: Unsubscribe | null = null;
     let chatDocUnsub: Unsubscribe | null = null;
-    let currentTime = new Date();
     let chatContainer: HTMLDivElement;
     let textareaElement: HTMLTextAreaElement;
     let isTyping = false;
     let typingTimeout: ReturnType<typeof setTimeout>;
-
-    // Update current time every minute to refresh relative timestamps
-    let timeInterval: ReturnType<typeof setInterval>;
-
-    onMount(() => {
-        timeInterval = setInterval(() => {
-            currentTime = new Date();
-        }, 60000);
-
-        return () => {
-            if (timeInterval) clearInterval(timeInterval);
-        };
-    });
 
     // Auto-resize textarea
     function autoResizeTextarea() {
@@ -329,7 +320,6 @@
     onDestroy(() => {
         if (messagesUnsub) messagesUnsub();
         if (chatDocUnsub) chatDocUnsub();
-        if (timeInterval) clearInterval(timeInterval);
         if (typingTimeout) clearTimeout(typingTimeout);
         
         // Clear typing indicator on component destroy

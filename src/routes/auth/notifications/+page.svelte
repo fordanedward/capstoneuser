@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { browser } from '$app/environment';
-    import { getAuth, onAuthStateChanged, type User } from 'firebase/auth';
+    import { getAuth, onAuthStateChanged } from 'firebase/auth';
     import { initializeApp, getApps, getApp } from 'firebase/app';
     import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, type Unsubscribe } from 'firebase/firestore';
     import Swal from 'sweetalert2';
@@ -17,28 +17,37 @@
         text: string;
     };
 
+    type AppointmentDoc = {
+        createdAt?: unknown;
+        status?: string;
+        cancellationStatus?: string;
+        date?: string;
+        time?: string;
+        requestedDate?: string;
+        requestedTime?: string;
+    };
+
+    type AccountDoc = {
+        archived?: boolean;
+        isArchived?: boolean;
+    };
+
     let auth: ReturnType<typeof getAuth> | null = null;
     let db: ReturnType<typeof getFirestore> | null = null;
-    let user: User | null = null;
 
     let notifications: NotificationItem[] = [];
     let unsubAppointments: Unsubscribe | null = null;
     let unsubUserDoc: Unsubscribe | null = null;
     let isLoading = true;
-    let currentTime = new Date();
 
-    // Update current time every minute to refresh relative timestamps
-    let timeInterval: ReturnType<typeof setInterval>;
-
-    onMount(() => {
-        timeInterval = setInterval(() => {
-            currentTime = new Date();
-        }, 60000); // Update every minute
-
-        return () => {
-            if (timeInterval) clearInterval(timeInterval);
-        };
-    });
+    function resolveCreatedAt(createdAt: unknown): Date {
+        if (!createdAt) return new Date();
+        if (typeof createdAt === 'object' && createdAt !== null && 'seconds' in createdAt) {
+            const ts = createdAt as { seconds?: number };
+            if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000);
+        }
+        return new Date(createdAt as string | number | Date);
+    }
 
     function pushOrReplace(notif: NotificationItem) {
         const idx = notifications.findIndex(n => n.id === notif.id);
@@ -51,9 +60,9 @@
         notifications = notifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
-    function buildAppointmentNotifs(appt: any, apptId: string): NotificationItem[] {
+    function buildAppointmentNotifs(appt: AppointmentDoc, apptId: string): NotificationItem[] {
         const items: NotificationItem[] = [];
-        const created = appt.createdAt ? new Date(appt.createdAt.seconds ? appt.createdAt.seconds * 1000 : appt.createdAt) : new Date();
+        const created = resolveCreatedAt(appt.createdAt);
 
         const status: string = appt.status || '';
         const canc: string = appt.cancellationStatus || '';
@@ -79,7 +88,7 @@
         return items;
     }
 
-    function buildAccountNotifs(userData: any, uid: string): NotificationItem[] {
+    function buildAccountNotifs(userData: AccountDoc, uid: string): NotificationItem[] {
         const items: NotificationItem[] = [];
         const archived = userData?.archived === true || userData?.isArchived === true;
         if (archived) {
@@ -106,7 +115,6 @@
             if (unsubAppointments) { unsubAppointments(); unsubAppointments = null; }
             if (unsubUserDoc) { unsubUserDoc(); unsubUserDoc = null; }
 
-            user = u;
             if (!u || !db) { isLoading = false; return; }
 
             // Appointments listener

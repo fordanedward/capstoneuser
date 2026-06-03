@@ -1,8 +1,28 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { createLogger, defineConfig } from 'vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
+const logger = createLogger();
+
+function shouldSuppressFlowbiteWarning(message: string) {
+	return (
+		message.includes('node_modules/flowbite-svelte/dist/') &&
+		(message.includes("Can't resolve original location of error") ||
+			message.includes('contains an annotation that Rollup cannot interpret'))
+	);
+}
+
 export default defineConfig({
+	customLogger: {
+		...logger,
+		warn(message, options) {
+			if (shouldSuppressFlowbiteWarning(message)) {
+				return;
+			}
+
+			logger.warn(message, options);
+		}
+	},
 	plugins: [
 		sveltekit(),
 		SvelteKitPWA({

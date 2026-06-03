@@ -1,5 +1,6 @@
 import { dev } from '$app/environment';
-import { STRIPE_SECRET_KEY } from '$env/static/private';
+
+const STRIPE_SECRET_KEY = import.meta.env.STRIPE_SECRET_KEY;
 
 if (!STRIPE_SECRET_KEY && !dev) {
   throw new Error('STRIPE_SECRET_KEY is not defined in production');
