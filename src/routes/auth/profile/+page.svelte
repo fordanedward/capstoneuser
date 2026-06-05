@@ -4,12 +4,30 @@
     import { initializeApp, getApps, getApp } from "firebase/app";
     import { getAuth, onAuthStateChanged, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
     import type { User } from "firebase/auth";
+    import { onDestroy } from 'svelte';
     import Swal from 'sweetalert2';
 
     // Firebase setup
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const db = getFirestore(app);
     const auth = getAuth(app);
+
+    const lockBodyScroll = () => {
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    const unlockBodyScroll = () => {
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+        }
+    };
+
+    onDestroy(() => {
+        // Ensure page navigation never leaves scroll locked.
+        unlockBodyScroll();
+    });
 
     // State for form inputs and data display
     let formPatientName = "";
@@ -695,7 +713,7 @@ async function savePatientProfile() {
         console.log("Saving profile data:", profileData);
         await setDoc(patientRef, profileData);
 
-        Swal.fire({
+        await Swal.fire({
             icon: 'success',
             title: 'Profile Saved',
             text: 'Profile updated successfully.'
@@ -703,6 +721,7 @@ async function savePatientProfile() {
 
         patientProfile = profileData;
         isEditingProfile = false;
+        unlockBodyScroll();
         console.log("Profile saved successfully");
     } catch (error) {
         console.error("Error saving patient profile: ", error);
@@ -834,7 +853,7 @@ function toggleEditProfile() {
 
         if (isEditingProfile) {
             // Disable body scroll when modal opens
-            document.body.style.overflow = 'hidden';
+            lockBodyScroll();
             
             formPatientName = patientProfile.name || '';
             formMiddleName = patientProfile.middleName || '';
@@ -920,7 +939,7 @@ function toggleEditProfile() {
             profileImage = patientProfile.profileImage || '';
         } else {
         // Re-enable body scroll when modal closes
-        document.body.style.overflow = '';
+        unlockBodyScroll();
         
         formPatientName = "";
         formMiddleName = "";
@@ -983,7 +1002,7 @@ function toggleEditProfile() {
             text: 'There was an error loading your profile data for editing. Please try again or contact support.'
         });
         isEditingProfile = false;
-        document.body.style.overflow = '';
+        unlockBodyScroll();
     }
 }
 

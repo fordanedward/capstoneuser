@@ -153,6 +153,44 @@
         }
     }
 
+    // Mobile carousel controls for schedule cards
+    let scheduleSlideIndex = 0;
+    const totalScheduleSlides = 3;
+    let scheduleTouchStartX = 0;
+    let scheduleTouchEndX = 0;
+    let scheduleDragOffset = 0;
+    let isScheduleDragging = false;
+
+    function nextScheduleSlide() {
+        scheduleSlideIndex = (scheduleSlideIndex + 1) % totalScheduleSlides;
+    }
+
+    function prevScheduleSlide() {
+        scheduleSlideIndex = (scheduleSlideIndex - 1 + totalScheduleSlides) % totalScheduleSlides;
+    }
+
+    function handleScheduleTouchStart(e: TouchEvent) {
+        scheduleTouchStartX = e.changedTouches[0].screenX;
+        isScheduleDragging = true;
+        scheduleDragOffset = 0;
+    }
+
+    function handleScheduleTouchMove(e: TouchEvent) {
+        if (!isScheduleDragging) return;
+        scheduleDragOffset = e.changedTouches[0].screenX - scheduleTouchStartX;
+    }
+
+    function handleScheduleTouchEnd(e: TouchEvent) {
+        isScheduleDragging = false;
+        scheduleTouchEndX = e.changedTouches[0].screenX;
+        scheduleDragOffset = 0;
+        const diff = scheduleTouchStartX - scheduleTouchEndX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) nextScheduleSlide();
+            else prevScheduleSlide();
+        }
+    }
+
     // Mobile carousel controls for diagnostic packages
     let packageSlideIndex = 0;
     const totalPackageSlides = 5;
@@ -464,9 +502,6 @@
     .packages-carousel-track {
         display: contents;
     }
-    .packages-carousel-nav-btn {
-        display: none;
-    }
     .packages-dots-row {
         display: none;
     }
@@ -667,9 +702,6 @@
     .carousel-track {
         display: contents;
     }
-    .carousel-nav-btn {
-        display: none;
-    }
     .carousel-dots-row {
         display: none;
     }
@@ -679,32 +711,11 @@
     /* Schedule & Hours Section */
     .schedule-section {
         margin-top: 2rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+        background: #ffffff;
         border: 1px solid #dbe6f4;
-        border-radius: 1.75rem;
-        box-shadow: 0 18px 36px rgba(10,55,97,0.08);
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 28px rgba(10,55,97,0.08);
         padding: 2rem;
-        position: relative;
-        overflow: hidden;
-    }
-    .schedule-section::before {
-        content: '';
-        position: absolute;
-        inset: 0 auto auto 0;
-        width: 100%;
-        height: 6px;
-        background: linear-gradient(90deg, #f4c542 0%, #0a3761 55%, #3b82f6 100%);
-    }
-    .schedule-section::after {
-        content: '';
-        position: absolute;
-        right: -5rem;
-        top: -4rem;
-        width: 14rem;
-        height: 14rem;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(244, 197, 66, 0.16) 0%, rgba(244, 197, 66, 0) 72%);
-        pointer-events: none;
     }
     .schedule-grid {
         display: grid;
@@ -713,30 +724,39 @@
         margin-top: 1.25rem;
         position: relative;
         z-index: 1;
+        touch-action: pan-y;
+    }
+    .schedule-carousel-track {
+        display: contents;
+    }
+    .schedule-dots-row {
+        display: none;
     }
     .schedule-card {
         border: 1px solid #d6e0ee;
-        border-radius: 1.35rem;
-        padding: 1.35rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        border-radius: 1rem;
+        padding: 1rem 1rem 1.15rem;
+        background: #ffffff;
         transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-        box-shadow: 0 8px 20px rgba(10, 55, 97, 0.06);
+        box-shadow: 0 4px 14px rgba(10, 55, 97, 0.06);
         position: relative;
         overflow: hidden;
         min-height: 240px;
     }
     .schedule-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 16px 30px rgba(10, 55, 97, 0.12);
+        box-shadow: 0 10px 22px rgba(10, 55, 97, 0.12);
         border-color: #b8cbe5;
     }
     .schedule-card::before {
-        content: '';
+        content: "";
         position: absolute;
-        inset: 0 auto auto 0;
+        left: 0;
+        top: 0;
         width: 100%;
         height: 5px;
-        background: linear-gradient(90deg, #f4c542 0%, #ffd56f 100%);
+        border-radius: 1rem 1rem 0 0;
+        background: linear-gradient(90deg, #f4c542 0%, #ffd566 100%);
     }
     .schedule-title {
         color: #0a3761;
@@ -797,7 +817,7 @@
         margin-top: 0.95rem;
         padding: 0.75rem 0.85rem;
         border-radius: 0.95rem;
-        background: linear-gradient(135deg, rgba(244, 197, 66, 0.12), rgba(10, 55, 97, 0.05));
+        background: #fffdfa;
         border: 1px solid rgba(244, 197, 66, 0.28);
         color: #0a3761;
         font-weight: 600;
@@ -949,6 +969,18 @@
         .packages-section {
             padding: 1.25rem;
         }
+        .packages-notes {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+        .note {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.8rem 0.95rem;
+            line-height: 1.4;
+        }
         .packages-scroll { max-height: none; }
         .package-title {
             font-size: 0.98rem;
@@ -982,41 +1014,26 @@
             height: auto;
             min-height: 0;
         }
-        .packages-carousel-nav-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            top: 42%;
-            transform: translateY(-50%);
-            width: 2.1rem;
-            height: 2.1rem;
-            background: rgba(255, 255, 255, 0.93);
-            border: 1px solid #e2e8f0;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 5;
-            box-shadow: 0 2px 8px rgba(10, 55, 97, 0.14);
-            color: #0a3761;
-            padding: 0;
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-        .packages-carousel-nav-btn:active {
-            background: #f4c542;
-            border-color: #e0b030;
-        }
-        .packages-carousel-nav-btn svg {
-            width: 1.1rem;
-            height: 1.1rem;
-        }
-        .packages-prev-btn { left: 0.3rem; }
-        .packages-next-btn { right: 0.3rem; }
         .packages-dots-row {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 0.42rem;
             margin-top: 0.9rem;
+        }
+        .packages-notes {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+        .packages-notes .note {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: left;
+            border-radius: 0.85rem;
+            padding: 0.62rem 0.8rem;
+            line-height: 1.35;
         }
         .packages-carousel-dot {
             width: 0.45rem;
@@ -1069,36 +1086,6 @@
             transform: none;
             box-shadow: none;
         }
-        /* Navigation arrow buttons */
-        .carousel-nav-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            top: 42%;
-            transform: translateY(-50%);
-            width: 2.1rem;
-            height: 2.1rem;
-            background: rgba(255, 255, 255, 0.93);
-            border: 1px solid #e2e8f0;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 5;
-            box-shadow: 0 2px 8px rgba(10, 55, 97, 0.14);
-            color: #0a3761;
-            padding: 0;
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-        .carousel-nav-btn:active {
-            background: #f4c542;
-            border-color: #e0b030;
-        }
-        .carousel-nav-btn svg {
-            width: 1.1rem;
-            height: 1.1rem;
-        }
-        .prev-btn { left: 0.3rem; }
-        .next-btn { right: 0.3rem; }
         /* Dot indicators */
         .carousel-dots-row {
             display: flex;
@@ -1126,6 +1113,50 @@
         }
         .bp-tip-icon {
             height: 9.5rem;
+        }
+
+        .schedule-grid {
+            overflow: hidden;
+            display: block;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .schedule-carousel-track {
+            display: flex;
+            width: calc(3 * 100%);
+            transform: translateX(calc(-1 * var(--schedule-index, 0) * 100% / 3 + var(--schedule-drag-offset, 0px)));
+            transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+        .schedule-carousel-track.dragging {
+            transition: none;
+        }
+        .schedule-card {
+            flex: 0 0 calc(100% / 3);
+            width: calc(100% / 3);
+            box-sizing: border-box;
+            min-height: 0;
+        }
+        .schedule-dots-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.42rem;
+            margin-top: 0.9rem;
+        }
+        .schedule-carousel-dot {
+            width: 0.45rem;
+            height: 0.45rem;
+            border-radius: 9999px;
+            background: #cbd5e1;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.22s ease, width 0.25s ease;
+        }
+        .schedule-carousel-dot.active {
+            background: #0a3761;
+            width: 1.3rem;
         }
     }
 
@@ -1496,12 +1527,6 @@
             </div>
         </div>
 
-        <button class="packages-carousel-nav-btn packages-prev-btn" on:click={prevPackageSlide} aria-label="Previous package">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
-        </button>
-        <button class="packages-carousel-nav-btn packages-next-btn" on:click={nextPackageSlide} aria-label="Next package">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"></polyline></svg>
-        </button>
     </div>
 
     <div class="packages-dots-row">
@@ -1512,7 +1537,7 @@
 
     <div class="packages-notes">
         <div class="note">Fasting Hours: FBS and Lipid — 10 to 12 hours</div>
-        <div class="note">Open: Monday to Sunday</div>
+        <div class="note">Open: Monday to Saturday</div>
         <div class="note">All packages come with a FREE DOCTOR CONSULTATION.</div>
     </div>
 </div>
@@ -1563,12 +1588,6 @@
                 </article>
             </div>
         </div>
-        <button class="carousel-nav-btn prev-btn" on:click={prevBpTip} aria-label="Previous tip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
-        </button>
-        <button class="carousel-nav-btn next-btn" on:click={nextBpTip} aria-label="Next tip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,6 15,12 9,18"></polyline></svg>
-        </button>
     </div>
     <div class="carousel-dots-row">
         {#each [0,1,2,3,4,5] as i}
@@ -1579,56 +1598,76 @@
 
 <div class="schedule-section">
     <h2 class="section-heading" style="color: #0a3761; font-size: 2rem; margin-bottom: 0.5rem;">Schedule & Hours</h2>
-    <div class="schedule-grid">
-        <div class="schedule-card">
-            <div class="schedule-title">
-                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12,6 12,12 16,14"></polyline>
-                </svg>
-                <span class="schedule-title-text">Pharmacy & Clinic Hours</span>
-            </div>
-            <div class="schedule-content">
-                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Open window</div>
-                <div class="schedule-hours">Monday to Saturday</div>
-                <div class="schedule-details">8:00 AM - 9:00 PM</div>
-                <div class="schedule-callout">Pharmacy support and clinic services are available throughout the day.</div>
+    <div class="schedule-carousel-outer">
+        <div class="schedule-grid"
+             role="region"
+             aria-label="Schedule and hours carousel"
+             on:touchstart={handleScheduleTouchStart}
+             on:touchmove={handleScheduleTouchMove}
+             on:touchend={handleScheduleTouchEnd}>
+            <div
+                class="schedule-carousel-track"
+                class:dragging={isScheduleDragging}
+                style="--schedule-index: {scheduleSlideIndex}; --schedule-drag-offset: {scheduleDragOffset}px"
+            >
+                <div class="schedule-card">
+                    <div class="schedule-title">
+                        <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12,6 12,12 16,14"></polyline>
+                        </svg>
+                        <span class="schedule-title-text">Pharmacy & Clinic Hours</span>
+                    </div>
+                    <div class="schedule-content">
+                        <div class="schedule-pill"><span class="schedule-pill-dot"></span>Open window</div>
+                        <div class="schedule-hours">Monday to Saturday</div>
+                        <div class="schedule-details">8:00 AM - 9:00 PM</div>
+                        <div class="schedule-callout">Pharmacy support and clinic services are available throughout the day.</div>
+                    </div>
+                </div>
+
+                <div class="schedule-card">
+                    <div class="schedule-title">
+                        <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 4 2V7l-5-5z"></path>
+                            <polyline points="14,2 14,8 20,8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10,9 9,9 8,9"></polyline>
+                        </svg>
+                        <span class="schedule-title-text">Laboratory Hours</span>
+                    </div>
+                    <div class="schedule-content">
+                        <div class="schedule-pill"><span class="schedule-pill-dot"></span>Diagnostics</div>
+                        <div class="schedule-hours">Monday to Saturday</div>
+                        <div class="schedule-details">8:00 AM - 5:00 PM</div>
+                        <div class="schedule-callout">For laboratory testing and routine diagnostic services.</div>
+                    </div>
+                </div>
+
+                <div class="schedule-card">
+                    <div class="schedule-title">
+                        <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                        <span class="schedule-title-text">Consultation Schedule</span>
+                    </div>
+                    <div class="schedule-content">
+                        <div class="schedule-pill"><span class="schedule-pill-dot"></span>Internal Medicine</div>
+                        <div class="schedule-hours">Monday to Friday</div>
+                        <div class="schedule-details">8:00 AM - 5:00 PM</div>
+                        <div class="schedule-callout">Face-to-face and online coordination available during clinic hours.</div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="schedule-card">
-            <div class="schedule-title">
-                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 4 2V7l-5-5z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                </svg>
-                <span class="schedule-title-text">Laboratory Hours</span>
-            </div>
-            <div class="schedule-content">
-                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Diagnostics</div>
-                <div class="schedule-hours">Monday to Saturday</div>
-                <div class="schedule-details">8:00 AM - 5:00 PM</div>
-                <div class="schedule-callout">For laboratory testing and routine diagnostic services.</div>
-            </div>
-        </div>
-        
-        <div class="schedule-card">
-            <div class="schedule-title">
-                <svg class="schedule-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11.5h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                </svg>
-                <span class="schedule-title-text">Consultation Schedule</span>
-            </div>
-            <div class="schedule-content">
-                <div class="schedule-pill"><span class="schedule-pill-dot"></span>Internal Medicine</div>
-                <div class="schedule-hours">Monday to Friday</div>
-                <div class="schedule-details">8:00 AM - 5:00 PM</div>
-                <div class="schedule-callout">Face-to-face and online coordination available during clinic hours.</div>
-            </div>
-        </div>
+
+    </div>
+
+    <div class="schedule-dots-row">
+        {#each [0,1,2] as i}
+            <button class="schedule-carousel-dot" class:active={scheduleSlideIndex === i} on:click={() => scheduleSlideIndex = i} aria-label="Schedule card {i + 1}"></button>
+        {/each}
     </div>
 </div>
 
