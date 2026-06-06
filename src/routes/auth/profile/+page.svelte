@@ -1459,7 +1459,7 @@ function toggleEditProfile() {
             
             <!-- Medical Conditions Section -->
             <div class="form-section admin-readonly-section">
-                <h4 class="section-subtitle">Your Medical Conditions (check all that apply)</h4>
+                <h4 class="section-subtitle">Your Medical Conditions</h4>
                 <fieldset class="admin-readonly-group" disabled aria-label="Medical conditions (admin only)">
                 <div class="checkbox-grid">
                     <label class="checkbox-label">
@@ -1536,7 +1536,7 @@ function toggleEditProfile() {
             
             <!-- Surgical History Section -->
             <div class="form-section admin-readonly-section">
-                <h4 class="section-subtitle">Surgical History (check all that apply)</h4>
+                <h4 class="section-subtitle">Surgical History</h4>
                 <fieldset class="admin-readonly-group" disabled aria-label="Surgical history (admin only)">
                 <div class="checkbox-grid">
                     <label class="checkbox-label">
@@ -1621,7 +1621,7 @@ function toggleEditProfile() {
             
             <!-- Family History Section -->
             <div class="form-section admin-readonly-section">
-                <h4 class="section-subtitle">Family History (check all that apply)</h4>
+                <h4 class="section-subtitle">Family History</h4>
                 <div class="admin-readonly-group family-history-readonly-wrap" role="group" aria-label="Family history (admin only)" aria-disabled="true">
                 <div class="family-history-table-container">
                     <table class="family-history-table">
@@ -1743,7 +1743,7 @@ function toggleEditProfile() {
                 <h4 class="section-subtitle">Other Medical Information</h4>
                 <fieldset class="admin-readonly-group" disabled aria-label="Other medical information (admin only)">
                 <div class="form-group full-width">
-                    <label for="otherMedicalConditions">Other Medical Conditions (specify)</label>
+                    <label for="otherMedicalConditions">Other Medical Conditions</label>
                     <textarea id="otherMedicalConditions" bind:value={formOtherMedicalConditions} placeholder="Specify any other medical conditions" rows="3"></textarea>
                 </div>
                 <div class="form-group full-width">
