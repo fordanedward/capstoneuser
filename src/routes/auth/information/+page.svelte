@@ -153,6 +153,63 @@
         }
     }
 
+    const cholesterolTips = [
+        {
+            title: 'Eat Properly',
+            image: '/images/healthy%20habits/much%20needed%20foods%20cholesterol.png',
+            alt: 'Foods that help lower cholesterol',
+            points: [
+                'Try to eat more oatmeal, beans, mung beans, and vegetables.',
+                'Avoid eating fatty pork.',
+                'Avoid cakes, pastries, croissants, ensaymada, butter, and cookies.',
+                'If you like fried rice, choose newly cooked plain rice instead.'
+            ]
+        },
+        {
+            title: 'Exercise',
+            image: '/images/healthy%20habits/creating-a-fitness-plan.jpg',
+            alt: 'Creating a fitness plan to lower cholesterol',
+            description: 'Exercising 3 to 5 times a week, for 30 minutes to 1 hour, greatly helps reduce cholesterol.'
+        }
+    ];
+
+    let cholesterolTipIndex = 0;
+    const totalCholesterolTips = cholesterolTips.length;
+    let cholesterolTouchStartX = 0;
+    let cholesterolTouchEndX = 0;
+    let cholesterolDragOffset = 0;
+    let isCholesterolDragging = false;
+
+    function nextCholesterolTip() {
+        cholesterolTipIndex = (cholesterolTipIndex + 1) % totalCholesterolTips;
+    }
+
+    function prevCholesterolTip() {
+        cholesterolTipIndex = (cholesterolTipIndex - 1 + totalCholesterolTips) % totalCholesterolTips;
+    }
+
+    function handleCholesterolTouchStart(e: TouchEvent) {
+        cholesterolTouchStartX = e.changedTouches[0].screenX;
+        isCholesterolDragging = true;
+        cholesterolDragOffset = 0;
+    }
+
+    function handleCholesterolTouchMove(e: TouchEvent) {
+        if (!isCholesterolDragging) return;
+        cholesterolDragOffset = e.changedTouches[0].screenX - cholesterolTouchStartX;
+    }
+
+    function handleCholesterolTouchEnd(e: TouchEvent) {
+        isCholesterolDragging = false;
+        cholesterolTouchEndX = e.changedTouches[0].screenX;
+        cholesterolDragOffset = 0;
+        const diff = cholesterolTouchStartX - cholesterolTouchEndX;
+        if (Math.abs(diff) > 40) {
+            if (diff > 0) nextCholesterolTip();
+            else prevCholesterolTip();
+        }
+    }
+
     // Mobile carousel controls for schedule cards
     let scheduleSlideIndex = 0;
     const totalScheduleSlides = 3;
@@ -695,6 +752,18 @@
         line-height: 1.35;
         margin: 0;
     }
+    .bp-tip-desc ul {
+        text-align: left;
+        margin: 0;
+        padding-left: 1.15rem;
+        list-style: disc;
+    }
+    .bp-tip-desc li + li {
+        margin-top: 0.4rem;
+    }
+    .cholesterol-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     /* Carousel desktop base — invisible wrappers */
     .bp-carousel-outer {
         position: relative;
@@ -1113,6 +1182,23 @@
         }
         .bp-tip-icon {
             height: 9.5rem;
+        }
+        .cholesterol-carousel-track {
+            display: flex;
+            width: calc(2 * 100%);
+            transform: translateX(calc(-1 * var(--cholesterol-index, 0) * 100% / 2 + var(--cholesterol-drag-offset, 0px)));
+            transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            will-change: transform;
+        }
+        .cholesterol-carousel-track.dragging {
+            transition: none;
+        }
+        .cholesterol-carousel-grid .bp-tip-card {
+            flex: 0 0 calc(100% / 2);
+            width: calc(100% / 2);
+        }
+        .cholesterol-grid {
+            grid-template-columns: 1fr;
         }
 
         .schedule-grid {
@@ -1592,6 +1678,47 @@
     <div class="carousel-dots-row">
         {#each [0,1,2,3,4,5] as i}
             <button class="carousel-dot" class:active={bpTipIndex === i} on:click={() => bpTipIndex = i} aria-label="Tip {i + 1}"></button>
+        {/each}
+    </div>
+</div>
+
+<div class="bp-prevention-section">
+    <div class="bp-prevention-header">
+        <h2 class="bp-prevention-title">What to Do if Cholesterol is High?</h2>
+        <p class="bp-prevention-subtitle">Simple lifestyle changes can help lower your cholesterol.</p>
+    </div>
+    <div class="bp-carousel-outer">
+        <div class="bp-prevention-grid cholesterol-grid cholesterol-carousel-grid"
+             role="region" aria-label="High cholesterol tips carousel"
+             on:touchstart={handleCholesterolTouchStart}
+             on:touchmove={handleCholesterolTouchMove}
+             on:touchend={handleCholesterolTouchEnd}>
+            <div class="carousel-track cholesterol-carousel-track"
+                 class:dragging={isCholesterolDragging}
+                 style="--cholesterol-index: {cholesterolTipIndex}; --cholesterol-drag-offset: {cholesterolDragOffset}px">
+                {#each cholesterolTips as tip}
+                    <article class="bp-tip-card">
+                        <div class="bp-tip-icon"><img src={tip.image} alt={tip.alt} loading="lazy" decoding="async" width="640" height="360" /></div>
+                        <h3 class="bp-tip-name">{tip.title}</h3>
+                        {#if tip.points}
+                            <div class="bp-tip-desc">
+                                <ul>
+                                    {#each tip.points as point}
+                                        <li>{point}</li>
+                                    {/each}
+                                </ul>
+                            </div>
+                        {:else if tip.description}
+                            <p class="bp-tip-desc">{tip.description}</p>
+                        {/if}
+                    </article>
+                {/each}
+            </div>
+        </div>
+    </div>
+    <div class="carousel-dots-row">
+        {#each cholesterolTips as tip, i}
+            <button class="carousel-dot" class:active={cholesterolTipIndex === i} on:click={() => cholesterolTipIndex = i} aria-label="Cholesterol tip: {tip.title}"></button>
         {/each}
     </div>
 </div>
