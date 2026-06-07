@@ -959,7 +959,7 @@
               subServices: selectedSubServices || []
           });
 
-          selectedTime = null;
+          resetBookingForm();
           await fetchAvailabilityForDate(selectedDate, 'booking');
 
         } catch (error: unknown) {
@@ -1420,6 +1420,12 @@
     } else {
       selectedSubServices.push(subService);
     }
+  }
+
+  function resetBookingForm() {
+    selectedTime = null;
+    selectedService = null;
+    selectedSubServices = [];
   }
 
   async function processPayment() {
