@@ -1039,7 +1039,7 @@
       const messagesRef = collection(db, 'chats', patientId, 'messages');
       await addDoc(messagesRef, {
         senderId: 'system',
-        senderName: 'System',
+        senderName: 'PHPDGMPBot',
         senderRole: 'admin',
         message: confirmationMessage,
         timestamp: serverTimestamp(),

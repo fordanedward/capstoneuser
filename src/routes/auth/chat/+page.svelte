@@ -39,6 +39,13 @@
         lastName?: string;
     };
 
+    function getDisplaySenderName(message: Message): string {
+        if (message.senderName === 'System') {
+            return 'PHPDGMPBot';
+        }
+        return message.senderName;
+    }
+
     let auth: ReturnType<typeof getAuth> | null = null;
     let db: ReturnType<typeof getFirestore> | null = null;
     let user: User | null = null;
@@ -358,7 +365,7 @@
                         {#if message.senderRole === 'admin'}
                             <div class="sender-info">
                                 <i class="fas fa-user-shield admin-icon"></i>
-                                <span class="sender-name">{message.senderName}</span>
+                                <span class="sender-name">{getDisplaySenderName(message)}</span>
                             </div>
                         {/if}
                         <div class="message-text">{message.message}</div>
